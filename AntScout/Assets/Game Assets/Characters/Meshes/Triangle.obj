@@ -1,0 +1,20 @@
+# Wavefront OBJ - Triangle Mesh for Ant Scout
+# Flat 3D Triangle pointing forward (+Z) with +Y Up
+
+o Triangle
+v 0.0 0.0 0.6
+v -0.4 0.0 -0.4
+v 0.4 0.0 -0.4
+
+vt 0.5 1.0
+vt 0.0 0.0
+vt 1.0 0.0
+
+vn 0.0 1.0 0.0
+vn 0.0 -1.0 0.0
+
+# Top face (normal pointing +Y)
+f 1/1/1 3/3/1 2/2/1
+
+# Bottom face (normal pointing -Y, reverse winding)
+f 1/1/2 2/2/2 3/3/2

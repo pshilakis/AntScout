@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cdc58a6487bb83448f671f70f6b2c59, type: 3}
+  m_Name: ScoutConfig
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Config.ScoutConfigSO
+  _moveSpeed: 8
+  _acceleration: 40
+  _turnSpeed: 1080
+  _idleThreshold: 0.05
+  _dashSpeed: 22
+  _dashDuration: 0.18
+  _dashCooldown: 1.25
+  _maxGlandCapacity: 100
+  _glandDrainRate: 20
+  _glandRechargeRate: 15
+  _nodePlacementDistance: 0.35
+  _nodeLifetime: 12
