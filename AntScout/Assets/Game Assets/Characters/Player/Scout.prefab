@@ -73,7 +73,7 @@ SphereCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1628693764415974340}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: c863b27ead73a7a42bc548feb4b1f459, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -311,6 +311,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Pheromone.PheromoneTrailRenderer
   _emitter: {fileID: 3791793609488148048}
   _config: {fileID: 11400000, guid: ef505a48ec7faf14ea34f0cfce8aabe2, type: 2}
+  _alignmentMode: 1
   _recruitmentColor: {r: 0, g: 0.85, b: 1, a: 0.85}
   _alarmColor: {r: 1, g: 0.2, b: 0.1, a: 0.85}
   _repellentColor: {r: 0.8, g: 0.1, b: 0.9, a: 0.85}
