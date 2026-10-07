@@ -23,6 +23,28 @@
         "com.unity.ugui": "1.0.0"
       }
     },
+    "com.pgs.combat": {
+      "version": "file:../../../_SharedPackages/com.pgs.combat",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.pgs.core": "1.3.0"
+      }
+    },
+    "com.pgs.core": {
+      "version": "file:../../../_SharedPackages/com.pgs.core",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
+    "com.pgs.effects": {
+      "version": "file:../../../_SharedPackages/com.pgs.effects",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.pgs.core": "1.3.0"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
       "depth": 0,

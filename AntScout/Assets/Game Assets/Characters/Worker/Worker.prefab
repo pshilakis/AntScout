@@ -172,7 +172,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.Seeker
   version: 1073741824
-  drawGizmos: 1
+  drawGizmos: 0
   detailedGizmos: 0
   startEndModifier:
     addPoints: 0
@@ -244,7 +244,7 @@ MonoBehaviour:
   endReachedDistance: 0.2
   whenCloseToDestination: 0
   rvoDensityBehavior:
-    enabled: 1
+    enabled: 0
     densityThreshold: 0.5
     returnAfterBeingPushedAway: 0
     progressAverage: 0
@@ -285,9 +285,9 @@ MonoBehaviour:
   centerBackingField: 1
   locked: 0
   lockWhenNotMoving: 0
-  agentTimeHorizon: 2
-  obstacleTimeHorizon: 0.5
-  maxNeighbours: 10
+  agentTimeHorizon: 0.75
+  obstacleTimeHorizon: 0.4
+  maxNeighbours: 5
   layer: 1
   collidesWith: -1
   wallAvoidForce: 1

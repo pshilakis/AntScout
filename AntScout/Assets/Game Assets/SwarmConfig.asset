@@ -15,9 +15,17 @@ MonoBehaviour:
   _nestRecruitmentRadius: 8
   _workerSpawnInterval: 1
   _maxActiveWorkers: 20
+  _initialWorkerCount: 6
+  _workerBiomassCost: 50
+  _nestWanderRadius: 5
   _workerMoveSpeed: 5.5
-  _trailSamplingRadius: 4
+  _trailSamplingRadius: 12
   _waypointLookAheadDistance: 1.2
   _arrivalThreshold: 0.6
   _nestArrivalThreshold: 1.2
-  _trailEndSearchDuration: 3
+  _localSearchNodeWindow: 4
+  _trailSwarmDispersion: 0.6
+  _trailTipWanderRadius: 6
+  _trailTipWanderDuration: 6
+  _workerReturnWanderSpeed: 2.8
+  _meanderJitterAngle: 35

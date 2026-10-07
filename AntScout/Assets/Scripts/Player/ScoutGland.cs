@@ -2,6 +2,7 @@ using System;
 using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Pheromone;
+using PGS.Core.Time;
 using UnityEngine;
 
 namespace AntScout.Player
@@ -9,8 +10,9 @@ namespace AntScout.Player
     /// <summary>
     /// Manages the Scout Ant's chemical gland reserves, handling pheromone depletion and passive regeneration.
     /// Interacts with the trail emitter when the gland is triggered.
+    /// Implements IUpdatable to receive deterministic frame updates on TimeChannel.Player.
     /// </summary>
-    public class ScoutGland : MonoBehaviour
+    public class ScoutGland : MonoBehaviour, IUpdatable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for gland capacity, drain, and recharge rates.")]
@@ -22,6 +24,7 @@ namespace AntScout.Player
 
         private float _currentCapacity;
         private bool _isLayingTrail;
+        private bool _isDepleted;
         private PheromoneType _activeScentType = PheromoneType.Recruitment;
 
         public event Action<float, float> OnCapacityChanged; // (current, max)
@@ -30,6 +33,7 @@ namespace AntScout.Player
         public float MaxCapacity => _config != null ? _config.MaxGlandCapacity : 100f;
         public float NormalizedCapacity => MaxCapacity > 0f ? Mathf.Clamp01(_currentCapacity / MaxCapacity) : 0f;
         public bool IsLayingTrail => _isLayingTrail;
+        public bool IsDepleted => _isDepleted;
 
         private void Awake()
         {
@@ -53,43 +57,70 @@ namespace AntScout.Player
             }
 
             _currentCapacity = _config.MaxGlandCapacity;
+            _isDepleted = false;
         }
 
         public void SetLayingTrail(bool active, PheromoneType type = PheromoneType.Recruitment)
         {
-            _activeScentType = type;
-
-            if (active && _currentCapacity > 0f)
+            if (active && !_isDepleted && _currentCapacity > 0f)
             {
-                _isLayingTrail = true;
+                if (!_isLayingTrail || _activeScentType != type)
+                {
+                    _isLayingTrail = true;
+                    _activeScentType = type;
+                    _emitter.StartNewSegment(_activeScentType);
+                }
+
                 _emitter.EmitNode(transform.position, _activeScentType);
             }
             else
             {
-                _isLayingTrail = false;
+                if (_isLayingTrail)
+                {
+                    _isLayingTrail = false;
+                    _emitter.EndCurrentSegment();
+                }
             }
         }
 
-        private void Update()
+        private void OnEnable()
+        {
+            PgsTime.Register(this, UpdateRate.Continuous, TimeChannel.Player);
+        }
+
+        private void OnDisable()
+        {
+            PgsTime.Unregister(this);
+        }
+
+        public void OnUpdate(float deltaTime)
         {
             if (_isLayingTrail)
             {
                 if (_currentCapacity > 0f)
                 {
-                    _currentCapacity = Mathf.Max(0f, _currentCapacity - _config.GlandDrainRate * Time.deltaTime);
+                    _currentCapacity = Mathf.Max(0f, _currentCapacity - _config.GlandDrainRate * deltaTime);
                     _emitter.EmitNode(transform.position, _activeScentType);
                     OnCapacityChanged?.Invoke(_currentCapacity, MaxCapacity);
 
                     if (_currentCapacity <= 0f)
                     {
+                        _isDepleted = true;
                         _isLayingTrail = false;
+                        _emitter.EndCurrentSegment();
                     }
                 }
             }
             else if (_currentCapacity < _config.MaxGlandCapacity)
             {
-                _currentCapacity = Mathf.Min(_config.MaxGlandCapacity, _currentCapacity + _config.GlandRechargeRate * Time.deltaTime);
+                _currentCapacity = Mathf.Min(_config.MaxGlandCapacity, _currentCapacity + _config.GlandRechargeRate * deltaTime);
                 OnCapacityChanged?.Invoke(_currentCapacity, MaxCapacity);
+
+                // Recover from depleted state once at least 15% chemical capacity has refilled
+                if (_isDepleted && _currentCapacity >= (_config.MaxGlandCapacity * 0.15f))
+                {
+                    _isDepleted = false;
+                }
             }
         }
     }

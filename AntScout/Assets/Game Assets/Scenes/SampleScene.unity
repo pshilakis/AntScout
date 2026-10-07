@@ -393,6 +393,7 @@ GameObject:
   m_Component:
   - component: {fileID: 419853477}
   - component: {fileID: 419853476}
+  - component: {fileID: 419853478}
   m_Layer: 0
   m_Name: NavMesh
   m_TagString: Untagged
@@ -417,7 +418,7 @@ MonoBehaviour:
     dataString: UEsDBBQAAAgIAACQn+s1wEuoqwIAAOoFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQGFVE1v2kAQ/Stoz02Fk9CE3logpIckKKTKoc5h4x3jFcuutR8BEvHfM7NesCGHSkg2b97MvPnyB5Pa1VB4Y6dWijsjgP3sMXpn33qt8RY2fGH0XL7DnvMsha+IxCPnkXtpEM/IzZkVeCuLX3qhiNxHMGhZGruaiAWMjPMO4ZIrB2iyxpO3RuijxzbJYZue7/Ts7fCtAO3B/o8VdKH4qgZBalvyYM8eNDSNdSQGaS6MUtIlEcxv61jkiNcuYAlIEJJjUTE98SuQi8rjn/Ou80NZOvBJkuXbsbTYmyYq+22ahq24Wza63rgKcBDehLz7Yj3Lorm0ZnW7z5r1KYOvZLF85NuCO9/pZxceH8sOes3Vkr8qeK5A35upNUELNHobyDU4OB93Qh0qG1VQLFteo/UEDPXX2WTtbHax9s3cQ32oo//9skX/OnBzZWLrU0iyJGRIIcHi2P5gPXFhXEqEKGlE/ye+6G5WMtxI6zyakp6EEneG8wEBuoDU9zMiaJL3aoKlWGwStVIzgh8ZqyHCSWANmiu/nWFEf7oAJ7aOrhPLDacjS+qSbX87Jy4Rbvn9/olpZtaHYVtcXRf3ef/274WG4CqzvgNXPQSvpO50mwz32OCR0brZ224z927zYEtedNw8bHywMOaex2woBxdMdF2xl9FDB6Vol2MBUREWQL8X6m/FMa+KMLs3Ot7d0TPKXwQpji+ECS5eB1lWiuEgg6uLy7Pry+uLYZEVw+xHNry46rN4QlJju7maNf1KU8Lt0m0tGs9l/wnsTS2v48kKy9dT+b4ynclLXZp5YQH0QxPhUCxYTIKfFjEREsucg/dSx71kHzlTpliCyA+B8tjYycZbnrdRclbLN+MJydkofvhyRvDhInF13ySsKflRMFA4OhBPUsGK12Tq79juE1BLAwQUAAAICAAAkJ/rAWq5kmwAAAB3AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDVM9Ez11FQSi9KLMgoBgoYgjilmSkgdrRSSmJKkqmhYVqKpalhqrmxia6FiYWxZbJhsqWhmaGlsbmBUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAACQn+s1wEuoqwIAAOoFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAACQn+sBarmSbAAAAHcAAAAJACQAAAAAAAAAAAAAAPgCAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAArwMAAAAA
     file_cachedStartup: {fileID: 0}
     cacheStartup: 0
-  showNavGraphs: 1
+  showNavGraphs: 0
   showUnwalkableNodes: 1
   debugMode: 0
   graphUpdateDebugMode: 0
@@ -426,7 +427,7 @@ MonoBehaviour:
   manualDebugFloorRoof: 0
   showSearchTree: 0
   unwalkableNodeDebugSize: 0.3
-  logPathResults: 1
+  logPathResults: 4
   maxNearestNodeDistance: 100
   scanOnStartup: 1
   fullGetNearestSearch: 0
@@ -453,7 +454,7 @@ MonoBehaviour:
     seed: 0
     pivotPointRoot: {fileID: 0}
     spreadOutCount: 10
-  showGraphs: 1
+  showGraphs: 0
   showGraphsInStandalonePlayer: 0
 --- !u!4 &419853477
 Transform:
@@ -470,6 +471,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &419853478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 419853475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1764de1de43cc4d19af52679d3eaae06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.RVO.RVOSimulator
+  version: 1073741824
+  hardCollisions: 0
+  symmetryBreakingBias: 0.1
+  movementPlane: 0
+  useNavmeshAsObstacle: 0
+  drawQuadtree: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -700,10 +719,6 @@ PrefabInstance:
     - target: {fileID: 1628693764415974340, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
       propertyPath: m_Name
       value: Scout
-      objectReference: {fileID: 0}
-    - target: {fileID: 4345612751954169550, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
-      propertyPath: m_Material
-      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6165533058979464612, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
       propertyPath: m_LocalPosition.x

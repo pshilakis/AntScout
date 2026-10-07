@@ -1,16 +1,18 @@
 using System;
 using AntScout.Config;
 using AntScout.Core.Interfaces;
+using PGS.Core.Time;
 using UnityEngine;
 
 namespace AntScout.Player
 {
     /// <summary>
     /// Executes the Scout Ant's 3D evasive dash (Scurry) mechanic across the XZ plane.
-    /// Implements IDashable to isolate dash triggers and cooldown state queries from UI or state machines.
+    /// Implements IDashable and IUpdatable to isolate dash triggers and cooldown state queries.
+    /// Receives deterministic frame updates via PGS.Core.Time on TimeChannel.Player.
     /// </summary>
     [RequireComponent(typeof(ScoutMotor))]
-    public class ScoutDash : MonoBehaviour, IDashable
+    public class ScoutDash : MonoBehaviour, IDashable, IUpdatable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for dash speed, duration, and cooldown.")]
@@ -44,11 +46,21 @@ namespace AntScout.Player
             }
         }
 
-        private void Update()
+        private void OnEnable()
+        {
+            PgsTime.Register(this, UpdateRate.Continuous, TimeChannel.Player);
+        }
+
+        private void OnDisable()
+        {
+            PgsTime.Unregister(this);
+        }
+
+        public void OnUpdate(float deltaTime)
         {
             if (_cooldownTimer > 0f)
             {
-                _cooldownTimer -= Time.deltaTime;
+                _cooldownTimer -= deltaTime;
             }
         }
 

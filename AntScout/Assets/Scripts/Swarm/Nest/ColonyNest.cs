@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Pheromone;
+using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
-using Pathfinding.RVO;
+using PGS.Core.Time;
 using UnityEngine;
 
 namespace AntScout.Swarm.Nest
@@ -12,8 +13,9 @@ namespace AntScout.Swarm.Nest
     /// <summary>
     /// Represents the home anthill depot. Senses nearby pheromone trails and deploys worker ants.
     /// Strictly adheres to Single Responsibility Principle (SRP) by isolating nest macro state from agent steering.
+    /// Implements IUpdatable to receive deterministic updates on TimeChannel.World.
     /// </summary>
-    public class ColonyNest : MonoBehaviour
+    public class ColonyNest : MonoBehaviour, IUpdatable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for nest recruitment radius, spawn timers, and population limits.")]
@@ -32,14 +34,17 @@ namespace AntScout.Swarm.Nest
         private readonly List<ISwarmAgent> _activeWorkers = new List<ISwarmAgent>();
         private bool _isTrailConnected;
         private float _spawnTimer;
+        private int _totalBiomass;
 
         public event Action<bool> OnTrailConnectionChanged;
         public event Action<ISwarmAgent> OnWorkerSpawned;
+        public event Action<int, int> OnBiomassChanged; // (gainedAmount, newTotal)
 
         public Vector3 DepotPosition => _spawnPoint != null ? _spawnPoint.position : transform.position;
         public bool IsTrailConnected => _isTrailConnected;
         public int ActiveWorkerCount => _activeWorkers.Count;
         public int MaxWorkers => _config != null ? _config.MaxActiveWorkers : 0;
+        public int TotalBiomass => _totalBiomass;
 
         private void Awake()
         {
@@ -73,25 +78,33 @@ namespace AntScout.Swarm.Nest
             {
                 _spawnPoint = transform;
             }
-
-            EnsureRVOSimulatorExists();
         }
 
-        private void EnsureRVOSimulatorExists()
+        private void Start()
         {
-            if (RVOSimulator.active == null && FindFirstObjectByType<RVOSimulator>() == null)
+            // Spawn initial StarCraft-style worker squad
+            int initialCount = Mathf.Min(_config.InitialWorkerCount, _config.MaxActiveWorkers);
+            for (int i = 0; i < initialCount; i++)
             {
-                GameObject rvoObj = new GameObject("RVOSimulator");
-                rvoObj.AddComponent<RVOSimulator>();
-                Debug.Log("[ColonyNest] Automatically instantiated an RVOSimulator in the scene for ant swarm local avoidance.");
+                SpawnWorker();
             }
         }
 
-        private void Update()
+        private void OnEnable()
+        {
+            PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
+        }
+
+        private void OnDisable()
+        {
+            PgsTime.Unregister(this);
+        }
+
+        public void OnUpdate(float deltaTime)
         {
             CleanupInactiveWorkers();
             EvaluateTrailConnection();
-            ProcessDeployment();
+            ProcessDeployment(deltaTime);
         }
 
         private void CleanupInactiveWorkers()
@@ -112,25 +125,8 @@ namespace AntScout.Swarm.Nest
 
             if (_trailEmitter != null && _trailEmitter.ActiveNodeCount > 0)
             {
-                Vector3 nestPos = transform.position;
                 float radiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
-                IReadOnlyList<PheromoneNode> nodes = _trailEmitter.ActiveNodes;
-
-                for (int i = 0; i < nodes.Count; i++)
-                {
-                    if (nodes[i].Type == PheromoneType.Recruitment)
-                    {
-                        Vector3 nodePos = nodes[i].Position;
-                        // Measure distance on the horizontal XZ plane
-                        float dx = nodePos.x - nestPos.x;
-                        float dz = nodePos.z - nestPos.z;
-                        if ((dx * dx + dz * dz) <= radiusSqr)
-                        {
-                            _isTrailConnected = true;
-                            break;
-                        }
-                    }
-                }
+                _isTrailConnected = _trailEmitter.HasRecruitmentNear(transform.position, radiusSqr);
             }
 
             if (wasConnected != _isTrailConnected)
@@ -139,18 +135,21 @@ namespace AntScout.Swarm.Nest
             }
         }
 
-        private void ProcessDeployment()
+        private void ProcessDeployment(float deltaTime)
         {
-            if (!_isTrailConnected || _activeWorkers.Count >= _config.MaxActiveWorkers)
+            // StarCraft-style economy: Nest incubates and hatches new workers by spending harvested biomass
+            if (_activeWorkers.Count >= _config.MaxActiveWorkers || _totalBiomass < _config.WorkerBiomassCost)
             {
                 _spawnTimer = 0f;
                 return;
             }
 
-            _spawnTimer += Time.deltaTime;
+            _spawnTimer += deltaTime;
             if (_spawnTimer >= _config.WorkerSpawnInterval)
             {
                 _spawnTimer = 0f;
+                _totalBiomass -= _config.WorkerBiomassCost;
+                OnBiomassChanged?.Invoke(-_config.WorkerBiomassCost, _totalBiomass);
                 SpawnWorker();
             }
         }
@@ -173,19 +172,23 @@ namespace AntScout.Swarm.Nest
         }
 
         /// <summary>
+        /// Deposits harvested food into the colony's biomass stores.
+        /// </summary>
+        public void DepositResource(ResourceType type, int amount, int biomassValue)
+        {
+            int earned = amount * biomassValue;
+            _totalBiomass += earned;
+            OnBiomassChanged?.Invoke(earned, _totalBiomass);
+        }
+
+        /// <summary>
         /// Called by a returning worker when it reaches the nest depot.
+        /// Workers are persistent RTS units and are NOT destroyed upon return.
         /// </summary>
         public void NotifyWorkerReturned(ISwarmAgent agent)
         {
-            if (_activeWorkers.Contains(agent))
-            {
-                _activeWorkers.Remove(agent);
-            }
-
-            if (agent.AgentTransform != null)
-            {
-                Destroy(agent.AgentTransform.gameObject);
-            }
+            // Notification hook for colony audio, UI, or telemetry.
+            // Worker is maintained in _activeWorkers and transitions independently.
         }
 
         private void OnDrawGizmosSelected()

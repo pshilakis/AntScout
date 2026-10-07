@@ -2,16 +2,18 @@ using System;
 using System.Collections.Generic;
 using AntScout.Config;
 using AntScout.Core.Enums;
+using PGS.Core.Time;
 using UnityEngine;
 
 namespace AntScout.Pheromone
 {
     /// <summary>
-    /// Visualizes active pheromone scent nodes in 3D space using Unity's LineRenderer.
-    /// Encapsulates all rendering concerns, adhering strictly to the Single Responsibility Principle (SRP).
+    /// Visualizes independent pheromone scent strokes in 3D space using pooled LineRenderers.
+    /// Each continuous keypress stroke maintains its own distinct color and decay lifecycle without bridge lines.
+    /// Implements ILateUpdatable to render after physics/movement ticks on TimeChannel.World.
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
-    public class PheromoneTrailRenderer : MonoBehaviour
+    public class PheromoneTrailRenderer : MonoBehaviour, ILateUpdatable
     {
         public enum TrailAlignmentMode
         {
@@ -23,7 +25,7 @@ namespace AntScout.Pheromone
         }
 
         [Header("References")]
-        [Tooltip("The trail emitter supplying the active scent node coordinates.")]
+        [Tooltip("The trail emitter supplying active scent segments.")]
         [SerializeField] private PheromoneTrailEmitter _emitter;
 
         [Tooltip("Configuration asset for obtaining node lifetime to compute alpha fades.")]
@@ -51,12 +53,20 @@ namespace AntScout.Pheromone
         [Range(0.01f, 0.5f)]
         [SerializeField] private float _groundYOffset = 0.05f;
 
-        private LineRenderer _lineRenderer;
+        private Material _trailMaterial;
+        private readonly Dictionary<PheromoneTrailSegment, LineRenderer> _segmentRenderers = new Dictionary<PheromoneTrailSegment, LineRenderer>();
+        private readonly Queue<LineRenderer> _linePool = new Queue<LineRenderer>();
         private Vector3[] _positionBuffer = new Vector3[64];
+
+        private readonly Gradient _gradientCache = new Gradient();
+        private readonly GradientColorKey[] _colorKeys = new GradientColorKey[2];
+        private readonly GradientAlphaKey[] _alphaKeys = new GradientAlphaKey[2];
 
         private void Awake()
         {
-            _lineRenderer = GetComponent<LineRenderer>();
+            LineRenderer rootLine = GetComponent<LineRenderer>();
+            _trailMaterial = rootLine.sharedMaterial;
+            rootLine.enabled = false; // Root acts as template and pool container
 
             if (_emitter == null)
             {
@@ -76,74 +86,129 @@ namespace AntScout.Pheromone
                     $"[PheromoneTrailRenderer] Missing required ScoutConfigSO reference on '{gameObject.name}'. " +
                     $"Please assign it in the Inspector.");
             }
-
-            ConfigureLineRenderer();
         }
 
         private void OnEnable()
         {
-            _emitter.OnTrailUpdated += RenderTrail;
+            PgsTime.Register((ILateUpdatable)this, TimeChannel.World);
+            _emitter.OnSegmentCreated += HandleSegmentCreated;
+            _emitter.OnSegmentDestroyed += HandleSegmentDestroyed;
         }
 
         private void OnDisable()
         {
-            _emitter.OnTrailUpdated -= RenderTrail;
+            PgsTime.Unregister((ILateUpdatable)this);
+            _emitter.OnSegmentCreated -= HandleSegmentCreated;
+            _emitter.OnSegmentDestroyed -= HandleSegmentDestroyed;
+            ClearAllRenderers();
         }
 
-        public void SetAlignmentMode(TrailAlignmentMode mode)
+        private void HandleSegmentCreated(PheromoneTrailSegment segment)
         {
-            _alignmentMode = mode;
-            ConfigureLineRenderer();
+            if (segment == null || _segmentRenderers.ContainsKey(segment)) return;
+
+            LineRenderer line = GetOrCreateLineRenderer();
+            ConfigureLineRenderer(line, segment.Type);
+            _segmentRenderers[segment] = line;
         }
 
-        private void ConfigureLineRenderer()
+        private void HandleSegmentDestroyed(PheromoneTrailSegment segment)
         {
-            _lineRenderer.useWorldSpace = true;
-            _lineRenderer.startWidth = _trailWidth;
-            _lineRenderer.endWidth = _trailWidth;
-            _lineRenderer.numCapVertices = 4;
-            _lineRenderer.numCornerVertices = 4;
-            _lineRenderer.positionCount = 0;
+            if (segment != null && _segmentRenderers.TryGetValue(segment, out LineRenderer line))
+            {
+                _segmentRenderers.Remove(segment);
+                RecycleLineRenderer(line);
+            }
+        }
+
+        private LineRenderer GetOrCreateLineRenderer()
+        {
+            if (_linePool.Count > 0)
+            {
+                LineRenderer pooled = _linePool.Dequeue();
+                pooled.gameObject.SetActive(true);
+                pooled.enabled = true;
+                return pooled;
+            }
+
+            GameObject childObj = new GameObject($"SegmentLine_{_segmentRenderers.Count + _linePool.Count}");
+            childObj.transform.SetParent(transform, false);
+
+            LineRenderer newLine = childObj.AddComponent<LineRenderer>();
+            if (_trailMaterial != null)
+            {
+                newLine.material = _trailMaterial;
+            }
+
+            return newLine;
+        }
+
+        private void RecycleLineRenderer(LineRenderer line)
+        {
+            if (line == null) return;
+            line.positionCount = 0;
+            line.enabled = false;
+            line.gameObject.SetActive(false);
+            _linePool.Enqueue(line);
+        }
+
+        private void ClearAllRenderers()
+        {
+            foreach (var kvp in _segmentRenderers)
+            {
+                RecycleLineRenderer(kvp.Value);
+            }
+            _segmentRenderers.Clear();
+        }
+
+        private void ConfigureLineRenderer(LineRenderer line, PheromoneType type)
+        {
+            line.useWorldSpace = true;
+            line.startWidth = _trailWidth;
+            line.endWidth = _trailWidth;
+            line.numCapVertices = 4;
+            line.numCornerVertices = 4;
+            line.positionCount = 0;
 
             if (_alignmentMode == TrailAlignmentMode.FlatOnGround)
             {
-                _lineRenderer.alignment = LineAlignment.TransformZ;
-                // Rotate transform so local +Z points directly world UP (+Y)
-                transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                line.alignment = LineAlignment.TransformZ;
+                line.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             }
             else
             {
-                _lineRenderer.alignment = LineAlignment.View;
+                line.alignment = LineAlignment.View;
             }
         }
 
-        private void LateUpdate()
+        public void OnLateUpdate(float deltaTime)
         {
-            // Maintain world upright orientation if parent scout rotates
-            if (_alignmentMode == TrailAlignmentMode.FlatOnGround)
-            {
-                transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            }
+            float currentTime = PgsTime.ElapsedTime;
+            float lifetime = _config.NodeLifetime;
 
-            // Continuously update alpha fading even when ant is stationary
-            if (_emitter.ActiveNodeCount > 0)
+            // Render each active segment independently
+            foreach (var kvp in _segmentRenderers)
             {
-                RenderTrail();
-            }
-            else if (_lineRenderer.positionCount > 0)
-            {
-                _lineRenderer.positionCount = 0;
+                PheromoneTrailSegment segment = kvp.Key;
+                LineRenderer line = kvp.Value;
+
+                if (_alignmentMode == TrailAlignmentMode.FlatOnGround)
+                {
+                    line.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                }
+
+                RenderSingleSegment(segment, line, currentTime, lifetime);
             }
         }
 
-        private void RenderTrail()
+        private void RenderSingleSegment(PheromoneTrailSegment segment, LineRenderer line, float currentTime, float lifetime)
         {
-            IReadOnlyList<PheromoneNode> nodes = _emitter.ActiveNodes;
+            IReadOnlyList<PheromoneNode> nodes = segment.Nodes;
             int count = nodes.Count;
 
             if (count < 2)
             {
-                _lineRenderer.positionCount = 0;
+                line.positionCount = 0;
                 return;
             }
 
@@ -158,11 +223,10 @@ namespace AntScout.Pheromone
                 _positionBuffer[i] = new Vector3(pos.x, pos.y + _groundYOffset, pos.z);
             }
 
-            _lineRenderer.positionCount = count;
-            _lineRenderer.SetPositions(_positionBuffer);
+            line.positionCount = count;
+            line.SetPositions(_positionBuffer);
 
-            PheromoneType primaryType = nodes[count - 1].Type;
-            Color baseColor = primaryType switch
+            Color baseColor = segment.Type switch
             {
                 PheromoneType.Recruitment => _recruitmentColor,
                 PheromoneType.Alarm => _alarmColor,
@@ -170,18 +234,16 @@ namespace AntScout.Pheromone
                 _ => _recruitmentColor
             };
 
-            float currentTime = Time.time;
-            float lifetime = _config.NodeLifetime;
             float oldestIntensity = nodes[0].GetCurrentIntensity(currentTime, lifetime);
             float newestIntensity = nodes[count - 1].GetCurrentIntensity(currentTime, lifetime);
 
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new GradientColorKey[] { new GradientColorKey(baseColor, 0.0f), new GradientColorKey(baseColor, 1.0f) },
-                new GradientAlphaKey[] { new GradientAlphaKey(oldestIntensity * baseColor.a, 0.0f), new GradientAlphaKey(newestIntensity * baseColor.a, 1.0f) }
-            );
+            _colorKeys[0] = new GradientColorKey(baseColor, 0.0f);
+            _colorKeys[1] = new GradientColorKey(baseColor, 1.0f);
+            _alphaKeys[0] = new GradientAlphaKey(oldestIntensity * baseColor.a, 0.0f);
+            _alphaKeys[1] = new GradientAlphaKey(newestIntensity * baseColor.a, 1.0f);
 
-            _lineRenderer.colorGradient = gradient;
+            _gradientCache.SetKeys(_colorKeys, _alphaKeys);
+            line.colorGradient = _gradientCache;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using AntScout.Core.Enums;
 using AntScout.Core.Interfaces;
+using PGS.Core.Time;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,8 +10,9 @@ namespace AntScout.Player
     /// <summary>
     /// Translates player input from Unity's New Input System into 3D locomotion, dash evasion, and pheromone emission.
     /// Strictly adheres to Single Responsibility Principle (SRP) by decoupling input gathering from gameplay execution.
+    /// Receives deterministic frame updates via PGS.Core.Time on TimeChannel.Player.
     /// </summary>
-    public class ScoutInputHandler : MonoBehaviour
+    public class ScoutInputHandler : MonoBehaviour, IUpdatable
     {
         private IMotor _motor;
         private IDashable _dash;
@@ -42,7 +44,17 @@ namespace AntScout.Player
             }
         }
 
-        private void Update()
+        private void OnEnable()
+        {
+            PgsTime.Register(this, UpdateRate.Continuous, TimeChannel.Player);
+        }
+
+        private void OnDisable()
+        {
+            PgsTime.Unregister(this);
+        }
+
+        public void OnUpdate(float deltaTime)
         {
             ProcessLocomotionInput();
             ProcessDashInput();
