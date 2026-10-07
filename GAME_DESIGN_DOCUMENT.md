@@ -1,20 +1,24 @@
 # Ant Scout: Pheromone Rush
-*A Dynamic Resource-Spawn Micro-RTS / Action Hybrid*
+*A Dynamic Hero-RTS / MOBA Hybrid*
 
 ---
 
 ## 1. Executive Summary & Vision
 
-*Ant Scout: Pheromone Rush* is an action-strategy hybrid designed to eliminate traditional RTS "turtling" and base-building bloat in favor of continuous, dynamic skirmishes. 
+*Ant Scout: Pheromone Rush* is an action-strategy hybrid positioned squarely between a **MOBA (Hero-centric action & skill progression)** and an **RTS (macro resource gathering & indirect swarm management)**.
 
-Instead of constructing static bases and harvesting fixed crystal patches, players control a fast, fragile **Scout Ant** in a bustling backyard/pavement environment. High-value food sources (a dropped grape, a dead beetle, an aphid cluster) spawn dynamically across the map, triggering high-stakes scrambles between your Black Ant colony and rival Red Ants. The player does not micromanage units with a selection box; instead, the player lays **chemical pheromone scent trails** connecting active discovery sites back to the home nest, guiding swarms of autonomous workers and soldier ants into the fray.
+Instead of traditional RTS factions with fixed, asymmetric races (e.g., Terran/Zerg/Protoss), all players operate a biological Colony Nest, but at the start of each match select a specialized **Hero Ant Caste** (e.g., **Scout**, **Soldier**, and future castes). 
+
+The chosen Hero Ant is the player's direct physical commander on the field. During the match, players harvest dynamic resource drops ("Bonanzas") to fuel their colony's economy and earn **Evolutionary Biomass**, unlocking branching in-match **Skill Trees**. Furthermore, the player's Hero Caste directly reshapes the attributes and behaviors of the autonomous minions spawned from their nest:
+* **Scout Hero colonies** deploy fast, wide-ranging foragers with expansive sensory detection bubbles.
+* **Soldier Hero colonies** deploy armored, hard-hitting phalanxes that hit hard and soak damage at the cost of mobility.
 
 ### Key Game Pillars
-1. **Dynamic Bonanzas over Static Bases**: Resources are ephemeral, sudden, and contested. Map control is fluid rather than static.
-2. **The Vanguard Scout**: You are the eyes and nervous system of the colony. High-speed kiting, evasion, and reconnaissance take precedence over brute-force tanking.
-3. **Pheromone-Driven Swarm Macro**: You draw your own supply and reinforcement highways. If your trail reaches the nest, backup arrives; if severed by enemies, you are isolated.
-4. **Minimalist Visual Punch (Zero Asset Fatigue)**: Polished geometric silhouettes, high-contrast team colors (Black/Cyan vs. Crimson Red), glowing neon scent ribbons, and kinetic screenshake / hit-stop over laborious hand-drawn art.
-5. **Scope Discipline**: A focused 7-day development roadmap designed to avoid burnout while establishing a rock-solid, extensible codebase.
+1. **Hero Ant + Swarm Synergy (MOBA meets RTS Macro)**: You control a powerful, customizable Hero avatar with distinct active abilities while indirectly guiding swarms of autonomous workers and combat escorts via chemical pheromone ribbons.
+2. **Asymmetric Hero Castes over Rigid Races**: Matchup diversity comes from player-selected Hero Ants and in-match skilltree adaptations rather than disparate base tech trees.
+3. **Dynamic Resource Bonanzas over Static Bases**: High-value food sources (a dropped grape, a dead beetle, an aphid cluster) spawn dynamically in neutral territory, forcing continuous movement, skirmishing, and map control.
+4. **Pheromone-Driven Supply Lines**: You draw physical chemical scent highways. If your trail connects to the nest, reinforcements and harvesters stream forward; if severed or contested by rival colonies, your vanguard is cut off.
+5. **Minimalist Visual Punch (Zero Asset Fatigue)**: High-contrast silhouettes, glowing neon scent ribbons, kinetic screen juice (hit-stop, screenshake, pheromone pulses), and clean geometric clarity.
 
 ---
 
@@ -22,93 +26,164 @@ Instead of constructing static bases and harvesting fixed crystal patches, playe
 
 ```
  ┌────────────────────────────────────────────────────────┐
- │ 1. RECONNAISSANCE & DISCOVERY                          │
- │ - Scout explores uncharted yard / fog of war.          │
- │ - Audio/visual ping alerts map of dynamic food drop.   │
+ │ 0. HERO SELECTION & DEPLOYMENT                         │
+ │ - Player selects Hero Caste (Scout, Soldier, etc.).    │
+ │ - Hero Caste sets base stats, abilities, & swarm bias. │
  └──────────────────────────┬─────────────────────────────┘
                             │
                             ▼
  ┌────────────────────────────────────────────────────────┐
- │ 2. TRAIL LAYING & RECRUITMENT                          │
- │ - Scout activates pheromone gland while scurrying.     │
- │ - Trail connects discovery site back to Colony Nest.   │
- │ - Colony catches scent; Workers & Soldiers deploy.     │
+ │ 1. RECONNAISSANCE & DYNAMIC BONANZA DROP               │
+ │ - Hero explores the yard / fog of war.                 │
+ │ - Audio/visual pheromone ping announces a food drop.   │
  └──────────────────────────┬─────────────────────────────┘
                             │
                             ▼
  ┌────────────────────────────────────────────────────────┐
- │ 3. PERIMETER CONTEST & HARASSMENT                      │
- │ - Rival Red Ants arrive to contest the drop.           │
- │ - Scout kites, dodges, and tags priority targets.      │
- │ - Allied Soldiers clash with Red Ants; Workers strip.  │
+ │ 2. PHEROMONE HIGHWAYS & SWARM MOBILIZATION             │
+ │ - Hero sprays recruitment scent connecting drop to Nest│
+ │ - Nest spawns specialized caste minions along trail.   │
+ │ - Workers harvest; combat escorts secure perimeter.    │
  └──────────────────────────┬─────────────────────────────┘
                             │
                             ▼
  ┌────────────────────────────────────────────────────────┐
- │ 4. SECURE, REINFORCE & EVOLVE                          │
- │ - Workers haul food chunks back to Nest.               │
- │ - Nest biomass grows -> Unlocks swarm buffs/upgrades.  │
+ │ 3. HERO SKIRMISH & OBJECTIVE CONTEST                   │
+ │ - Rival Hero and enemy swarm contest the food site.    │
+ │ - Heroes clash using active cooldown abilities (Q/W/E) │
+ │ - Tactical plays: sever enemy trails, paint targets.   │
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ 4. BIOMASS DELIVERY & IN-MATCH SKILLTREE PROGRESSION   │
+ │ - Workers deposit food -> Colony Biomass pool grows.   │
+ │ - Level up Hero Skill Tree: unlock active/passive buffs│
+ │ - Colony evolves; push toward enemy nest or win score. │
  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. The Player: The Scout Ant
+## 3. Hero Ant Castes & Swarm Specializations
 
-The player controls an agile, specialized reconnaissance ant. 
+At match start, players lock in their Hero Ant. The selection determines the Hero's direct kit and modifies the colony's minion swarm:
 
-### Stats & Movement
-* **High Base Velocity**: Faster than worker and soldier ants.
-* **Scurry / Dash (Spacebar)**: A burst of acceleration with a brief cooldown to escape enemy surrounds or cross open hazards.
-* **Fragile Health**: Cannot face-tank enemy soldiers in direct melee combat.
-
-### Pheromone Gland System
-* **Pheromone Capacity**: A regenerating resource meter representing the chemical reserve in the scout's abdomen.
-* **Trail Laying (Hold Right Click / Shift)**: Deplete gland reserves to drop a connected chain of scent nodes as you run.
-* **Chemical Types**:
-  * **Recruitment / Highway Scent**: Draws workers and soldiers from the nest along the drawn vector path.
-  * **Alarm / Target Paint (Left Click on Target)**: Marks a specific enemy or carcass. Allied soldiers within range enter a frenzy state and focus fire.
-
----
-
-## 4. World & Dynamic Resource Mechanics
-
-### Dynamic Food Drops ("Bonanzas")
-* **Spawn Intervals**: Periodic events (every 30–60 seconds) at semi-random map coordinates.
-* **Visual & Audio Announcement**: Scent waves ripple across the screen edge pointing toward the drop location.
-* **Food Types**:
-  * *Sugar Granules / Honeydew*: Lightweight, rapid collection for quick worker boosts.
-  * *Fallen Fruit (Grapes/Berries)*: Massive resource pools requiring prolonged perimeter defense.
-  * *Bug Carcasses (Beetles/Moths)*: Requires multiple ants working together to harvest or drag.
-
-### Nest & Swarm Units
-* **The Colony Nest**: The home base. Acts as the delivery depot and spawning ground for:
-  * **Worker Ants**: Non-combatants. Follow pheromone trails to harvest food chunks and haul them back.
-  * **Soldier Ants**: Heavy combatants. Defend workers along the trail and engage hostile units.
+```
+                      ┌──────────────────────┐
+                      │ HERO ANT SELECTION   │
+                      └──────────┬───────────┘
+                                 │
+            ┌────────────────────┴────────────────────┐
+            ▼                                         ▼
+ ┌──────────────────────┐                  ┌──────────────────────┐
+ │   THE SCOUT HERO     │                  │   THE SOLDIER HERO   │
+ ├──────────────────────┤                  ├──────────────────────┤
+ │ • Agile & Fragile    │                  │ • Armored Bruiser    │
+ │ • Deep Scent Glands  │                  │ • High Melee Damage  │
+ │ • Multi-Dash Mobility│                  │ • Slow Base Speed    │
+ └──────────┬───────────┘                  └──────────┬───────────┘
+            │                                         │
+            ▼                                         ▼
+ ┌──────────────────────┐                  ┌──────────────────────┐
+ │ SCOUT SWARM MINIONS  │                  │ SOLDIER SWARM MINIONS│
+ ├──────────────────────┤                  ├──────────────────────┤
+ │ • +35% Move Speed    │                  │ • +50% HP & Defense  │
+ │ • 12m+ Scent Bubble  │                  │ • Heavy Mandible Bite│
+ │ • Wide Area Search   │                  │ • -20% Move Speed    │
+ │ • Rapid Food Hauling │                  │ • Tight Perimeter Hub│
+ └──────────────────────┘                  └──────────────────────┘
+```
 
 ---
 
-## 5. Architectural Standards & Design Philosophy
+### Caste 1: The Scout (Recon & High-Speed Macro)
 
-To prevent codebase rot and maintain strict professional quality, the project follows these mandatory engineering guidelines:
+* **Hero Playstyle**: Fast, evasive, and opportunistic. Excels at hit-and-run tactics, cutting enemy supply trails, and claiming distant food drops before opponents can react.
+* **Hero Base Attributes**:
+  * Very high base speed (~8.5 m/s) and rapid turning.
+  * Fragile chitin (low health pool); vulnerable to direct soldier surrounds.
+  * Large pheromone reservoir with rapid chemical recharge.
+* **Colony Swarm Modifiers**:
+  * **Swift Foragers**: Worker and escort ants move +35% faster.
+  * **Expansive Antennal Reach**: Minion sensory sampling radius increased to 12.0m+; wider Area-Restricted Search (6.0m+ wander radius at trail ends).
+  * **Efficient Carrying**: Workers harvest and deposit food chunks with lower turnaround latency.
+* **Hero Skill Tree Paths**:
+  * *Mobility & Evasion*: Multi-charge dash, terrain hops/scurrying, trail-haste passive (movement speed boost while running on active pheromone trails).
+  * *Chemical Trailcraft*: Dense highways (trails last longer and cost less energy), blinding repellent scent (disrupts enemy worker tracking), speed-boosting scent ribbons.
+  * *Scouting Radar*: Pheromone pulse (briefly reveals distant bonanzas and enemy hero location through fog of war).
 
-### A. SOLID Principles
-* **Single Responsibility (SRP)**: Each class manages only one domain concern (e.g. `ScoutMotor` moves the player, `PheromoneGland` manages chemical pools, `TrailRenderer` draws visuals).
-* **Open/Closed (OCP)**: New ant castes or resource types implement common interfaces (`ISwarmAgent`, `IHarvestable`) without modifying the core simulation loops.
-* **Liskov Substitution (LSP)**: Any unit implementing `ISwarmAgent` can be navigated by the pheromone steering system interchangeably.
-* **Interface Segregation (ISP)**: Interfaces are kept lean and focused (e.g. `IDamageable`, `IPheromoneSensor`, `IControllable`).
-* **Dependency Inversion (DIP)**: High-level systems interact with pure domain abstractions rather than concrete engine implementations.
+---
+
+### Caste 2: The Soldier (Frontline Enforcer & Area Denial)
+
+* **Hero Playstyle**: A durable brawler designed to anchor contested resource nodes, crush enemy harvesters, and duel rival heroes in brutal close-quarters combat.
+* **Hero Base Attributes**:
+  * High health pool and passive damage resistance (thick chitin).
+  * Crushing mandibles dealing heavy single-target damage and cleave.
+  * Lower movement speed (~5.0 m/s); relies on positioning and crowd control.
+* **Colony Swarm Modifiers**:
+  * **Chitin Phalanx**: Minions spawn with +50% health and increased mandible strike power.
+  * **Escort Protocol**: Soldier minions prioritize forming defensive rings around active food clusters.
+  * **Weighted March**: Minions move ~20% slower; tighter, more disciplined area-restricted wander radii (3.5m) to maintain defensive cohesion.
+* **Hero Skill Tree Paths**:
+  * *Mandible Mastery*: Armor-crushing bite (reduces target defense), sweeping cleave attack, jaw-clamp root (temporarily immobilizes fleeing scouts).
+  * *Pheromone Roar / Command*: Battle frenzy aura (temporarily buffs allied minion attack speed and tenacity), alarm paint (focus-fires all nearby allied soldiers onto a marked enemy).
+  * *Juggernaut Carapace*: Reactive chitin plating (reduces incoming burst damage), shockwave ground stomp (stuns or knocks back enemy swarms).
+
+---
+
+### Future Hero Castes (Open/Closed Architecture)
+* **The Weaver / Formicine (Artillery & Trapper)**: Ranged formic acid spit, slowing silk snares, lingering toxic chemical puddles.
+* **The Queen's Attendant / Nurse (Bio-Surgeon & Support)**: Accelerated egg incubation, healing pheromone mist, bio-conversion doubling harvested resource yield.
+
+---
+
+## 4. In-Match Skill Tree & Progression System
+
+Progression in *Ant Scout* is session-based and dynamic, mirroring modern MOBA/action-RTS mechanics:
+
+1. **Biomass Collection**:
+   - Every food chunk delivered to the Colony Nest grants shared **Evolutionary Biomass**.
+   - Defeating enemy heroes, soldiers, or wildlife also yields concentrated biomass droplets.
+2. **Tiered Upgrades (Tiers 1 – 4)**:
+   - As colony biomass thresholds are met, the player unlocks a Skill Point.
+   - Players select from mutually exclusive or branching upgrades in the field (via hotkeys or quick-select UI).
+3. **Strategic Counter-Building**:
+   - If a Scout faces a heavy Soldier, they can tech into *Acidic Trail Dissolver* or *Multi-Charge Sprint*.
+   - If a Soldier faces an evasive Scout, they can tech into *Jaw-Clamp Root* or *Pheromone Alarm Roar*.
+
+---
+
+## 5. Architectural Standards & SOLID Grounding
+
+To support this Hero-RTS hybrid without system sprawl, the codebase adheres to strict software design principles:
+
+### A. SOLID Principles in Practice
+* **Single Responsibility (SRP)**:
+  * `HeroMotor`: Pure 2D movement and physical translation.
+  * `HeroAbilitySystem`: Manages cooldowns, energy costs, and ability triggering.
+  * `HeroSkillTree`: Tracks unlocked tiers and dispatches stat/ability modifiers.
+  * `SwarmColonyModifier`: Applies caste-specific stat multipliers to spawned minions.
+* **Open/Closed (OCP)**:
+  * New Hero Castes are created by implementing polymorphic contracts (`IHeroCaste`, `IAbility`, `ISkillNode`) and ScriptableObject definitions without rewriting core movement or nest spawning loops.
+* **Liskov Substitution (LSP)**:
+  * Any hero ant caste swaps transparently into player input controllers, camera followers, and HUD elements.
+* **Interface Segregation (ISP)**:
+  * Modular interfaces such as `IDashable`, `IPheromoneEmitter`, `IDamageable`, `ISkillTreeTarget` keep class footprints lean and testable.
+* **Dependency Inversion (DIP)**:
+  * High-level gameplay systems depend on pure abstractions (`IPheromoneEmitter`, `ISwarmAgent`, `IHarvestable`) rather than concrete Monobehaviours.
 
 ### B. Anti-Hardcoding & Configuration Standards
-* **No Magic Numbers or Strings**: Speeds, timers, health totals, radii, and decay rates are strictly defined in dedicated `ScriptableObject` assets with clear tooltips and ranges.
-* **Fail-Fast & Strict Exceptions**: Missing configuration assets, unassigned references, or invalid simulation states throw explicit exceptions (e.g. `InvalidOperationException`) immediately rather than failing silently with default fallbacks.
-* **Inspector Tunability**: Game balance can be tuned live during Play mode by editing configuration assets.
+* **ScriptableObject Single Source of Truth**: All hero speeds, health values, ability cooldowns, minion stat multipliers, and skilltree nodes are configured in dedicated `ConfigSO` assets.
+* **Fail-Fast Standard**: Mandatory references throw descriptive `InvalidOperationException` or `ArgumentNullException` immediately on `Awake`/`Initialize` rather than silently degrading with magic numbers.
 
 ---
 
-## 6. Industry Benchmarks & References
+## 6. Industry Benchmarks & Case Studies
 
-* **Sim Ant (Maxis)**: Biological authenticity, pheromone trail recruitment, nest dynamics.
-* **Tooth and Tail (Pocketwatch Games)**: Indirect RTS command via a physical field commander rather than cursor drag-selection.
-* **StarCraft (Blizzard)**: Visceral Zergling surround tactics, dynamic skirmish micro, distinct asymmetric roles.
-* **Pikmin (Nintendo)**: Swarm escort, dividing labor between carrying resources and fighting off wildlife.
+* **Warcraft III (Blizzard)**: Hero-centric army synergy, field leveling, and ability-based skirmish micro.
+* **Tooth and Tail (Pocketwatch Games)**: Indirect RTS command executed strictly through the player's physical avatar rather than cursor boxes.
+* **Battlerite / Heroes of the Storm (Stunlock / Blizzard)**: Kinetic, crisp skillshots and talent tree customization without tedious inventory/item management.
+* **StarCraft II (Blizzard)**: Visceral Zergling swarm fluid dynamics, surround behaviors, and macro economic rhythm.
+* **SimAnt (Maxis)**: Authentic biological foundation—chemical pheromone recruitment and colony caste division.
