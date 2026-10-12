@@ -35,29 +35,26 @@ namespace AntScout.Player
         public bool IsLayingTrail => _isLayingTrail;
         public bool IsDepleted => _isDepleted;
 
+        public void Initialize(ScoutConfigSO config, PheromoneTrailEmitter emitter)
+        {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _emitter = emitter ?? throw new ArgumentNullException(nameof(emitter));
+            _currentCapacity = _config.MaxGlandCapacity;
+            _isDepleted = false;
+        }
+
         private void Awake()
         {
-            if (_config == null)
-            {
-                throw new InvalidOperationException(
-                    $"[ScoutGland] Missing required ScoutConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid ScoutConfigSO in the Inspector.");
-            }
-
-            if (_emitter == null)
+            if (_config != null && _emitter == null)
             {
                 _emitter = GetComponentInChildren<PheromoneTrailEmitter>();
             }
 
-            if (_emitter == null)
+            if (_config != null)
             {
-                throw new InvalidOperationException(
-                    $"[ScoutGland] Missing required PheromoneTrailEmitter on or under GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid emitter in the Inspector.");
+                _currentCapacity = _config.MaxGlandCapacity;
+                _isDepleted = false;
             }
-
-            _currentCapacity = _config.MaxGlandCapacity;
-            _isDepleted = false;
         }
 
         public void SetLayingTrail(bool active, PheromoneType type = PheromoneType.Recruitment)
@@ -95,6 +92,8 @@ namespace AntScout.Player
 
         public void OnUpdate(float deltaTime)
         {
+            if (_config == null || _emitter == null) return;
+
             if (_isLayingTrail)
             {
                 if (_currentCapacity > 0f)

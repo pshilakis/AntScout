@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -256,6 +257,50 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 832a4592eaff42c8a95334db0ee17a99, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Camera.Runtime::PGS.Camera.Core.CameraController
+  _timeChannel: 1
+  _defaultTransition:
+    _duration: 0.5
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  _traumaShake:
+    _traumaDecayRate: 1.2
+    _maxTranslation: {x: 0.3, y: 0.3, z: 0.15}
+    _maxRotation: {x: 6, y: 6, z: 10}
+    _noiseFrequency: 22
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -484,6 +529,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.RVO.RVOSimulator
   version: 1073741824
+  workerThreads: 2
+  doubleBuffering: 0
   hardCollisions: 0
   symmetryBreakingBias: 0.1
   movementPlane: 0
@@ -538,6 +585,95 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &910000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 910000002}
+  - component: {fileID: 910000003}
+  - component: {fileID: 910000004}
+  m_Layer: 0
+  m_Name: IsometricVirtualCamera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &910000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 910000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &910000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 910000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ec6b9ed5a43f5a68d73ce0ae1f30b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Camera.Runtime::PGS.Camera.VirtualCameras.IsometricVirtualCamera
+  _definition: {fileID: 11400000, guid: 35409ed3310c493287645552a9837997, type: 2}
+  _priority: 20
+  _transition:
+    _duration: 0.5
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  _targetTransform: {fileID: 0}
+  _enableZoom: 1
+--- !u!114 &910000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 910000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de1a51cedc064b86a3ce180bb51bb343, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.CameraSystem.IsometricCameraInputBridge
+  _inputReader: {fileID: 0}
+  _virtualCamera: {fileID: 910000003}
 --- !u!1 &1819214174
 GameObject:
   m_ObjectHideFlags: 0
@@ -726,7 +862,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6165533058979464612, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.2
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6165533058979464612, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
       propertyPath: m_LocalPosition.z
@@ -765,6 +901,53 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
+--- !u!1 &920000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 920000002}
+  - component: {fileID: 920000003}
+  m_Layer: 0
+  m_Name: PgsInputReader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &920000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &920000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9df96dbe65f4501468c2fc357c8d0630, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Input.Runtime::PGS.Input.Readers.PgsInputReader
+  _settings: {fileID: 11400000, guid: 26bc24fed6c5419eb70808bdf427d1f8, type: 2}
+  _initialMode: 0
+  _dontDestroyOnLoad: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -776,3 +959,5 @@ SceneRoots:
   - {fileID: 419853477}
   - {fileID: 562298555112415107}
   - {fileID: 1819214178}
+  - {fileID: 910000002}
+  - {fileID: 920000002}

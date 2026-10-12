@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Pheromone;
+using AntScout.Player;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using PGS.Core.Time;
@@ -67,13 +68,6 @@ namespace AntScout.Swarm.Nest
                 _trailEmitter = FindFirstObjectByType<PheromoneTrailEmitter>();
             }
 
-            if (_trailEmitter == null)
-            {
-                throw new InvalidOperationException(
-                    $"[ColonyNest] Unable to find a PheromoneTrailEmitter in the scene for GameObject '{gameObject.name}'. " +
-                    $"Please assign one in the Inspector.");
-            }
-
             if (_spawnPoint == null)
             {
                 _spawnPoint = transform;
@@ -82,6 +76,26 @@ namespace AntScout.Swarm.Nest
 
         private void Start()
         {
+            if (_trailEmitter == null)
+            {
+                _trailEmitter = FindFirstObjectByType<PheromoneTrailEmitter>();
+                if (_trailEmitter == null)
+                {
+                    var scout = FindFirstObjectByType<ScoutHero>();
+                    if (scout != null)
+                    {
+                        _trailEmitter = scout.TrailEmitter;
+                    }
+                }
+            }
+
+            if (_trailEmitter == null)
+            {
+                throw new InvalidOperationException(
+                    $"[ColonyNest] Unable to find a PheromoneTrailEmitter in the scene for GameObject '{gameObject.name}'. " +
+                    $"Please ensure a Scout or PheromoneTrail exists in the scene.");
+            }
+
             // Spawn initial StarCraft-style worker squad
             int initialCount = Mathf.Min(_config.InitialWorkerCount, _config.MaxActiveWorkers);
             for (int i = 0; i < initialCount; i++)
