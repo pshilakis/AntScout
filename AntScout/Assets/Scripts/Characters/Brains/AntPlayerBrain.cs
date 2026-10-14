@@ -8,17 +8,17 @@ using PGS.Player.Input;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace AntScout.Player
+namespace AntScout.Characters.Brains
 {
     /// <summary>
-    /// Event-driven, zero-magic-string input bridge connecting PgsInputReader actions to AntCharacter.
+    /// Event-driven human player brain connecting PgsInputReader actions to AntCharacter.
     /// Reads ability-to-InputActionReference pairings directly from CharacterDefinition (Single Source of Truth)
     /// so no duplicate input references need to be wired on the prefab.
     /// Grounded in Single Responsibility (SRP), Open/Closed (OCP), and Dependency Inversion (DIP).
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AntCharacter))]
-    public class AntPlayerInputBridge : PgsInputBridge, IPlayerInputProvider
+    public partial class AntPlayerBrain : PgsInputBridge
     {
         private AntCharacter _character;
         private bool _isEnabled = true;
@@ -28,7 +28,7 @@ namespace AntScout.Player
 
         public bool IsEnabled
         {
-            get => _isEnabled;
+            get => enabled && _isEnabled;
             set
             {
                 _isEnabled = value;
@@ -43,7 +43,7 @@ namespace AntScout.Player
         {
             get
             {
-                if (!_isEnabled || InputReader == null)
+                if (!enabled || !_isEnabled || InputReader == null)
                 {
                     return PlayerInputContext.Empty;
                 }
@@ -75,26 +75,51 @@ namespace AntScout.Player
 
         protected override void Awake()
         {
-            _character = GetComponent<AntCharacter>();
-            if (_character == null)
-            {
-                throw new InvalidOperationException($"[{name}] AntPlayerInputBridge requires an AntCharacter on the same GameObject!");
-            }
-
+            ValidateConfiguration();
             base.Awake();
         }
 
         private void Start()
         {
-            if (InputReader != null && _character != null && _character.Definition != null)
+            if (enabled && InputReader != null && _character != null && _character.Definition != null)
             {
                 _character.Definition.RegisterInputActions(InputReader);
             }
+
+            AttachCameraIfActive();
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            AttachCameraIfActive();
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            ResetInput();
+            DetachCameraIfTargeted();
+        }
+
+        private void AttachCameraIfActive()
+        {
+            if (!enabled || !isActiveAndEnabled || _character == null) return;
 
             var cameraController = CameraController.GetController(PlayerIndex) ?? CameraController.ActiveInstance;
             if (cameraController != null && cameraController.ActiveVirtualCamera != null && cameraController.ActiveVirtualCamera.Target == null)
             {
                 cameraController.ActiveVirtualCamera.Target = _character;
+            }
+        }
+
+        private void DetachCameraIfTargeted()
+        {
+            var cameraController = CameraController.GetController(PlayerIndex) ?? CameraController.ActiveInstance;
+            if (cameraController != null && cameraController.ActiveVirtualCamera != null &&
+                ReferenceEquals(cameraController.ActiveVirtualCamera.Target, _character))
+            {
+                cameraController.ActiveVirtualCamera.Target = null;
             }
         }
 
@@ -133,7 +158,7 @@ namespace AntScout.Player
 
         private void HandleActionTriggered(InputActionReference triggeredInput)
         {
-            if (!_isEnabled || triggeredInput == null || _character == null || _character.Definition == null)
+            if (!enabled || !_isEnabled || triggeredInput == null || _character == null || _character.Definition == null)
             {
                 return;
             }
@@ -167,7 +192,7 @@ namespace AntScout.Player
 
         private void HandleCameraZoom(float delta)
         {
-            if (!_isEnabled || Mathf.Abs(delta) <= 0.0001f)
+            if (!enabled || !_isEnabled || Mathf.Abs(delta) <= 0.0001f)
             {
                 return;
             }

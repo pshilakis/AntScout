@@ -17,9 +17,11 @@ GameObject:
   - component: {fileID: 1000000000000011}
   - component: {fileID: 1000000000000010}
   - component: {fileID: 2118210952930008191}
-  - component: {fileID: 1000000000000008}
   - component: {fileID: 6022403423633082031}
   - component: {fileID: 7626023654164514371}
+  - component: {fileID: 4650450323193879233}
+  - component: {fileID: -6078194950024911233}
+  - component: {fileID: 5380449462745748624}
   m_Layer: 0
   m_Name: Vanguard
   m_TagString: Player
@@ -177,20 +179,6 @@ MonoBehaviour:
   _colonyTeamId: 0
   _definition: {fileID: 11400000, guid: eb656104d76136245b72223858e46b02, type: 2}
   _modelTransform: {fileID: 1018656556669368293}
---- !u!114 &1000000000000008
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1628693764415974340}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1771730c67147b4aaddd40f51053ebe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Player.AntPlayerInputBridge
-  _playerIndex: 0
-  _inputReader: {fileID: 0}
 --- !u!114 &6022403423633082031
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -219,6 +207,56 @@ MonoBehaviour:
   _timeChannel: 0
   _maxConcurrentStatuses: 16
   _immuneStatusTypes: []
+--- !u!114 &4650450323193879233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f5cf2c1b787252479a21a3949305ed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntPlayerBrain
+  _playerIndex: 0
+  _inputReader: {fileID: 0}
+--- !u!114 &-6078194950024911233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38545199ef137904b86f1e624317dcbc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntAiBrain
+  _homeNest: {fileID: 0}
+  _targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _detectionRadius: 8
+  _leashRadius: 14
+  _minGlandRatioToPave: 0.5
+  _arrivalDistance: 1.2
+  _scanInterval: 0.15
+--- !u!114 &5380449462745748624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1a22ec07a512a3468408a26d827dcf6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntBrainController
+  _brainMode: 0
+  _playerBrain: {fileID: 0}
+  _aiBrain: {fileID: 0}
 --- !u!1 &6371134376639563138
 GameObject:
   m_ObjectHideFlags: 0

@@ -17,7 +17,11 @@ GameObject:
   - component: {fileID: 1000000000000011}
   - component: {fileID: 1000000000000010}
   - component: {fileID: 2118210952930008191}
-  - component: {fileID: 1000000000000008}
+  - component: {fileID: 6022403423633082031}
+  - component: {fileID: 7626023654164514371}
+  - component: {fileID: 5518014029966792389}
+  - component: {fileID: -346565087781962868}
+  - component: {fileID: 3032528351523122725}
   m_Layer: 0
   m_Name: Scout
   m_TagString: Player
@@ -172,9 +176,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b582ff799674a438cf9d4f58787019c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.AntCharacter
+  _colonyTeamId: 0
   _definition: {fileID: 11400000, guid: 9350adb4692047c1b00e4913f21c7a30, type: 2}
   _modelTransform: {fileID: 1018656556669368293}
---- !u!114 &1000000000000008
+--- !u!114 &6022403423633082031
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -183,11 +188,75 @@ MonoBehaviour:
   m_GameObject: {fileID: 1628693764415974340}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1771730c67147b4aaddd40f51053ebe, type: 3}
+  m_Script: {fileID: 11500000, guid: e04622113a8bf234295461fb91da2493, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Player.AntPlayerInputBridge
+  m_EditorClassIdentifier: PGS.Stats.Runtime::PGS.Stats.StatsController
+  _initialStats: []
+--- !u!114 &7626023654164514371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aeaaa8aff15b394c8fd0c1b483134ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Effects.Runtime::PGS.Effects.StatusReceiver
+  _timeChannel: 0
+  _maxConcurrentStatuses: 16
+  _immuneStatusTypes: []
+--- !u!114 &5518014029966792389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f5cf2c1b787252479a21a3949305ed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntPlayerBrain
   _playerIndex: 0
   _inputReader: {fileID: 0}
+--- !u!114 &-346565087781962868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38545199ef137904b86f1e624317dcbc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntAiBrain
+  _homeNest: {fileID: 0}
+  _targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _detectionRadius: 8
+  _leashRadius: 14
+  _minGlandRatioToPave: 0.5
+  _arrivalDistance: 1.2
+  _scanInterval: 0.15
+--- !u!114 &3032528351523122725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1a22ec07a512a3468408a26d827dcf6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntBrainController
+  _brainMode: 0
+  _playerBrain: {fileID: 0}
+  _aiBrain: {fileID: 0}
 --- !u!1 &6371134376639563138
 GameObject:
   m_ObjectHideFlags: 0

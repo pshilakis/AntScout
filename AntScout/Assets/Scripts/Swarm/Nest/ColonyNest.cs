@@ -29,6 +29,9 @@ namespace AntScout.Swarm.Nest
         [Tooltip("The pheromone trail emitter tracked by the colony.")]
         [SerializeField] private PheromoneTrailEmitter _trailEmitter;
 
+        [Tooltip("Optional visual trail prefab spawned if no PheromoneTrailEmitter exists for this colony in the scene.")]
+        [SerializeField] private GameObject _pheromoneTrailPrefab;
+
         [Tooltip("Prefab instantiated when deploying worker ants (must contain an ISwarmAgent component).")]
         [SerializeField] private GameObject _workerPrefab;
 
@@ -53,11 +56,7 @@ namespace AntScout.Swarm.Nest
         private void Awake()
         {
             ValidateNestConfiguration();
-
-            if (_trailEmitter == null)
-            {
-                PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter);
-            }
+            ResolveTrailEmitter();
 
             if (_spawnPoint == null)
             {
@@ -69,11 +68,7 @@ namespace AntScout.Swarm.Nest
 
         private void Start()
         {
-            if (_trailEmitter == null)
-            {
-                PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter);
-            }
-
+            ResolveTrailEmitter();
             ValidateTrailEmitter();
 
             // Spawn initial StarCraft-style worker squad
@@ -81,6 +76,28 @@ namespace AntScout.Swarm.Nest
             for (int i = 0; i < initialCount; i++)
             {
                 SpawnWorker();
+            }
+        }
+
+        private void ResolveTrailEmitter()
+        {
+            if (_trailEmitter != null && _trailEmitter.ColonyTeamId == _colonyTeamId)
+            {
+                return;
+            }
+
+            if (!PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter))
+            {
+                if (_pheromoneTrailPrefab != null)
+                {
+                    GameObject instance = Instantiate(_pheromoneTrailPrefab, transform.position, Quaternion.identity);
+                    instance.name = $"PheromoneTrail_Colony{_colonyTeamId}";
+                    _trailEmitter = instance.GetComponent<PheromoneTrailEmitter>();
+                    if (_trailEmitter != null)
+                    {
+                        _trailEmitter.SetColonyTeam(_colonyTeamId);
+                    }
+                }
             }
         }
 

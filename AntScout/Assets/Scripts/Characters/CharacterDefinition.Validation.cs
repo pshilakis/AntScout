@@ -85,10 +85,9 @@ namespace AntScout.Characters
                 }
             }
 
-            if (_utilityAction == null)
-            {
-                throw new InvalidOperationException($"[{name}] Missing UtilityAction (CombatActionDefinition)! Assign one in the Inspector.");
-            }
+            if (_primaryAction != null) _primaryAction.Validate();
+            if (_secondaryAction != null) _secondaryAction.Validate();
+            if (_utilityAction != null) _utilityAction.Validate();
         }
     }
 }

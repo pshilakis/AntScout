@@ -4,6 +4,7 @@ using AntScout.Core.Interfaces;
 using AntScout.Core.Stats;
 using PGS.Combat.Execution;
 using PGS.Combat.Targeting;
+using PGS.Core;
 using PGS.Effects;
 using UnityEngine;
 
@@ -30,6 +31,13 @@ namespace AntScout.Characters
         [Header("Colony Faction (com.pgs.combat)")]
         [Tooltip("Numeric team identifier (0 = Colony 1 / Player, 1 = Colony 2 / Enemy AI).")]
         [SerializeField] private int _colonyTeamId = 0;
+
+        [Header("Vitals (Live Inspector Telemetry)")]
+        [ReadOnly]
+        [SerializeField] private float _currentHealth;
+
+        [ReadOnly]
+        [SerializeField] private float _maxHealth;
 
         private readonly ColonyVitals _vitals = new ColonyVitals();
         private bool _isStunned;
@@ -136,12 +144,18 @@ namespace AntScout.Characters
 
         public DamageResult ReceiveDamage(float amount, in HitContext context)
         {
-            return _vitals.ReceiveDamage(amount, in context);
+            var result = _vitals.ReceiveDamage(amount, in context);
+            _currentHealth = _vitals.CurrentHealth;
+            _maxHealth = _vitals.MaxHealth;
+            Debug.Log($"<color=orange>[{name} - Team {_colonyTeamId}] Hit by {context.Instigator?.name ?? "Unknown"}! Took {result.DamageApplied:F1} damage ({amount:F1} raw - {_vitals.Defense:F1} def). HP: {_currentHealth:F1}/{_maxHealth:F1}</color>");
+            return result;
         }
 
         public void ReceiveHealing(float amount, in HitContext context)
         {
             _vitals.ReceiveHealing(amount, in context);
+            _currentHealth = _vitals.CurrentHealth;
+            _maxHealth = _vitals.MaxHealth;
         }
 
         #endregion
@@ -201,10 +215,17 @@ namespace AntScout.Characters
                     _definition.Defense,
                     _definition.Attack);
                 _isAlive = _vitals.IsAlive;
+                _currentHealth = _vitals.CurrentHealth;
+                _maxHealth = _vitals.MaxHealth;
             }
 
             if (!_combatSubscribed)
             {
+                _vitals.OnHealthChanged += (curr, max) =>
+                {
+                    _currentHealth = curr;
+                    _maxHealth = max;
+                };
                 _vitals.OnDied += HandleCharacterDied;
                 if (_combatExecutor != null)
                 {
