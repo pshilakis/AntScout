@@ -26,7 +26,8 @@ MonoBehaviour:
         _sprintSpeed: 11
         _groundAcceleration: 40
         _groundDeceleration: 40
-        _sprintChannel: 1
+        _canSprint: 0
+        _canCrouch: 0
     - rid: 1000000000000002
       type: {class: AirTraversalModule, ns: PGS.Player.Traversal.Modules, asm: PGS.Player.Runtime}
       data:

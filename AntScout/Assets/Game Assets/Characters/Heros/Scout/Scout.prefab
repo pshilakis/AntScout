@@ -13,8 +13,11 @@ GameObject:
   - component: {fileID: 7492019482016392011}
   - component: {fileID: 2363482022606832680}
   - component: {fileID: 5593989974126393334}
-  - component: {fileID: 1000000000000008}
+  - component: {fileID: 1000000000000009}
+  - component: {fileID: 1000000000000011}
+  - component: {fileID: 1000000000000010}
   - component: {fileID: 2118210952930008191}
+  - component: {fileID: 1000000000000008}
   m_Layer: 0
   m_Name: Scout
   m_TagString: Player
@@ -115,8 +118,7 @@ MonoBehaviour:
   _traversalDefinition: {fileID: 11400000, guid: 89ab34cd56ef401289abcdef01234567, type: 2}
   _speedMultiplier: 1
   _gravityMultiplier: 1
-  _crouchActionChannel: 2
---- !u!114 &1000000000000008
+--- !u!114 &1000000000000009
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -125,15 +127,39 @@ MonoBehaviour:
   m_GameObject: {fileID: 1628693764415974340}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7488687f46b749668c737fd8888247e0, type: 3}
+  m_Script: {fileID: 11500000, guid: 56cf7ed4515c46d4aad64ca89b47c1eb, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Player.ScoutPlayerInputBridge
-  _playerIndex: 0
-  _inputReader: {fileID: 0}
-  _dashAction: {fileID: 0}
-  _alarmAction: {fileID: 0}
-  _recruitmentAction: {fileID: 0}
-  _targetCamera: {fileID: 0}
+  m_EditorClassIdentifier: PGS.Combat.Runtime::PGS.Combat.Execution.CombatActionExecutor
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _timeChannel: 1
+--- !u!114 &1000000000000011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdb113b2b1989994da499733179fa109, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Combat.Runtime::PGS.Combat.Telegraphs.CombatTelegraphCoordinator
+  _telegraphSource: {fileID: 0}
+--- !u!114 &1000000000000010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 829e417610c4404da6de8424caf7cbdc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterGland
+  _pheromoneTrailPrefab: {fileID: 1000000000000001, guid: 9812ef4567ab4cd089ef12345678abcd, type: 3}
 --- !u!114 &2118210952930008191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,12 +169,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 1628693764415974340}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b17a10243fe423ea7bcde1029384756, type: 3}
+  m_Script: {fileID: 11500000, guid: 4b582ff799674a438cf9d4f58787019c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Player.ScoutHero
-  _config: {fileID: 11400000, guid: ef505a48ec7faf14ea34f0cfce8aabe2, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.AntCharacter
+  _definition: {fileID: 11400000, guid: 9350adb4692047c1b00e4913f21c7a30, type: 2}
   _modelTransform: {fileID: 1018656556669368293}
-  _pheromoneTrailPrefab: {fileID: 1000000000000001, guid: 9812ef4567ab4cd089ef12345678abcd, type: 3}
+--- !u!114 &1000000000000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1628693764415974340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1771730c67147b4aaddd40f51053ebe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Player.AntPlayerInputBridge
+  _playerIndex: 0
+  _inputReader: {fileID: 0}
 --- !u!1 &6371134376639563138
 GameObject:
   m_ObjectHideFlags: 0

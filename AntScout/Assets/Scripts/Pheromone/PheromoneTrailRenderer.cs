@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using AntScout.Config;
 using AntScout.Core.Enums;
 using PGS.Core.Time;
 using UnityEngine;
@@ -27,9 +26,6 @@ namespace AntScout.Pheromone
         [Header("References")]
         [Tooltip("The trail emitter supplying active scent segments.")]
         [SerializeField] private PheromoneTrailEmitter _emitter;
-
-        [Tooltip("Configuration asset for obtaining node lifetime to compute alpha fades.")]
-        [SerializeField] private ScoutConfigSO _config;
 
         [Header("Orientation & Alignment")]
         [Tooltip("Choose whether the ribbon lies flat like paint on the floor, or billboards to face the camera.")]
@@ -77,13 +73,6 @@ namespace AntScout.Pheromone
             {
                 throw new InvalidOperationException(
                     $"[PheromoneTrailRenderer] Missing required PheromoneTrailEmitter reference on '{gameObject.name}'. " +
-                    $"Please assign it in the Inspector.");
-            }
-
-            if (_config == null)
-            {
-                throw new InvalidOperationException(
-                    $"[PheromoneTrailRenderer] Missing required ScoutConfigSO reference on '{gameObject.name}'. " +
                     $"Please assign it in the Inspector.");
             }
         }
@@ -184,7 +173,7 @@ namespace AntScout.Pheromone
         public void OnLateUpdate(float deltaTime)
         {
             float currentTime = PgsTime.ElapsedTime;
-            float lifetime = _config.NodeLifetime;
+            float lifetime = _emitter != null ? _emitter.NodeLifetime : 12.0f;
 
             // Render each active segment independently
             foreach (var kvp in _segmentRenderers)

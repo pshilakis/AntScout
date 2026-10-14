@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Core.Interfaces;
 using PGS.Core.Time;
@@ -14,9 +13,14 @@ namespace AntScout.Pheromone
     /// </summary>
     public class PheromoneTrailEmitter : MonoBehaviour, IPheromoneEmitter, IUpdatable
     {
-        [Header("Configuration")]
-        [Tooltip("Tunable configuration defining node placement spacing and lifetime.")]
-        [SerializeField] private ScoutConfigSO _config;
+        [Header("Trail Dynamics")]
+        [Tooltip("Minimum distance in meters the ant must travel before placing the next scent node.")]
+        [Min(0.05f)]
+        [SerializeField] private float _nodePlacementDistance = 0.35f;
+
+        [Tooltip("Lifetime in seconds before a pheromone scent node completely expires and decays.")]
+        [Min(0.5f)]
+        [SerializeField] private float _nodeLifetime = 12.0f;
 
         private readonly List<PheromoneTrailSegment> _segments = new List<PheromoneTrailSegment>();
         private PheromoneTrailSegment _currentSegment;
@@ -27,7 +31,8 @@ namespace AntScout.Pheromone
         public event Action OnTrailUpdated;
 
         public IReadOnlyList<PheromoneTrailSegment> ActiveSegments => _segments;
-        public float NodeLifetime => _config != null ? _config.NodeLifetime : 30f;
+        public float NodePlacementDistance => _nodePlacementDistance;
+        public float NodeLifetime => _nodeLifetime;
         public bool IsSegmentActive(PheromoneTrailSegment segment) => segment != null && _segments.Contains(segment);
 
         public int ActiveNodeCount
@@ -45,11 +50,13 @@ namespace AntScout.Pheromone
 
         private void Awake()
         {
-            if (_config == null)
+            if (_nodePlacementDistance <= 0f)
             {
-                throw new InvalidOperationException(
-                    $"[PheromoneTrailEmitter] Missing required ScoutConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid ScoutConfigSO in the Inspector.");
+                throw new InvalidOperationException($"[{name}] PheromoneTrailEmitter requires _nodePlacementDistance > 0.");
+            }
+            if (_nodeLifetime <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] PheromoneTrailEmitter requires _nodeLifetime > 0.");
             }
         }
 
@@ -102,7 +109,7 @@ namespace AntScout.Pheromone
                 float dx = lastPos.x - worldPosition.x;
                 float dz = lastPos.z - worldPosition.z;
                 float distanceSqr = dx * dx + dz * dz;
-                float minSpacing = _config.NodePlacementDistance;
+                float minSpacing = _nodePlacementDistance;
 
                 if (distanceSqr < (minSpacing * minSpacing))
                 {
@@ -120,7 +127,7 @@ namespace AntScout.Pheromone
             if (_segments.Count == 0) return;
 
             float currentTime = PgsTime.ElapsedTime;
-            float lifetime = _config.NodeLifetime;
+            float lifetime = _nodeLifetime;
             bool updated = false;
 
             for (int i = _segments.Count - 1; i >= 0; i--)
@@ -219,7 +226,7 @@ namespace AntScout.Pheromone
             bestNodeIndex = -1;
             float bestScore = float.MinValue;
             float currentTime = PgsTime.ElapsedTime;
-            float lifetime = _config.NodeLifetime;
+            float lifetime = _nodeLifetime;
 
             for (int s = 0; s < _segments.Count; s++)
             {

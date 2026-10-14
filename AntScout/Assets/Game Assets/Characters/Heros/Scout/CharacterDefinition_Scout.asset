@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43b86366a76c4e4a9055d2a553a61241, type: 3}
+  m_Name: CharacterDefinition_Scout
+  _characterName: Scout Ant
+  _icon: {fileID: 0}
+  _motorSettings: {fileID: 11400000, guid: d71a8123ef454c76b91122a0011bb221, type: 2}
+  _traversalDefinition: {fileID: 11400000, guid: 89ab34cd56ef401289abcdef01234567, type: 2}
+  _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}
+  _primaryInput: {fileID: 0}
+  _secondaryAction: {fileID: 0}
+  _secondaryInput: {fileID: 0}
+  _utilityAction: {fileID: 11400000, guid: a61ad124c10b440eb3a7d610302f8b8f, type: 2}
+  _utilityInput: {fileID: 0}
+  _recruitmentTrailAction: {fileID: 11400000, guid: 38d2e3817b174817a4349815c010886d, type: 2}
+  _recruitmentTrailInput: {fileID: 0}
+  _alarmTrailAction: {fileID: 11400000, guid: fc2afc4c7999402183497db4f3f48016, type: 2}
+  _alarmTrailInput: {fileID: 0}

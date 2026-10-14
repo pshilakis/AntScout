@@ -156,7 +156,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 558c0356ba86b3143af42d0bc6715690, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Pheromone.PheromoneTrailEmitter
-  _config: {fileID: 11400000, guid: ef505a48ec7faf14ea34f0cfce8aabe2, type: 2}
+  _nodePlacementDistance: 0.35
+  _nodeLifetime: 12
 --- !u!114 &1000000000000005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,7 +171,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Pheromone.PheromoneTrailRenderer
   _emitter: {fileID: 1000000000000004}
-  _config: {fileID: 11400000, guid: ef505a48ec7faf14ea34f0cfce8aabe2, type: 2}
   _alignmentMode: 1
   _recruitmentColor: {r: 0, g: 0.85, b: 1, a: 0.85}
   _alarmColor: {r: 1, g: 0.2, b: 0.1, a: 0.85}

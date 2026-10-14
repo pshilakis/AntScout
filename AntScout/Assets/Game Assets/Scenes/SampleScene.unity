@@ -595,7 +595,6 @@ GameObject:
   m_Component:
   - component: {fileID: 910000002}
   - component: {fileID: 910000003}
-  - component: {fileID: 910000004}
   m_Layer: 0
   m_Name: IsometricVirtualCamera
   m_TagString: Untagged
@@ -660,20 +659,6 @@ MonoBehaviour:
       m_RotationOrder: 4
   _targetTransform: {fileID: 0}
   _enableZoom: 1
---- !u!114 &910000004
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 910000001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de1a51cedc064b86a3ce180bb51bb343, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.CameraSystem.IsometricCameraInputBridge
-  _inputReader: {fileID: 0}
-  _virtualCamera: {fileID: 910000003}
 --- !u!1 &1819214174
 GameObject:
   m_ObjectHideFlags: 0

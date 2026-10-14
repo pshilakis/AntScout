@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f36e9b0fd22c46d9a9c276148da21d30, type: 3}
+  m_Name: Action_Trail_Alarm
+  _actionName: Alarm Trail
+  _icon: {fileID: 0}
+  _windupDuration: 0
+  _recoveryDuration: 0
+  _cooldownDuration: 0
+  _targetingType: 0
+  _targetAffiliation: 0
+  _range: 0
+  _shape:
+    rid: -2
+  _basePotency: 0
+  _requiredComboAction: {fileID: 0}
+  _comboPotency: 0
+  _comboWindowDuration: 0
+  _requireHitToAdvanceCombo: 0
+  _showTelegraph: 0
+  _telegraphAnchorMode: 0
+  _telegraphColor: {r: 1, g: 0.2, b: 0, a: 0.65}
+  _animationStateName: 
+  _isCharge: 0
+  _chargeConfig:
+    _distance: 8
+    _speed: 16
+    _sweepRadius: 0.6
+    _stopOnFirstHit: 0
+    _stopOnObstacles: 1
+    _knockbackDistance: 2.5
+    _obstacleLayers:
+      serializedVersion: 2
+      m_Bits: 4294967295
+  _isProjectile: 0
+  _projectileConfig:
+    _projectilePrefab: {fileID: 0}
+    _speed: 20
+    _maxLifetime: 3
+    _collisionRadius: 0.3
+    _piercing: 0
+    _maxPierceCount: 1
+    _homingStrength: 0
+    _gravityScale: 0
+    _layerMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+  _isChanneled: 1
+  _channelDuration: 999
+  _tickInterval: 0.1
+  _interruptOnMovement: 0
+  _movementInterruptThreshold: 0.15
+  _canBeInterruptedByActions: 1
+  _hasHazardZone: 0
+  _hazardZoneConfig:
+    _shape:
+      rid: -2
+    _duration: 4
+    _tickInterval: 0.5
+    _potencyPerTick: 25
+    _zoneColor: {r: 0.1, g: 0.95, b: 0.4, a: 0.75}
+    _visualPrefab: {fileID: 0}
+  _pheromoneType: 1
+  _nodeRadius: 1.25
+  _nodePlacementDistance: 0.35
+  _nodeLifetime: 12
+  _maxCapacity: 100
+  _chemicalCostPerSecond: 20
+  _rechargeRatePerSecond: 15

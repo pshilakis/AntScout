@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using AntScout.Characters;
 using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Pheromone;
-using AntScout.Player;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using PGS.Core.Time;
@@ -81,10 +81,10 @@ namespace AntScout.Swarm.Nest
                 _trailEmitter = FindFirstObjectByType<PheromoneTrailEmitter>();
                 if (_trailEmitter == null)
                 {
-                    var scout = FindFirstObjectByType<ScoutHero>();
-                    if (scout != null)
+                    var character = FindFirstObjectByType<AntCharacter>();
+                    if (character != null && character.Gland != null)
                     {
-                        _trailEmitter = scout.TrailEmitter;
+                        _trailEmitter = character.Gland.Emitter;
                     }
                 }
             }

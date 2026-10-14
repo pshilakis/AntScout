@@ -1,14 +1,14 @@
 using Pathfinding.RVO;
 using UnityEngine;
 
-namespace AntScout.Player
+namespace AntScout.Characters
 {
     /// <summary>
     /// Partial class managing Aron Granberg's A* Pathfinding RVO local avoidance integration.
     /// Grounded in Single Responsibility (SRP): Feeds true kinematic motor velocities to RVO
-    /// so swarm worker ants steer around the player without coupling the collision motor to A*.
+    /// so swarm worker ants steer around the character without coupling the motor to A*.
     /// </summary>
-    public sealed partial class ScoutHero
+    public sealed partial class AntCharacter
     {
         private RVOController _rvoController;
 
@@ -16,14 +16,12 @@ namespace AntScout.Player
 
         private void BootstrapRvo()
         {
-            // Dynamically ensure RVOController exists
             _rvoController = GetComponent<RVOController>();
             if (_rvoController == null)
             {
                 _rvoController = gameObject.AddComponent<RVOController>();
             }
 
-            // High priority (1.0) so worker and soldier ants always yield space to the player
             _rvoController.priority = 1.0f;
             _rvoController.lockWhenNotMoving = false;
             _rvoController.maxNeighbours = 6;
