@@ -14,9 +14,12 @@ namespace AntScout.Swarm.Nest
     /// <summary>
     /// Represents the home anthill depot. Senses nearby pheromone trails and deploys worker ants.
     /// Strictly adheres to Single Responsibility Principle (SRP) by isolating nest macro state from agent steering.
+    /// Split across partial classes:
+    /// - ColonyNest.cs: Macro recruitment sensing, worker deployment, and biomass economy.
+    /// - ColonyNest.Structure.cs: Colony team identity (IColonyFactionMember), targetability (IAttackable), and structure vitals (IDamageReceiver, IHealReceiver).
     /// Implements IUpdatable to receive deterministic updates on TimeChannel.World.
     /// </summary>
-    public class ColonyNest : MonoBehaviour, IUpdatable
+    public partial class ColonyNest : MonoBehaviour, IUpdatable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for nest recruitment radius, spawn timers, and population limits.")]
@@ -49,19 +52,7 @@ namespace AntScout.Swarm.Nest
 
         private void Awake()
         {
-            if (_config == null)
-            {
-                throw new InvalidOperationException(
-                    $"[ColonyNest] Missing required SwarmConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid SwarmConfigSO in the Inspector.");
-            }
-
-            if (_workerPrefab == null)
-            {
-                throw new InvalidOperationException(
-                    $"[ColonyNest] Missing required WorkerPrefab on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid prefab in the Inspector.");
-            }
+            ValidateNestConfiguration();
 
             if (_trailEmitter == null)
             {
@@ -72,6 +63,8 @@ namespace AntScout.Swarm.Nest
             {
                 _spawnPoint = transform;
             }
+
+            BootstrapStructure();
         }
 
         private void Start()
@@ -89,12 +82,7 @@ namespace AntScout.Swarm.Nest
                 }
             }
 
-            if (_trailEmitter == null)
-            {
-                throw new InvalidOperationException(
-                    $"[ColonyNest] Unable to find a PheromoneTrailEmitter in the scene for GameObject '{gameObject.name}'. " +
-                    $"Please ensure a Scout or PheromoneTrail exists in the scene.");
-            }
+            ValidateTrailEmitter();
 
             // Spawn initial StarCraft-style worker squad
             int initialCount = Mathf.Min(_config.InitialWorkerCount, _config.MaxActiveWorkers);
@@ -114,8 +102,14 @@ namespace AntScout.Swarm.Nest
             PgsTime.Unregister(this);
         }
 
+        private void OnDestroy()
+        {
+            CleanupStructure();
+        }
+
         public void OnUpdate(float deltaTime)
         {
+            if (!IsStructureAlive) return;
             CleanupInactiveWorkers();
             EvaluateTrailConnection();
             ProcessDeployment(deltaTime);

@@ -1,18 +1,64 @@
 using System;
+using System.Collections.Generic;
+using AntScout.Core.Interfaces;
+using AntScout.Core.Stats;
 using PGS.Combat.Execution;
 using PGS.Combat.Targeting;
+using PGS.Effects;
 using UnityEngine;
 
 namespace AntScout.Characters
 {
     /// <summary>
-    /// Partial class implementing com.pgs.combat contracts:
+    /// Partial class implementing com.pgs.combat and com.pgs.effects contracts:
     /// - IMovementReceiver: Grants CombatActionExecutor direct movement authority during charges/impulses.
     /// - IAttackable: Exposes physical target radius and attackable state.
-    /// - IFactionMember: Evaluates zero-allocation combat affiliation.
+    /// - IColonyFactionMember (IFactionMember): Evaluates zero-allocation colony team affiliation.
+    /// - IDamageReceiver & IHealReceiver: Resolves incoming damage/healing against StatsController vitals.
+    /// - IKnockbackReceiver, ISlowReceiver, IStunReceiver: Supports all PGS.Effects status payloads.
     /// </summary>
-    public sealed partial class AntCharacter : IMovementReceiver, IAttackable, IFactionMember
+    public sealed partial class AntCharacter :
+        IMovementReceiver,
+        IAttackable,
+        IColonyFactionMember,
+        IDamageReceiver,
+        IHealReceiver,
+        IKnockbackReceiver,
+        ISlowReceiver,
+        IStunReceiver
     {
+        [Header("Colony Faction (com.pgs.combat)")]
+        [Tooltip("Numeric team identifier (0 = Colony 1 / Player, 1 = Colony 2 / Enemy AI).")]
+        [SerializeField] private int _colonyTeamId = 0;
+
+        private readonly ColonyVitals _vitals = new ColonyVitals();
+        private bool _isStunned;
+        private float _speedMultiplier = 1.0f;
+        private bool _combatSubscribed;
+
+        public event Action<float, float> OnHealthChanged
+        {
+            add => _vitals.OnHealthChanged += value;
+            remove => _vitals.OnHealthChanged -= value;
+        }
+
+        public event Action<DamageResult, HitContext> OnDamaged
+        {
+            add => _vitals.OnDamaged += value;
+            remove => _vitals.OnDamaged -= value;
+        }
+
+        public event Action<HitContext> OnDied
+        {
+            add => _vitals.OnDied += value;
+            remove => _vitals.OnDied -= value;
+        }
+
+        public float CurrentHealth => _vitals.CurrentHealth;
+        public float MaxHealth => _vitals.MaxHealth;
+        public float NormalizedHealth => _vitals.NormalizedHealth;
+        public float SpeedMultiplier => _speedMultiplier;
+
         #region IMovementReceiver Implementation
 
         public bool IsLocomotionLocked
@@ -59,45 +105,182 @@ namespace AntScout.Characters
         #region IAttackable Implementation
 
         public Transform Transform => transform;
-        public float BodyRadius => _characterCollider != null ? _characterCollider.Radius : 0.4f;
+        public float BodyRadius => _characterCollider != null
+            ? _characterCollider.Radius
+            : throw new InvalidOperationException($"[{name}] CharacterCollider3D is missing on AntCharacter!");
         public bool IsAttackable => _isAlive;
 
         #endregion
 
-        #region IFactionMember Implementation
+        #region IColonyFactionMember (IFactionMember) Implementation
+
+        public int ColonyTeamId => _colonyTeamId;
+
+        public void SetColonyTeam(int teamId)
+        {
+            _colonyTeamId = teamId;
+        }
 
         public TargetAffiliation GetAffiliationTowards(IFactionMember other)
         {
-            if (other == null) return TargetAffiliation.Neutral;
-            if (ReferenceEquals(other, this)) return TargetAffiliation.Self;
-
-            // Allied if both are in player colony faction
-            if (other is AntCharacter)
-            {
-                return TargetAffiliation.Ally;
-            }
-
-            return TargetAffiliation.Enemy;
+            return ColonyAffiliation.Evaluate(this, other);
         }
 
         #endregion
 
-        #region Action Execution Dispatcher
+        #region IDamageReceiver & IHealReceiver Implementation (com.pgs.effects)
+
+        public DamageResult ReceiveDamage(float amount, in HitContext context)
+        {
+            return _vitals.ReceiveDamage(amount, in context);
+        }
+
+        public void ReceiveHealing(float amount, in HitContext context)
+        {
+            _vitals.ReceiveHealing(amount, in context);
+        }
+
+        #endregion
+
+        #region IKnockbackReceiver, ISlowReceiver, IStunReceiver Implementation (com.pgs.effects)
+
+        public void ReceiveKnockback(Vector3 impulse)
+        {
+            ApplyImpulse(impulse);
+        }
+
+        public void SetSpeedMultiplier(float multiplier)
+        {
+            _speedMultiplier = Mathf.Max(0f, multiplier);
+        }
+
+        public bool IsStunned => _isStunned;
+
+        public void OnStunApplied(float duration, bool interruptAction)
+        {
+            _isStunned = true;
+            if (_motor != null)
+            {
+                _motor.LockLocomotion(this);
+            }
+
+            if (interruptAction)
+            {
+                CancelActiveAction(ActionCancelReason.Interrupted);
+                if (_gland != null && _gland.IsLayingTrail)
+                {
+                    _gland.StopLayingTrail();
+                }
+            }
+        }
+
+        public void OnStunRemoved()
+        {
+            _isStunned = false;
+            if (_motor != null && (_combatExecutor == null || !_combatExecutor.IsCharging))
+            {
+                _motor.UnlockLocomotion(this);
+            }
+        }
+
+        #endregion
+
+        #region Combat Lifecycle & Payload Delivery
 
         private void BootstrapCombat()
         {
-            // Any specific combat listener hookups
+            if (_definition != null)
+            {
+                _vitals.Initialize(
+                    _statsController,
+                    _definition.MaxHealth,
+                    _definition.Defense,
+                    _definition.Attack);
+                _isAlive = _vitals.IsAlive;
+            }
+
+            if (!_combatSubscribed)
+            {
+                _vitals.OnDied += HandleCharacterDied;
+                if (_combatExecutor != null)
+                {
+                    _combatExecutor.TargetsHit += HandleCombatTargetsHit;
+                }
+                _combatSubscribed = true;
+            }
+        }
+
+        private void CleanupCombat()
+        {
+            if (_combatSubscribed)
+            {
+                _vitals.OnDied -= HandleCharacterDied;
+                if (_combatExecutor != null)
+                {
+                    _combatExecutor.TargetsHit -= HandleCombatTargetsHit;
+                }
+                _combatSubscribed = false;
+            }
+
+            _vitals.Cleanup();
+        }
+
+        private void HandleCombatTargetsHit(
+            CombatActionDefinition action,
+            IReadOnlyList<IAttackable> targets,
+            int hitCount,
+            float effectivePotency,
+            bool isComboSuccess)
+        {
+            if (effectivePotency <= 0f || hitCount <= 0 || targets == null)
+            {
+                return;
+            }
+
+            // StarCraft-style attack scaling: AttackStat * (EffectivePotency / 100f)
+            float rawDamage = _vitals.Attack * (effectivePotency / 100f);
+
+            Vector3 origin = transform.position;
+            for (int i = 0; i < hitCount; i++)
+            {
+                IAttackable target = targets[i];
+                if (target == null || target.Transform == null) continue;
+
+                GameObject targetObj = target.Transform.gameObject;
+                IDamageReceiver receiver = (target as IDamageReceiver) ?? targetObj.GetComponentInParent<IDamageReceiver>();
+                if (receiver == null) continue;
+
+                Vector3 hitPoint = target.Transform.position;
+                Vector3 hitNormal = (origin - hitPoint);
+                hitNormal.y = 0f;
+                hitNormal = hitNormal.sqrMagnitude > 0.0001f ? hitNormal.normalized : Vector3.up;
+
+                Collider hitCol = targetObj.GetComponent<Collider>();
+                var context = new HitContext(hitPoint, hitNormal, hitCol, targetObj, gameObject);
+                receiver.ReceiveDamage(rawDamage, in context);
+            }
+        }
+
+        private void HandleCharacterDied(HitContext context)
+        {
+            _isAlive = false;
+            CancelActiveAction(ActionCancelReason.Interrupted);
+            if (_gland != null && _gland.IsLayingTrail)
+            {
+                _gland.StopLayingTrail();
+            }
+            if (_motor != null)
+            {
+                _motor.LockLocomotion(this);
+            }
         }
 
         /// <summary>
         /// Attempts to execute a combat action (e.g. Dash, Bite, Spit) via the attached CombatActionExecutor.
         /// </summary>
-        /// <param name="action">Action definition to execute.</param>
-        /// <param name="aimDirection">World-space aim direction.</param>
-        /// <returns>True if action was initiated; false if busy or on cooldown.</returns>
         public bool TryExecuteAction(CombatActionDefinition action, Vector3 aimDirection)
         {
-            if (_combatExecutor == null || action == null) return false;
+            if (!_isAlive || _isStunned || _combatExecutor == null || action == null) return false;
             return _combatExecutor.TryExecuteAction(action, aimDirection);
         }
 

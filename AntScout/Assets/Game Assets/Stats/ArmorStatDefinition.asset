@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a19f20e8b15d48dca34190f8450123ef, type: 3}
+  m_Name: ArmorStatDefinition
+  m_EditorClassIdentifier: PGS.Stats.Runtime::PGS.Stats.StatTypeSO
+  _guid: 8fe31fc6aee497d4aa38eb1a9cd32740
+  _displayName: Armor
+  _unitAbbreviation: ARM
+  _description: 
+  _defaultValue: 100
+  _minValue: 0
+  _maxValue: 999999
+  _clampToInteger: 1

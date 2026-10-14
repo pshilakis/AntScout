@@ -269,6 +269,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 832a4592eaff42c8a95334db0ee17a99, type: 3}
   m_Name: 
   m_EditorClassIdentifier: PGS.Camera.Runtime::PGS.Camera.Core.CameraController
+  _cameraChannel: 0
   _timeChannel: 1
   _defaultTransition:
     _duration: 0.5
@@ -631,6 +632,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PGS.Camera.Runtime::PGS.Camera.VirtualCameras.IsometricVirtualCamera
   _definition: {fileID: 11400000, guid: 35409ed3310c493287645552a9837997, type: 2}
   _priority: 20
+  _cameraChannel: 0
   _transition:
     _duration: 0.5
     _curve:
@@ -659,6 +661,59 @@ MonoBehaviour:
       m_RotationOrder: 4
   _targetTransform: {fileID: 0}
   _enableZoom: 1
+--- !u!1 &920000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 920000002}
+  - component: {fileID: 920000003}
+  m_Layer: 0
+  m_Name: PgsInputReader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &920000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &920000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9df96dbe65f4501468c2fc357c8d0630, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Input.Runtime::PGS.Input.Readers.PgsInputReader
+  _initialTrackedActions: []
+  _playerIndex: 0
+  _settings: {fileID: 11400000, guid: 26bc24fed6c5419eb70808bdf427d1f8, type: 2}
+  _actionsAsset: {fileID: 0}
+  _initialMapName: Player
+  _dontDestroyOnLoad: 1
+  _primary2DOverride: {fileID: 0}
+  _secondary2DOverride: {fileID: 0}
+  _scalarOverride: {fileID: 0}
 --- !u!1 &1819214174
 GameObject:
   m_ObjectHideFlags: 0
@@ -886,53 +941,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 84240a1c535779a4fa1598b5a90e6471, type: 3}
---- !u!1 &920000001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 920000002}
-  - component: {fileID: 920000003}
-  m_Layer: 0
-  m_Name: PgsInputReader
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &920000002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920000001}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &920000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920000001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9df96dbe65f4501468c2fc357c8d0630, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: PGS.Input.Runtime::PGS.Input.Readers.PgsInputReader
-  _settings: {fileID: 11400000, guid: 26bc24fed6c5419eb70808bdf427d1f8, type: 2}
-  _initialMode: 0
-  _dontDestroyOnLoad: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

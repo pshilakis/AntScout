@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72c844e9744c4d698f7101a1e95c52a4, type: 3}
+  m_Name: TraversalDefinition_VanguardHero
+  m_EditorClassIdentifier: PGS.Player.Runtime::PGS.Player.Traversal.TraversalDefinition
+  _modules:
+  - rid: 6105121067854201003
+  - rid: 6105121067854201004
+  references:
+    version: 2
+    RefIds:
+    - rid: 6105121067854201003
+      type: {class: GroundTraversalModule, ns: PGS.Player.Traversal.Modules, asm: PGS.Player.Runtime}
+      data:
+        _crouchSpeed: 2.2
+        _walkSpeed: 3
+        _runSpeed: 7
+        _sprintSpeed: 10.5
+        _groundAcceleration: 25
+        _groundDeceleration: 35
+        _canSprint: 0
+        _canCrouch: 0
+    - rid: 6105121067854201004
+      type: {class: AirTraversalModule, ns: PGS.Player.Traversal.Modules, asm: PGS.Player.Runtime}
+      data:
+        _gravity: 22
+        _terminalVelocity: 50
+        _airControlMultiplier: 0.4
+        _airSpeed: 7
+        _airAcceleration: 35
+        _fallGravityMultiplier: 1.8
+        _apexGravityMultiplier: 0.85
+        _apexThreshold: 1.5

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43b86366a76c4e4a9055d2a553a61241, type: 3}
+  m_Name: CharacterDefinition_VanguardHero
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterDefinition
+  _characterName: Scout Ant
+  _icon: {fileID: 0}
+  _maxHealth:
+    StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
+    BaseValue: 150
+  _defense:
+    StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
+    BaseValue: 15
+  _attack:
+    StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
+    BaseValue: 6
+  _primaryAction: {fileID: 0}
+  _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _secondaryAction: {fileID: 0}
+  _secondaryInput: {fileID: 6645002542129529566, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _utilityAction: {fileID: 0}
+  _utilityInput: {fileID: 6692165032235015795, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _recruitmentTrailAction: {fileID: 11400000, guid: 38d2e3817b174817a4349815c010886d, type: 2}
+  _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _alarmTrailAction: {fileID: 11400000, guid: fc2afc4c7999402183497db4f3f48016, type: 2}
+  _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}

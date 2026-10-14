@@ -12,7 +12,7 @@ namespace AntScout.Resources.Components
     /// Implements IHarvestable to provide loose coupling for swarm workers.
     /// Manages visual depletion and automatically cleans up when exhausted.
     /// </summary>
-    public class FoodSource : MonoBehaviour, IHarvestable
+    public partial class FoodSource : MonoBehaviour, IHarvestable
     {
         private static readonly List<FoodSource> s_activeSources = new List<FoodSource>();
         public static IReadOnlyList<FoodSource> ActiveSources => s_activeSources;
@@ -42,16 +42,13 @@ namespace AntScout.Resources.Components
         public ResourceType Type => _type;
         public int RemainingUnits => _remainingUnits;
         public bool CanHarvest => _remainingUnits > 0;
+        public float HarvestDuration => _config.GetHarvestDuration(_type);
+        public int BiomassValue => _config.GetBiomassValue(_type);
         public Vector3 WorldPosition => transform.position;
 
         private void Awake()
         {
-            if (_config == null)
-            {
-                throw new InvalidOperationException(
-                    $"[FoodSource] Missing required ResourceConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid ResourceConfigSO in the Inspector.");
-            }
+            ValidateConfiguration();
 
             _initialUnits = _config.GetTotalUnits(_type);
             _remainingUnits = _initialUnits;

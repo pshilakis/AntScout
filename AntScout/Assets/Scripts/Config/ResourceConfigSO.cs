@@ -60,11 +60,6 @@ namespace AntScout.Config
         [Range(1, 100)]
         [SerializeField] private int _biomassCarcass = 30;
 
-        [Header("Worker Harvesting")]
-        [Tooltip("Search radius when arriving at trail end to latch onto nearby food sources.")]
-        [Range(1f, 10f)]
-        [SerializeField] private float _foodDetectionRadius = 3.5f;
-
         // Public read-only accessors
         public float MinSpawnInterval => _minSpawnInterval;
         public float MaxSpawnInterval => _maxSpawnInterval;
@@ -75,14 +70,12 @@ namespace AntScout.Config
         public int FruitUnits => _fruitUnits;
         public int CarcassUnits => _carcassUnits;
 
-        public float FoodDetectionRadius => _foodDetectionRadius;
-
         public float GetHarvestDuration(ResourceType type) => type switch
         {
             ResourceType.SugarGranule => _harvestDurationSugar,
             ResourceType.FallenFruit => _harvestDurationFruit,
             ResourceType.BugCarcass => _harvestDurationCarcass,
-            _ => 1.5f
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported ResourceType!")
         };
 
         public int GetBiomassValue(ResourceType type) => type switch
@@ -90,7 +83,7 @@ namespace AntScout.Config
             ResourceType.SugarGranule => _biomassSugar,
             ResourceType.FallenFruit => _biomassFruit,
             ResourceType.BugCarcass => _biomassCarcass,
-            _ => 10
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported ResourceType!")
         };
 
         public int GetTotalUnits(ResourceType type) => type switch
@@ -98,17 +91,7 @@ namespace AntScout.Config
             ResourceType.SugarGranule => _sugarUnits,
             ResourceType.FallenFruit => _fruitUnits,
             ResourceType.BugCarcass => _carcassUnits,
-            _ => 20
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported ResourceType!")
         };
-
-        private void OnValidate()
-        {
-            if (_minSpawnInterval <= 1f) _minSpawnInterval = 1f;
-            if (_maxSpawnInterval < _minSpawnInterval) _maxSpawnInterval = _minSpawnInterval + 5f;
-            if (_spawnAreaHalfExtents.x <= 1f) _spawnAreaHalfExtents.x = 10f;
-            if (_spawnAreaHalfExtents.y <= 1f) _spawnAreaHalfExtents.y = 10f;
-            if (_maxActiveBonanzas < 1) _maxActiveBonanzas = 1;
-            if (_foodDetectionRadius <= 0.5f) _foodDetectionRadius = 0.5f;
-        }
     }
 }

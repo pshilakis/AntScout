@@ -11,16 +11,18 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e30f8f9403e157c41b1d4d86b4fbf70a, type: 3}
   m_Name: CombatAction_Scout_Dash
+  m_EditorClassIdentifier: 
   _actionName: Scurry Dash
   _icon: {fileID: 0}
+  _animationStateName: 
   _windupDuration: 0
   _recoveryDuration: 0.05
   _cooldownDuration: 1.25
-  _targetingType: 0
-  _targetAffiliation: 1
+  _targetingType: 5
+  _targetAffiliation: 0
   _range: 2.5
   _shape:
-    rid: -2
+    rid: 6105121067854200947
   _basePotency: 0
   _requiredComboAction: {fileID: 0}
   _comboPotency: 0
@@ -29,7 +31,27 @@ MonoBehaviour:
   _showTelegraph: 0
   _telegraphAnchorMode: 0
   _telegraphColor: {r: 1, g: 0.55, b: 0, a: 0.65}
-  _animationStateName: 
+  _isProjectile: 0
+  _projectileConfig:
+    _speed: 20
+    _radius: 0.25
+    _maxLifetime: 3
+    _gravity: 0
+    _isHoming: 0
+    _homingTurnRate: 180
+    _maxPenetrations: 1
+    _penetrationFalloff: 1
+    _visualPrefab: {fileID: 0}
+    _spawnsHazardZone: 0
+    _hazardZoneConfig:
+      _duration: 4
+      _tickInterval: 0.5
+      _potencyPerTick: 25
+      _zoneColor: {r: 0.1, g: 0.95, b: 0.4, a: 0.75}
+      _visualPrefab: {fileID: 0}
+  _isChanneled: 0
+  _channelDuration: 0
+  _tickInterval: 0.25
   _isCharge: 1
   _chargeConfig:
     _distance: 6
@@ -41,31 +63,15 @@ MonoBehaviour:
     _obstacleLayers:
       serializedVersion: 2
       m_Bits: 4294967295
-  _isProjectile: 0
-  _projectileConfig:
-    _projectilePrefab: {fileID: 0}
-    _speed: 20
-    _maxLifetime: 3
-    _collisionRadius: 0.3
-    _piercing: 0
-    _maxPierceCount: 1
-    _homingStrength: 0
-    _gravityScale: 0
-    _layerMask:
-      serializedVersion: 2
-      m_Bits: 4294967295
-  _isChanneled: 0
-  _channelDuration: 0
-  _tickInterval: 0.25
   _interruptOnMovement: 0
   _movementInterruptThreshold: 0.15
-  _canBeInterruptedByActions: 0
-  _hasHazardZone: 0
-  _hazardZoneConfig:
-    _shape:
-      rid: -2
-    _duration: 4
-    _tickInterval: 0.5
-    _potencyPerTick: 25
-    _zoneColor: {r: 0.1, g: 0.95, b: 0.4, a: 0.75}
-    _visualPrefab: {fileID: 0}
+  _canBeInterruptedByActions: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 6105121067854200947
+      type: {class: ConeShape, ns: PGS.Combat.Shapes, asm: PGS.Combat.Runtime}
+      data:
+        _radius: 2.5
+        _angleDegrees: 110
+        _height: 3

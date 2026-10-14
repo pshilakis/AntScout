@@ -1,14 +1,13 @@
-using System;
 using UnityEngine;
 
 namespace AntScout.Config
 {
     /// <summary>
-    /// Centralized configuration asset for Colony Nest spawning and Swarm Agent movement/sensing.
+    /// Centralized configuration asset for Colony Nest spawning and Swarm Agent navigation/sensing.
     /// Eliminates hardcoded values across swarm simulation systems (Single Source of Truth).
     /// </summary>
     [CreateAssetMenu(fileName = "SwarmConfig", menuName = "AntScout/Config/SwarmConfig", order = 1)]
-    public class SwarmConfigSO : ScriptableObject
+    public partial class SwarmConfigSO : ScriptableObject
     {
         [Header("Colony Nest Parameters")]
         [Tooltip("Sensory perimeter around the nest; recruitment scent nodes inside this radius trigger worker dispatch.")]
@@ -44,6 +43,10 @@ namespace AntScout.Config
         [Tooltip("Maximum sensory distance for detecting active pheromone nodes.")]
         [Range(1f, 25f)]
         [SerializeField] private float _trailSamplingRadius = 12.0f;
+
+        [Tooltip("Sensory radius when arriving at trail end to detect and latch onto nearby food sources.")]
+        [Range(1f, 10f)]
+        [SerializeField] private float _foodDetectionRadius = 3.5f;
 
         [Tooltip("Forward distance along the detected pheromone chain to project the next navigation waypoint.")]
         [Range(0.2f, 5.0f)]
@@ -92,6 +95,7 @@ namespace AntScout.Config
 
         public float WorkerMoveSpeed => _workerMoveSpeed;
         public float TrailSamplingRadius => _trailSamplingRadius;
+        public float FoodDetectionRadius => _foodDetectionRadius;
         public float WaypointLookAheadDistance => _waypointLookAheadDistance;
         public float ArrivalThreshold => _arrivalThreshold;
         public float NestArrivalThreshold => _nestArrivalThreshold;
@@ -102,26 +106,5 @@ namespace AntScout.Config
         public float MeanderJitterAngle => _meanderJitterAngle;
         public int LocalSearchNodeWindow => _localSearchNodeWindow;
         public float TrailSwarmDispersion => _trailSwarmDispersion;
-
-        private void OnValidate()
-        {
-            if (_nestRecruitmentRadius <= 0.5f) _nestRecruitmentRadius = 0.5f;
-            if (_workerSpawnInterval <= 0.1f) _workerSpawnInterval = 0.1f;
-            if (_maxActiveWorkers < 1) _maxActiveWorkers = 1;
-            if (_initialWorkerCount < 1) _initialWorkerCount = 1;
-            if (_workerBiomassCost < 1) _workerBiomassCost = 1;
-            if (_nestWanderRadius < 0.5f) _nestWanderRadius = 0.5f;
-            if (_workerMoveSpeed <= 0.5f) _workerMoveSpeed = 0.5f;
-            if (_trailSamplingRadius <= 0.5f) _trailSamplingRadius = 0.5f;
-            if (_waypointLookAheadDistance <= 0.1f) _waypointLookAheadDistance = 0.1f;
-            if (_arrivalThreshold <= 0.05f) _arrivalThreshold = 0.05f;
-            if (_nestArrivalThreshold <= 0.2f) _nestArrivalThreshold = 0.2f;
-            if (_trailTipWanderRadius <= 0.5f) _trailTipWanderRadius = 0.5f;
-            if (_trailTipWanderDuration <= 0.5f) _trailTipWanderDuration = 0.5f;
-            if (_workerReturnWanderSpeed <= 0.5f) _workerReturnWanderSpeed = 0.5f;
-            if (_meanderJitterAngle < 5.0f) _meanderJitterAngle = 5.0f;
-            if (_localSearchNodeWindow < 1) _localSearchNodeWindow = 1;
-            if (_trailSwarmDispersion < 0f) _trailSwarmDispersion = 0f;
-        }
     }
 }

@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 6060405008680240951}
   - component: {fileID: 23278261839193979}
   - component: {fileID: 3198096329139112686}
-  - component: {fileID: 5948560713327800166}
   m_Layer: 0
   m_Name: Mesh
   m_TagString: Untagged
@@ -91,27 +90,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &5948560713327800166
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2565726107765991493}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4316868396895172571
 GameObject:
   m_ObjectHideFlags: 0
@@ -122,6 +100,9 @@ GameObject:
   m_Component:
   - component: {fileID: 130768126300757909}
   - component: {fileID: 8919748608766039444}
+  - component: {fileID: 904210175310236587}
+  - component: {fileID: 4608963428122114287}
+  - component: {fileID: 5728017785585740349}
   m_Layer: 0
   m_Name: Nest
   m_TagString: Untagged
@@ -161,6 +142,57 @@ MonoBehaviour:
   _trailEmitter: {fileID: 0}
   _workerPrefab: {fileID: 8079377051405443581, guid: 7061d7fe4f5fda64b95b1d7b3fd1832d, type: 3}
   _spawnPoint: {fileID: 0}
+  _structureDefinition: {fileID: 11400000, guid: b6b2d6769b677f0429007ef8ea05e72b, type: 2}
+  _colonyTeamId: 0
+--- !u!114 &904210175310236587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4316868396895172571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e04622113a8bf234295461fb91da2493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Stats.Runtime::PGS.Stats.StatsController
+  _initialStats: []
+--- !u!114 &4608963428122114287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4316868396895172571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aeaaa8aff15b394c8fd0c1b483134ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Effects.Runtime::PGS.Effects.StatusReceiver
+  _timeChannel: 0
+  _maxConcurrentStatuses: 16
+  _immuneStatusTypes: []
+--- !u!135 &5728017785585740349
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4316868396895172571}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 1.5
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5384747535096589487
 GameObject:
   m_ObjectHideFlags: 0

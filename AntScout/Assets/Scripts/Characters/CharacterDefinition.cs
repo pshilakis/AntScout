@@ -1,10 +1,8 @@
-using System;
 using PGS.Combat.Execution;
 using PGS.Core;
 using PGS.Input.Common;
 using PGS.Input.Readers;
-using PGS.Player.Motor.ThreeD;
-using PGS.Player.Traversal;
+using PGS.Stats;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,24 +10,26 @@ namespace AntScout.Characters
 {
     /// <summary>
     /// Universal character definition ScriptableObject.
-    /// Single Source of Truth for character identity, locomotion motor settings (com.pgs.player),
-    /// traversal modules, combat action kit (com.pgs.combat), input action pairings (com.pgs.input),
-    /// and chemical gland tuning.
-    /// Reusable across both Player Heroes and AI Entities (Interface Segregation & OCP).
+    /// Single Source of Truth for character identity, physical target radius, base stats/vitals (com.pgs.stats),
+    /// combat action kit (com.pgs.combat), input action pairings (com.pgs.input), and chemical gland actions.
+    /// Reusable across both Player/AI Heroes and Swarm castes (Interface Segregation & OCP).
     /// </summary>
     [CreateAssetMenu(fileName = "CharacterDefinition_New", menuName = "AntScout/Character/Character Definition")]
-    public class CharacterDefinition : ScriptableObject
+    public partial class CharacterDefinition : ScriptableObject
     {
         [ColoredHeader("Character Identity", HeaderColor.Cyan)]
         [SerializeField] private string _characterName = "Scout Ant";
         [SerializeField] private Sprite _icon;
 
-        [ColoredHeader("Locomotion & Traversal", HeaderColor.Gold)]
-        [Tooltip("Physics and kinematic motor settings asset (Speed, acceleration, turn speed, slope angles).")]
-        [SerializeField] private MotorSettings3DDefinition _motorSettings;
+        [ColoredHeader("Base Stats & Vitals (com.pgs.stats)", HeaderColor.Green)]
+        [Tooltip("Maximum Health StatTypeSO and starting base value seeded into StatsController.")]
+        [SerializeField] private StatsController.InitialStatConfig _maxHealth;
 
-        [Tooltip("Traversal definition asset containing modules (Ground, Air, etc.).")]
-        [SerializeField] private TraversalDefinition _traversalDefinition;
+        [Tooltip("Flat Armor/Defense StatTypeSO and starting base value seeded into StatsController.")]
+        [SerializeField] private StatsController.InitialStatConfig _defense;
+
+        [Tooltip("Base Attack Damage StatTypeSO and starting base value seeded into StatsController (scales CombatAction potency).")]
+        [SerializeField] private StatsController.InitialStatConfig _attack;
 
         [ColoredHeader("Primary Slot", HeaderColor.Coral)]
         [Tooltip("Primary offensive action (e.g. Mandible Bite).")]
@@ -73,8 +73,9 @@ namespace AntScout.Characters
 
         public string CharacterName => _characterName;
         public Sprite Icon => _icon;
-        public MotorSettings3DDefinition MotorSettings => _motorSettings;
-        public TraversalDefinition TraversalDefinition => _traversalDefinition;
+        public StatsController.InitialStatConfig MaxHealth => _maxHealth;
+        public StatsController.InitialStatConfig Defense => _defense;
+        public StatsController.InitialStatConfig Attack => _attack;
         public CombatActionDefinition PrimaryAction => _primaryAction;
         public InputActionReference PrimaryInput => _primaryInput;
         public CombatActionDefinition SecondaryAction => _secondaryAction;
@@ -90,42 +91,6 @@ namespace AntScout.Characters
         /// True if at least one pheromone trail action is equipped in this character's Action Kit.
         /// </summary>
         public bool HasTrailActions => _recruitmentTrailAction != null || _alarmTrailAction != null;
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            AutoAssignDefaultInputs();
-        }
-
-        private void AutoAssignDefaultInputs()
-        {
-            if (_primaryInput != null && _secondaryInput != null && _utilityInput != null &&
-                _recruitmentTrailInput != null && _alarmTrailInput != null)
-            {
-                return;
-            }
-
-            string controlsPath = UnityEditor.AssetDatabase.GUIDToAssetPath("7f9c2d1045934ea29104b9015c7e10a1");
-            if (string.IsNullOrEmpty(controlsPath))
-            {
-                return;
-            }
-
-            UnityEngine.Object[] subAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(controlsPath);
-            for (int i = 0; i < subAssets.Length; i++)
-            {
-                if (subAssets[i] is InputActionReference actionRef && actionRef.action != null)
-                {
-                    string actionName = actionRef.action.name;
-                    if (_primaryInput == null && actionName == "Action1") _primaryInput = actionRef;
-                    else if (_secondaryInput == null && actionName == "Action2") _secondaryInput = actionRef;
-                    else if (_utilityInput == null && actionName == "Action3") _utilityInput = actionRef;
-                    else if (_recruitmentTrailInput == null && actionName == "Action4") _recruitmentTrailInput = actionRef;
-                    else if (_alarmTrailInput == null && actionName == "Action6") _alarmTrailInput = actionRef;
-                }
-            }
-        }
-#endif
 
         /// <summary>
         /// Registers all configured InputActionReferences in this character's Action Kit with the given PgsInputReader.
@@ -205,24 +170,6 @@ namespace AntScout.Characters
             if (slotInput == null || triggeredInput == null) return false;
             if (ReferenceEquals(slotInput, triggeredInput)) return true;
             return slotInput.action != null && triggeredInput.action != null && slotInput.action.id == triggeredInput.action.id;
-        }
-
-        public void Validate()
-        {
-            if (_motorSettings == null)
-            {
-                throw new InvalidOperationException($"[{name}] Missing MotorSettings3DDefinition! Assign one in the Inspector.");
-            }
-
-            if (_traversalDefinition == null)
-            {
-                throw new InvalidOperationException($"[{name}] Missing TraversalDefinition! Assign one in the Inspector.");
-            }
-
-            if (_utilityAction == null)
-            {
-                throw new InvalidOperationException($"[{name}] Missing UtilityAction (CombatActionDefinition)! Assign one in the Inspector.");
-            }
         }
     }
 }

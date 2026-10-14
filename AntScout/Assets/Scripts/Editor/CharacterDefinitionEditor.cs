@@ -17,8 +17,9 @@ namespace AntScout.Editor
         private SerializedProperty _characterNameProp;
         private SerializedProperty _iconProp;
 
-        private SerializedProperty _motorSettingsProp;
-        private SerializedProperty _traversalDefinitionProp;
+        private SerializedProperty _maxHealthProp;
+        private SerializedProperty _defenseProp;
+        private SerializedProperty _attackProp;
 
         private SerializedProperty _primaryActionProp;
         private SerializedProperty _primaryInputProp;
@@ -34,7 +35,7 @@ namespace AntScout.Editor
         private int _selectedTab = 0;
         private static readonly string[] TabNames = new string[]
         {
-            "Identity & Motor",
+            "Identity & Stats",
             "Action Kit"
         };
 
@@ -43,8 +44,9 @@ namespace AntScout.Editor
             _characterNameProp = serializedObject.FindProperty("_characterName");
             _iconProp = serializedObject.FindProperty("_icon");
 
-            _motorSettingsProp = serializedObject.FindProperty("_motorSettings");
-            _traversalDefinitionProp = serializedObject.FindProperty("_traversalDefinition");
+            _maxHealthProp = serializedObject.FindProperty("_maxHealth");
+            _defenseProp = serializedObject.FindProperty("_defense");
+            _attackProp = serializedObject.FindProperty("_attack");
 
             _primaryActionProp = serializedObject.FindProperty("_primaryAction");
             _primaryInputProp = serializedObject.FindProperty("_primaryInput");
@@ -69,7 +71,7 @@ namespace AntScout.Editor
             switch (_selectedTab)
             {
                 case 0:
-                    DrawIdentityAndMotorTab();
+                    DrawIdentityAndStatsTab();
                     break;
                 case 1:
                     DrawActionKitTab();
@@ -79,16 +81,17 @@ namespace AntScout.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        #region Tab 0: Identity & Motor
+        #region Tab 0: Identity & Stats
 
-        private void DrawIdentityAndMotorTab()
+        private void DrawIdentityAndStatsTab()
         {
             EditorGUILayout.PropertyField(_characterNameProp);
             EditorGUILayout.PropertyField(_iconProp);
 
             EditorGUILayout.Space(6);
-            EditorGUILayout.PropertyField(_motorSettingsProp);
-            EditorGUILayout.PropertyField(_traversalDefinitionProp);
+            EditorGUILayout.PropertyField(_maxHealthProp);
+            EditorGUILayout.PropertyField(_defenseProp);
+            EditorGUILayout.PropertyField(_attackProp);
         }
 
         #endregion

@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e30f8f9403e157c41b1d4d86b4fbf70a, type: 3}
   m_Name: CombatAction_Scout_MandibleBite
   m_EditorClassIdentifier: PGS.Combat.Runtime::PGS.Combat.Execution.CombatActionDefinition
-  _actionName: Strike
+  _actionName: Mandible Bite
   _icon: {fileID: 0}
-  _windupDuration: 0.2
+  _animationStateName: Attack_Slash
+  _windupDuration: 0.15
   _recoveryDuration: 0.35
-  _cooldownDuration: 0.85
+  _cooldownDuration: 0.86
   _targetingType: 1
   _targetAffiliation: 1
-  _range: 2.5
+  _range: 1.8
   _shape:
     rid: 6105121067854200934
   _basePotency: 100
@@ -30,18 +31,6 @@ MonoBehaviour:
   _showTelegraph: 1
   _telegraphAnchorMode: 0
   _telegraphColor: {r: 1, g: 0.55, b: 0, a: 0.65}
-  _animationStateName: Attack_Slash
-  _isCharge: 0
-  _chargeConfig:
-    _distance: 8
-    _speed: 16
-    _sweepRadius: 0.6
-    _stopOnFirstHit: 0
-    _stopOnObstacles: 1
-    _knockbackDistance: 2.5
-    _obstacleLayers:
-      serializedVersion: 2
-      m_Bits: 4294967295
   _isProjectile: 0
   _projectileConfig:
     _speed: 25
@@ -63,6 +52,17 @@ MonoBehaviour:
   _isChanneled: 0
   _channelDuration: 3
   _tickInterval: 0.25
+  _isCharge: 0
+  _chargeConfig:
+    _distance: 8
+    _speed: 16
+    _sweepRadius: 0.6
+    _stopOnFirstHit: 0
+    _stopOnObstacles: 1
+    _knockbackDistance: 2.5
+    _obstacleLayers:
+      serializedVersion: 2
+      m_Bits: 4294967295
   _interruptOnMovement: 0
   _movementInterruptThreshold: 0.15
   _canBeInterruptedByActions: 0
@@ -72,6 +72,6 @@ MonoBehaviour:
     - rid: 6105121067854200934
       type: {class: ConeShape, ns: PGS.Combat.Shapes, asm: PGS.Combat.Runtime}
       data:
-        _radius: 2.5
-        _angleDegrees: 110
+        _radius: 1.8
+        _angleDegrees: 75
         _height: 3

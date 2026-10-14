@@ -12,18 +12,17 @@ namespace AntScout.Swarm.Agents
 {
     /// <summary>
     /// High-level behavioral controller and state machine for Worker Ants.
+    /// Split across partial classes:
+    /// - WorkerAntController.cs: Outbound trail following, food source harvesting, and inbound delivery to the home nest.
+    /// - WorkerAntController.Combat.cs: Colony team identity (IColonyFactionMember), spatial attackability (IAttackable), and vitals (IDamageReceiver, IHealReceiver).
     /// Implements ISwarmAgent and IUpdatable to allow polymorphic management and deterministic time stepping on TimeChannel.World.
-    /// Coordinates outbound trail following, food source harvesting, and inbound delivery to the home nest.
     /// </summary>
     [RequireComponent(typeof(AntTrailFollower))]
-    public class WorkerAntController : MonoBehaviour, ISwarmAgent, IUpdatable
+    public partial class WorkerAntController : MonoBehaviour, ISwarmAgent, IUpdatable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for worker balance parameters.")]
         [SerializeField] private SwarmConfigSO _config;
-
-        [Tooltip("Configuration for resource harvesting timings and biomass values.")]
-        [SerializeField] private ResourceConfigSO _resourceConfig;
 
         [Header("Carried Cargo Visual")]
         [Tooltip("Visual representation of food morsel held in mandibles. Auto-created if unassigned.")]
@@ -45,6 +44,7 @@ namespace AntScout.Swarm.Agents
         private PheromoneTrailSegment _lastExhaustedSegment;
 
         private int _carriedAmount;
+        private int _carriedBiomassPerUnit;
         private ResourceType _carriedType;
 
         public SwarmAgentState CurrentState => _currentState;
@@ -58,21 +58,10 @@ namespace AntScout.Swarm.Agents
         private void Awake()
         {
             _follower = GetComponent<AntTrailFollower>();
-
-            if (_config == null)
-            {
-                throw new InvalidOperationException(
-                    $"[WorkerAntController] Missing required SwarmConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid SwarmConfigSO in the Inspector.");
-            }
-
-            if (_follower == null)
-            {
-                throw new InvalidOperationException(
-                    $"[WorkerAntController] Missing required AntTrailFollower on GameObject '{gameObject.name}'.");
-            }
+            ValidateSwarmConfigurationAndComponents();
 
             EnsureCarriedVisual();
+            BootstrapCombat();
         }
 
         private void EnsureCarriedVisual()
@@ -110,10 +99,16 @@ namespace AntScout.Swarm.Agents
             _follower.OnReturnedToNest -= HandleReturnedToNest;
         }
 
+        private void OnDestroy()
+        {
+            CleanupCombat();
+        }
+
         public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter trailEmitter)
         {
             _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
             _trailEmitter = trailEmitter ?? throw new ArgumentNullException(nameof(trailEmitter));
+            InitializeCombat(homeNest);
             _follower.Initialize(homeNest, trailEmitter, _config);
             _carriedAmount = 0;
             _scentCheckCooldown = 0f;
@@ -210,7 +205,7 @@ namespace AntScout.Swarm.Agents
         private void EvaluateFoodSearch(float deltaTime)
         {
             // 1. Sniff for harvestable food sources
-            float searchRadius = _resourceConfig != null ? _resourceConfig.FoodDetectionRadius : 3.5f;
+            float searchRadius = _config.FoodDetectionRadius;
             FoodSource closestFood = FoodSource.FindClosest(transform.position, searchRadius);
 
             if (closestFood != null && closestFood.CanHarvest)
@@ -328,14 +323,17 @@ namespace AntScout.Swarm.Agents
             }
 
             _harvestTimer += deltaTime;
-            float durationNeeded = _resourceConfig != null ? _resourceConfig.GetHarvestDuration(_targetFood.Type) : 1.5f;
+            float durationNeeded = _targetFood.HarvestDuration;
+            int biomassPerUnit = _targetFood.BiomassValue;
+            ResourceType foodType = _targetFood.Type;
 
             if (_harvestTimer >= durationNeeded)
             {
                 if (_targetFood.TryHarvest(1, out int harvested) && harvested > 0)
                 {
                     _carriedAmount = harvested;
-                    _carriedType = _targetFood.Type;
+                    _carriedBiomassPerUnit = biomassPerUnit;
+                    _carriedType = foodType;
 
                     if (_carriedMorselVisual != null)
                     {
@@ -385,9 +383,9 @@ namespace AntScout.Swarm.Agents
             bool broughtFood = _carriedAmount > 0;
             if (broughtFood && _homeNest != null)
             {
-                int biomassValue = _resourceConfig != null ? _resourceConfig.GetBiomassValue(_carriedType) : 10;
-                _homeNest.DepositResource(_carriedType, _carriedAmount, biomassValue);
+                _homeNest.DepositResource(_carriedType, _carriedAmount, _carriedBiomassPerUnit);
                 _carriedAmount = 0;
+                _carriedBiomassPerUnit = 0;
             }
 
             if (_carriedMorselVisual != null)

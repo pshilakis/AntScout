@@ -13,6 +13,8 @@ namespace AntScout.Resources.Interfaces
         ResourceType Type { get; }
         int RemainingUnits { get; }
         bool CanHarvest { get; }
+        float HarvestDuration { get; }
+        int BiomassValue { get; }
         Vector3 WorldPosition { get; }
 
         /// <summary>

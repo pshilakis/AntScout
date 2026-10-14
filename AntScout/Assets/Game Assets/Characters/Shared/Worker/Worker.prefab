@@ -136,6 +136,8 @@ GameObject:
   - component: {fileID: 6385926899507193685}
   - component: {fileID: 6518734241997474489}
   - component: {fileID: 9054211985227436922}
+  - component: {fileID: 6506247184042379439}
+  - component: {fileID: 218508178701343779}
   m_Layer: 0
   m_Name: Worker
   m_TagString: Untagged
@@ -319,6 +321,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8fe615c17d72cb4eb7e31291004c19f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Agents.WorkerAntController
+  _characterDefinition: {fileID: 11400000, guid: 674586a56639a8a45bb7a36fd153e0b5, type: 2}
   _config: {fileID: 11400000, guid: 174659f8cad8ace4096b02766f4d468f, type: 2}
   _resourceConfig: {fileID: 0}
   _carriedMorselVisual: {fileID: 0}
+--- !u!114 &6506247184042379439
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8079377051405443581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e04622113a8bf234295461fb91da2493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Stats.Runtime::PGS.Stats.StatsController
+  _initialStats: []
+--- !u!114 &218508178701343779
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8079377051405443581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aeaaa8aff15b394c8fd0c1b483134ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Effects.Runtime::PGS.Effects.StatusReceiver
+  _timeChannel: 0
+  _maxConcurrentStatuses: 16
+  _immuneStatusTypes: []

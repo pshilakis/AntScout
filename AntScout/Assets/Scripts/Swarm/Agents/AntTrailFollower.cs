@@ -59,6 +59,9 @@ namespace AntScout.Swarm.Agents
         public FollowerMode CurrentMode => _mode;
         public bool IsOutbound => _mode == FollowerMode.OutboundTrail;
         public PheromoneTrailSegment TrackedSegment => _trackedSegment;
+        public float Radius => _ai != null
+            ? _ai.radius
+            : throw new InvalidOperationException($"[{name}] IAstarAI is missing on AntTrailFollower!");
 
         private void Awake()
         {

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53642beefa7c474bbdfe47ac2dd889b4, type: 3}
+  m_Name: MotorSettings_Scout
+  MaxSlopeAngle: 45
+  GroundCheckDistance: 0.15
+  StepDownDistance: 0.45
+  SteepSlopeSlideGravity: 18
+  MaxStepHeight: 0.3
+  StepForwardBuffer: 0.05
+  TurnaroundBrakingMultiplier: 2.5
+  GroundDeceleration: 40
+  FacingRotationSpeed: 1080
+  MaxBounces: 3
+  CollisionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  CeilingCheckDistance: 0.05
+  MinCeilingCastRadius: 0.05
+  CeilingAngleThreshold: -0.2
