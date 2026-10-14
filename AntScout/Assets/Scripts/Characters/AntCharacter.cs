@@ -163,7 +163,7 @@ namespace AntScout.Characters
                 {
                     _gland = gameObject.AddComponent<CharacterGland>();
                 }
-                _gland.Initialize(_definition);
+                _gland.Initialize(_definition, _colonyTeamId);
             }
         }
 

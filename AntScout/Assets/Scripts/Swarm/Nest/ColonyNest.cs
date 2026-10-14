@@ -56,7 +56,7 @@ namespace AntScout.Swarm.Nest
 
             if (_trailEmitter == null)
             {
-                _trailEmitter = FindFirstObjectByType<PheromoneTrailEmitter>();
+                PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter);
             }
 
             if (_spawnPoint == null)
@@ -71,15 +71,7 @@ namespace AntScout.Swarm.Nest
         {
             if (_trailEmitter == null)
             {
-                _trailEmitter = FindFirstObjectByType<PheromoneTrailEmitter>();
-                if (_trailEmitter == null)
-                {
-                    var character = FindFirstObjectByType<AntCharacter>();
-                    if (character != null && character.Gland != null)
-                    {
-                        _trailEmitter = character.Gland.Emitter;
-                    }
-                }
+                PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter);
             }
 
             ValidateTrailEmitter();

@@ -119,6 +119,10 @@ namespace AntScout.Characters
         public void SetColonyTeam(int teamId)
         {
             _colonyTeamId = teamId;
+            if (_gland != null)
+            {
+                _gland.SetColonyTeam(teamId);
+            }
         }
 
         public TargetAffiliation GetAffiliationTowards(IFactionMember other)

@@ -12,13 +12,14 @@ namespace AntScout.Characters
     /// Driven by PheromoneTrailAction (com.pgs.combat).
     /// </summary>
     [DisallowMultipleComponent]
-    public class CharacterGland : MonoBehaviour, IUpdatable
+    public partial class CharacterGland : MonoBehaviour, IUpdatable
     {
         [Header("Pheromone Visual Prefab")]
         [Tooltip("Prefab containing LineRenderer and PheromoneTrailEmitter. Spawned dynamically in world space if absent.")]
         [SerializeField] private GameObject _pheromoneTrailPrefab;
 
         private CharacterDefinition _definition;
+        private int _colonyTeamId;
         private PheromoneTrailEmitter _emitter;
         private PheromoneTrailAction _activeAction;
         private float _currentCapacity;
@@ -34,30 +35,53 @@ namespace AntScout.Characters
              (_definition != null ? _definition.AlarmTrailAction : null));
 
         public float CurrentCapacity => _currentCapacity;
-        public float MaxCapacity => PrimaryTrailTemplate != null ? PrimaryTrailTemplate.MaxCapacity : 100f;
+        public float MaxCapacity
+        {
+            get
+            {
+                ValidateGlandInitialized();
+                return PrimaryTrailTemplate.MaxCapacity;
+            }
+        }
         public float NormalizedCapacity => MaxCapacity > 0f ? Mathf.Clamp01(_currentCapacity / MaxCapacity) : 0f;
         public bool IsLayingTrail => _isLayingTrail;
         public bool IsDepleted => _isDepleted;
         public PheromoneTrailEmitter Emitter => _emitter;
 
-        public void Initialize(CharacterDefinition definition, PheromoneTrailEmitter emitter = null)
+        public void Initialize(CharacterDefinition definition, int colonyTeamId, PheromoneTrailEmitter emitter = null)
         {
             _definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            _colonyTeamId = colonyTeamId;
+            ValidateGlandInitialized();
+
             _currentCapacity = MaxCapacity;
             _isDepleted = false;
 
             if (emitter != null)
             {
                 _emitter = emitter;
+                _emitter.SetColonyTeam(_colonyTeamId);
             }
-            else if (_emitter == null)
+            else
             {
                 ResolveEmitter();
             }
         }
 
-        private void Awake()
+        public void SetColonyTeam(int colonyTeamId)
         {
+            if (_colonyTeamId == colonyTeamId && _emitter != null && _emitter.ColonyTeamId == colonyTeamId)
+            {
+                return;
+            }
+
+            if (_isLayingTrail)
+            {
+                StopLayingTrail();
+            }
+
+            _colonyTeamId = colonyTeamId;
+            _emitter = null;
             ResolveEmitter();
         }
 
@@ -77,16 +101,24 @@ namespace AntScout.Characters
 
         private void ResolveEmitter()
         {
-            if (_emitter == null)
+            if (_emitter != null && _emitter.ColonyTeamId == _colonyTeamId)
             {
-                _emitter = FindFirstObjectByType<PheromoneTrailEmitter>();
-                if (_emitter == null && _pheromoneTrailPrefab != null)
+                return;
+            }
+
+            if (!PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _emitter))
+            {
+                if (_pheromoneTrailPrefab != null)
                 {
                     GameObject instance = Instantiate(_pheromoneTrailPrefab, transform.position, Quaternion.identity);
-                    instance.name = "PheromoneTrail_World";
+                    instance.name = $"PheromoneTrail_Colony{_colonyTeamId}";
                     _emitter = instance.GetComponent<PheromoneTrailEmitter>();
+                    ValidateSpawnedEmitter();
+                    _emitter.SetColonyTeam(_colonyTeamId);
                 }
             }
+
+            ValidateEmitterResolved();
         }
 
         /// <summary>
@@ -98,7 +130,6 @@ namespace AntScout.Characters
             if (_isDepleted || _currentCapacity <= 0f) return;
 
             ResolveEmitter();
-            if (_emitter == null) return;
 
             _activeAction = action;
             _isLayingTrail = true;

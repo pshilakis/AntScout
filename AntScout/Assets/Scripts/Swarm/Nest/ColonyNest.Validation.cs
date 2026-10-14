@@ -30,8 +30,15 @@ namespace AntScout.Swarm.Nest
             if (_trailEmitter == null)
             {
                 throw new InvalidOperationException(
-                    $"[ColonyNest] Unable to find a PheromoneTrailEmitter in the scene for GameObject '{gameObject.name}'. " +
-                    $"Please ensure a Scout or PheromoneTrail exists in the scene.");
+                    $"[ColonyNest] Unable to find a PheromoneTrailEmitter for ColonyTeamId {_colonyTeamId} in the scene for GameObject '{gameObject.name}'. " +
+                    $"Please ensure a PheromoneTrailEmitter or Hero with CharacterGland for Colony {_colonyTeamId} exists in the scene.");
+            }
+
+            if (_trailEmitter.ColonyTeamId != _colonyTeamId)
+            {
+                throw new InvalidOperationException(
+                    $"[ColonyNest] Assigned PheromoneTrailEmitter '{_trailEmitter.name}' belongs to ColonyTeamId {_trailEmitter.ColonyTeamId}, " +
+                    $"which does not match ColonyNest '{gameObject.name}' (ColonyTeamId {_colonyTeamId}).");
             }
         }
 

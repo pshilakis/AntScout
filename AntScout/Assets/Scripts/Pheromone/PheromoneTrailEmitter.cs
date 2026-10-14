@@ -11,8 +11,14 @@ namespace AntScout.Pheromone
     /// Manages independent pheromone trail strokes (segments), spacing, and expiration pruning.
     /// Implements IPheromoneEmitter and IUpdatable to allow deterministic per-stroke segmented emission.
     /// </summary>
-    public class PheromoneTrailEmitter : MonoBehaviour, IPheromoneEmitter, IUpdatable
+    public partial class PheromoneTrailEmitter : MonoBehaviour, IPheromoneEmitter, IUpdatable
     {
+        private static readonly Dictionary<int, PheromoneTrailEmitter> _colonyEmitters = new Dictionary<int, PheromoneTrailEmitter>();
+
+        [Header("Colony Ownership")]
+        [Tooltip("Numeric team identifier of the colony that owns and follows this pheromone trail (0 = Colony 1, 1 = Colony 2).")]
+        [SerializeField] private int _colonyTeamId = 0;
+
         [Header("Trail Dynamics")]
         [Tooltip("Minimum distance in meters the ant must travel before placing the next scent node.")]
         [Min(0.05f)]
@@ -30,6 +36,7 @@ namespace AntScout.Pheromone
         public event Action<PheromoneNode> OnNodeEmitted;
         public event Action OnTrailUpdated;
 
+        public int ColonyTeamId => _colonyTeamId;
         public IReadOnlyList<PheromoneTrailSegment> ActiveSegments => _segments;
         public float NodePlacementDistance => _nodePlacementDistance;
         public float NodeLifetime => _nodeLifetime;
@@ -48,26 +55,59 @@ namespace AntScout.Pheromone
             }
         }
 
+        public void SetColonyTeam(int teamId)
+        {
+            if (_colonyTeamId == teamId) return;
+
+            UnregisterFromColonyRegistry();
+            _colonyTeamId = teamId;
+
+            if (isActiveAndEnabled)
+            {
+                RegisterInColonyRegistry();
+            }
+        }
+
+        public static bool TryGetForColony(int colonyTeamId, out PheromoneTrailEmitter emitter)
+        {
+            if (_colonyEmitters.TryGetValue(colonyTeamId, out emitter) && emitter != null)
+            {
+                return true;
+            }
+
+            emitter = null;
+            return false;
+        }
+
         private void Awake()
         {
-            if (_nodePlacementDistance <= 0f)
-            {
-                throw new InvalidOperationException($"[{name}] PheromoneTrailEmitter requires _nodePlacementDistance > 0.");
-            }
-            if (_nodeLifetime <= 0f)
-            {
-                throw new InvalidOperationException($"[{name}] PheromoneTrailEmitter requires _nodeLifetime > 0.");
-            }
+            ValidateEmitterConfiguration();
+            RegisterInColonyRegistry();
         }
 
         private void OnEnable()
         {
+            RegisterInColonyRegistry();
             PgsTime.Register(this, UpdateRate.Continuous, TimeChannel.World);
         }
 
         private void OnDisable()
         {
+            UnregisterFromColonyRegistry();
             PgsTime.Unregister(this);
+        }
+
+        private void RegisterInColonyRegistry()
+        {
+            _colonyEmitters[_colonyTeamId] = this;
+        }
+
+        private void UnregisterFromColonyRegistry()
+        {
+            if (_colonyEmitters.TryGetValue(_colonyTeamId, out PheromoneTrailEmitter registered) && registered == this)
+            {
+                _colonyEmitters.Remove(_colonyTeamId);
+            }
         }
 
         public void OnUpdate(float deltaTime)
