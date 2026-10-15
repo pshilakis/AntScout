@@ -1,5 +1,6 @@
 using System;
 using AntScout.Config;
+using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Resources.Components;
 using AntScout.Resources.Enums;
@@ -19,7 +20,7 @@ namespace AntScout.Swarm.Agents
     /// Implements ISwarmAgent and IUpdatable to allow polymorphic management and deterministic time stepping on TimeChannel.World.
     /// </summary>
     [RequireComponent(typeof(AntTrailFollower))]
-    public partial class WorkerAntController : MonoBehaviour, ISwarmAgent, IUpdatable
+    public partial class WorkerAntController : MonoBehaviour, ISwarmAgent, IUpdatable, IPoolable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for worker balance parameters.")]
@@ -53,6 +54,25 @@ namespace AntScout.Swarm.Agents
         public ColonyNest HomeNest => _homeNest;
         public int CarriedAmount => _carriedAmount;
         public ResourceType CarriedType => _carriedType;
+
+        public PheromoneTrailEmitter TrailEmitter
+        {
+            get
+            {
+                if (_trailEmitter == null || !_trailEmitter.gameObject.scene.IsValid())
+                {
+                    if (_homeNest != null)
+                    {
+                        _trailEmitter = _homeNest.TrailEmitter;
+                    }
+                    else if (PheromoneTrailEmitter.TryGetForColony(ColonyTeamId, out var emitter))
+                    {
+                        _trailEmitter = emitter;
+                    }
+                }
+                return _trailEmitter;
+            }
+        }
 
         public event Action<SwarmAgentState> OnStateChanged;
 
@@ -191,10 +211,11 @@ namespace AntScout.Swarm.Agents
             }
 
             // 1. Sniff for active recruitment pheromone nearby
-            if (_scentCheckCooldown <= 0f && _trailEmitter != null && _trailEmitter.ActiveNodeCount > 0)
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (_scentCheckCooldown <= 0f && emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float recruitRadiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
-                if (_trailEmitter.HasRecruitmentNear(transform.position, recruitRadiusSqr))
+                if (emitter.HasRecruitmentNear(transform.position, recruitRadiusSqr))
                 {
                     _follower.FollowTrailOutbound();
                     SetState(SwarmAgentState.FollowingTrailOutbound);
@@ -229,10 +250,11 @@ namespace AntScout.Swarm.Agents
             }
 
             // 2. Sniff for continuing or staggered pheromone trail extensions
-            if (_trailEmitter != null && _trailEmitter.ActiveNodeCount > 0)
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-                if (_trailEmitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
+                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
                 {
                     if (newSeg.NodeCount > 0)
                     {
@@ -283,10 +305,11 @@ namespace AntScout.Swarm.Agents
             if (_carriedAmount > 0) return;
 
             // If empty-handed, actively sniff for fresh or extended recruitment trails to resume foraging!
-            if (_trailEmitter != null && _trailEmitter.ActiveNodeCount > 0)
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-                if (_trailEmitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
+                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
                 {
                     if (newSeg.NodeCount > 0)
                     {
@@ -452,5 +475,38 @@ namespace AntScout.Swarm.Agents
                 Gizmos.DrawWireSphere(_tipAnchorPosition, _config.TrailTipWanderRadius);
             }
         }
+
+        #region IPoolable Implementation
+
+        public void OnSpawnedFromPool()
+        {
+            _carriedAmount = 0;
+            _targetFood = null;
+            _scentCheckCooldown = 0f;
+            _lastExhaustedSegment = null;
+
+            if (_carriedMorselVisual != null)
+            {
+                _carriedMorselVisual.SetActive(false);
+            }
+        }
+
+        public void OnDespawnedToPool()
+        {
+            if (_follower != null)
+            {
+                _follower.StopMovement();
+            }
+
+            _carriedAmount = 0;
+            _targetFood = null;
+
+            if (_carriedMorselVisual != null)
+            {
+                _carriedMorselVisual.SetActive(false);
+            }
+        }
+
+        #endregion
     }
 }

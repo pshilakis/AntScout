@@ -1,4 +1,5 @@
 using System;
+using AntScout.Pheromone;
 
 namespace AntScout.Swarm.Nest
 {
@@ -34,17 +35,18 @@ namespace AntScout.Swarm.Nest
 
         private void ValidateTrailEmitter()
         {
-            if (_trailEmitter == null)
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (emitter == null)
             {
                 throw new InvalidOperationException(
                     $"[ColonyNest] Unable to find a PheromoneTrailEmitter for ColonyTeamId {_colonyTeamId} in the scene for GameObject '{gameObject.name}'. " +
-                    $"Please ensure a PheromoneTrailEmitter or Hero with CharacterGland for Colony {_colonyTeamId} exists in the scene.");
+                    $"Please ensure a PheromoneTrailEmitter or Hero with CharacterGland for Colony {_colonyTeamId} exists in the scene, or assign a valid _pheromoneTrailPrefab.");
             }
 
-            if (_trailEmitter.ColonyTeamId != _colonyTeamId)
+            if (emitter.ColonyTeamId != _colonyTeamId)
             {
                 throw new InvalidOperationException(
-                    $"[ColonyNest] Assigned PheromoneTrailEmitter '{_trailEmitter.name}' belongs to ColonyTeamId {_trailEmitter.ColonyTeamId}, " +
+                    $"[ColonyNest] Assigned PheromoneTrailEmitter '{emitter.name}' belongs to ColonyTeamId {emitter.ColonyTeamId}, " +
                     $"which does not match ColonyNest '{gameObject.name}' (ColonyTeamId {_colonyTeamId}).");
             }
         }

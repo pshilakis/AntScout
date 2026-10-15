@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AntScout.Characters;
 using AntScout.Config;
 using AntScout.Core.Enums;
+using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
@@ -75,6 +76,18 @@ namespace AntScout.Swarm.Nest
         public int MaxWorkers => _config != null ? _config.MaxActiveWorkers : 0;
         public int TotalBiomass => _totalBiomass;
 
+        public PheromoneTrailEmitter TrailEmitter
+        {
+            get
+            {
+                if (_trailEmitter == null || !_trailEmitter.gameObject.scene.IsValid())
+                {
+                    ResolveTrailEmitter();
+                }
+                return _trailEmitter;
+            }
+        }
+
         private static readonly Dictionary<int, ColonyNest> s_nestsByTeam = new Dictionary<int, ColonyNest>();
 
         public static bool TryGetForTeam(int teamId, out ColonyNest nest)
@@ -109,22 +122,36 @@ namespace AntScout.Swarm.Nest
 
         private void ResolveTrailEmitter()
         {
-            if (_trailEmitter != null && _trailEmitter.ColonyTeamId == _colonyTeamId)
+            // If assigned emitter is a prefab asset on disk, convert it to _pheromoneTrailPrefab template
+            if (_trailEmitter != null && !_trailEmitter.gameObject.scene.IsValid())
+            {
+                if (_pheromoneTrailPrefab == null)
+                {
+                    _pheromoneTrailPrefab = _trailEmitter.gameObject;
+                }
+                _trailEmitter = null;
+            }
+
+            if (_trailEmitter != null && _trailEmitter.gameObject.scene.IsValid() && _trailEmitter.ColonyTeamId == _colonyTeamId)
             {
                 return;
             }
 
-            if (!PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _trailEmitter))
+            if (PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out PheromoneTrailEmitter liveEmitter) &&
+                liveEmitter != null && liveEmitter.gameObject.scene.IsValid())
             {
-                if (_pheromoneTrailPrefab != null)
+                _trailEmitter = liveEmitter;
+                return;
+            }
+
+            if (_pheromoneTrailPrefab != null)
+            {
+                GameObject instance = Instantiate(_pheromoneTrailPrefab, transform.position, Quaternion.identity);
+                instance.name = $"PheromoneTrail_Colony{_colonyTeamId}";
+                _trailEmitter = instance.GetComponent<PheromoneTrailEmitter>();
+                if (_trailEmitter != null)
                 {
-                    GameObject instance = Instantiate(_pheromoneTrailPrefab, transform.position, Quaternion.identity);
-                    instance.name = $"PheromoneTrail_Colony{_colonyTeamId}";
-                    _trailEmitter = instance.GetComponent<PheromoneTrailEmitter>();
-                    if (_trailEmitter != null)
-                    {
-                        _trailEmitter.SetColonyTeam(_colonyTeamId);
-                    }
+                    _trailEmitter.SetColonyTeam(_colonyTeamId);
                 }
             }
         }
@@ -162,10 +189,23 @@ namespace AntScout.Swarm.Nest
         {
             for (int i = _activeWorkers.Count - 1; i >= 0; i--)
             {
-                if (_activeWorkers[i] == null || _activeWorkers[i].AgentTransform == null)
+                if (_activeWorkers[i] == null || 
+                    _activeWorkers[i].AgentTransform == null || 
+                    !_activeWorkers[i].AgentTransform.gameObject.activeInHierarchy)
                 {
                     _activeWorkers.RemoveAt(i);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Explicitly unregisters an agent from active worker tracking (e.g. upon death or pool recycling).
+        /// </summary>
+        public void UnregisterWorker(ISwarmAgent agent)
+        {
+            if (agent != null)
+            {
+                _activeWorkers.Remove(agent);
             }
         }
 
@@ -174,10 +214,11 @@ namespace AntScout.Swarm.Nest
             bool wasConnected = _isTrailConnected;
             _isTrailConnected = false;
 
-            if (_trailEmitter != null && _trailEmitter.ActiveNodeCount > 0)
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float radiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
-                _isTrailConnected = _trailEmitter.HasRecruitmentNear(transform.position, radiusSqr);
+                _isTrailConnected = emitter.HasRecruitmentNear(transform.position, radiusSqr);
             }
 
             if (wasConnected != _isTrailConnected)
@@ -207,17 +248,17 @@ namespace AntScout.Swarm.Nest
 
         private void SpawnWorker()
         {
-            GameObject workerObj = Instantiate(_workerPrefab, _spawnPoint.position, _spawnPoint.rotation);
+            GameObject workerObj = SpawnPool.Spawn(_workerPrefab, _spawnPoint.position, _spawnPoint.rotation);
             ISwarmAgent agent = workerObj.GetComponent<ISwarmAgent>();
 
             if (agent == null)
             {
-                Destroy(workerObj);
+                SpawnPool.Despawn(workerObj);
                 throw new InvalidOperationException(
                     $"[ColonyNest] Assigned WorkerPrefab '{_workerPrefab.name}' is missing an ISwarmAgent component.");
             }
 
-            agent.Initialize(this, _trailEmitter);
+            agent.Initialize(this, TrailEmitter);
             _activeWorkers.Add(agent);
             OnWorkerSpawned?.Invoke(agent);
         }

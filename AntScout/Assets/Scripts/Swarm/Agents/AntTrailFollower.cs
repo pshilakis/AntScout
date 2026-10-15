@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AntScout.Config;
 using AntScout.Core.Enums;
+using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
 using Pathfinding;
@@ -28,7 +29,7 @@ namespace AntScout.Swarm.Agents
     /// Samples scent gradients from PheromoneTrailEmitter and projects navigation destinations to A*.
     /// Implements IUpdatable to receive deterministic simulation updates on TimeChannel.World.
     /// </summary>
-    public class AntTrailFollower : MonoBehaviour, IUpdatable
+    public class AntTrailFollower : MonoBehaviour, IUpdatable, IPoolable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for worker movement speed, sensory radii, and waypoint lookahead.")]
@@ -59,6 +60,22 @@ namespace AntScout.Swarm.Agents
         public FollowerMode CurrentMode => _mode;
         public bool IsOutbound => _mode == FollowerMode.OutboundTrail;
         public PheromoneTrailSegment TrackedSegment => _trackedSegment;
+
+        public PheromoneTrailEmitter Emitter
+        {
+            get
+            {
+                if (_emitter == null || !_emitter.gameObject.scene.IsValid())
+                {
+                    if (_homeNest != null)
+                    {
+                        _emitter = _homeNest.TrailEmitter;
+                    }
+                }
+                return _emitter;
+            }
+        }
+
         public float Radius => _ai != null
             ? _ai.radius
             : throw new InvalidOperationException($"[{name}] IAstarAI is missing on AntTrailFollower!");
@@ -237,7 +254,8 @@ namespace AntScout.Swarm.Agents
 
         private void NavigateOutbound(float deltaTime)
         {
-            if (_emitter == null || _emitter.ActiveNodeCount == 0)
+            PheromoneTrailEmitter emitter = Emitter;
+            if (emitter == null || emitter.ActiveNodeCount == 0)
             {
                 _trackedSegment = null;
                 _trackedNodeIndex = -1;
@@ -252,9 +270,9 @@ namespace AntScout.Swarm.Agents
             int closestIndex = -1;
 
             // 1. Fast O(1) local window search if already tracking a valid segment
-            if (_trackedSegment != null && _trackedNodeIndex >= 0 && _emitter.IsSegmentActive(_trackedSegment))
+            if (_trackedSegment != null && _trackedNodeIndex >= 0 && emitter.IsSegmentActive(_trackedSegment))
             {
-                if (_emitter.TryFindNearestNodeLocal(_trackedSegment, _trackedNodeIndex, _config.LocalSearchNodeWindow, myPos, samplingRadiusSqr, out closestIndex))
+                if (emitter.TryFindNearestNodeLocal(_trackedSegment, _trackedNodeIndex, _config.LocalSearchNodeWindow, myPos, samplingRadiusSqr, out closestIndex))
                 {
                     segment = _trackedSegment;
                 }
@@ -265,13 +283,13 @@ namespace AntScout.Swarm.Agents
             if (_freshnessCheckTimer >= 0.5f)
             {
                 _freshnessCheckTimer = 0f;
-                if (_emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx))
+                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx))
                 {
                     if (freshSeg != segment && freshSeg.NodeCount > 0)
                     {
-                        float freshIntensity = freshSeg.Nodes[freshIdx].GetCurrentIntensity(PgsTime.ElapsedTime, _emitter.NodeLifetime);
+                        float freshIntensity = freshSeg.Nodes[freshIdx].GetCurrentIntensity(PgsTime.ElapsedTime, emitter.NodeLifetime);
                         float currIntensity = (segment != null && closestIndex >= 0 && closestIndex < segment.NodeCount)
-                            ? segment.Nodes[closestIndex].GetCurrentIntensity(PgsTime.ElapsedTime, _emitter.NodeLifetime)
+                            ? segment.Nodes[closestIndex].GetCurrentIntensity(PgsTime.ElapsedTime, emitter.NodeLifetime)
                             : 0f;
 
                         if (freshIntensity > currIntensity + 0.35f)
@@ -286,7 +304,7 @@ namespace AntScout.Swarm.Agents
             // 3. Fall back to best recruitment node if local window lost scent
             if (segment == null)
             {
-                if (!_emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out segment, out closestIndex))
+                if (!emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out segment, out closestIndex))
                 {
                     _trackedSegment = null;
                     _trackedNodeIndex = -1;
@@ -345,7 +363,7 @@ namespace AntScout.Swarm.Agents
             if (isNearTip)
             {
                 // Staggered Trail Chaining: Check if another segment is available before declaring trail end!
-                if (_emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx, excludeSegment: segment))
+                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx, excludeSegment: segment))
                 {
                     if (candidateSeg.NodeCount > 0)
                     {
@@ -474,5 +492,37 @@ namespace AntScout.Swarm.Agents
             _currentMeanderWaypoint = rawWaypoint;
             _ai.destination = _currentMeanderWaypoint;
         }
+
+        #region IPoolable Implementation
+
+        public void OnSpawnedFromPool()
+        {
+            if (_ai != null)
+            {
+                _ai.Teleport(transform.position);
+                _ai.isStopped = false;
+            }
+
+            if (_rvoController != null)
+            {
+                _rvoController.Move(Vector3.zero);
+            }
+
+            _trackedSegment = null;
+            _trackedNodeIndex = -1;
+            _lostTrailTimer = 0f;
+            _freshnessCheckTimer = 0f;
+            _mode = FollowerMode.Inactive;
+        }
+
+        public void OnDespawnedToPool()
+        {
+            StopMovement();
+            _trackedSegment = null;
+            _trackedNodeIndex = -1;
+            _mode = FollowerMode.Inactive;
+        }
+
+        #endregion
     }
 }

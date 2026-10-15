@@ -140,8 +140,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Nest.ColonyNest
   _config: {fileID: 11400000, guid: 174659f8cad8ace4096b02766f4d468f, type: 2}
-  _trailEmitter: {fileID: 1000000000000004, guid: 9812ef4567ab4cd089ef12345678abcd, type: 3}
-  _pheromoneTrailPrefab: {fileID: 0}
+  _trailEmitter: {fileID: 0}
+  _pheromoneTrailPrefab: {fileID: 1000000000000001, guid: 9812ef4567ab4cd089ef12345678abcd, type: 3}
   _workerPrefab: {fileID: 8079377051405443581, guid: 7061d7fe4f5fda64b95b1d7b3fd1832d, type: 3}
   _spawnPoint: {fileID: 6056873137358381847}
   _structureDefinition: {fileID: 11400000, guid: b6b2d6769b677f0429007ef8ea05e72b, type: 2}

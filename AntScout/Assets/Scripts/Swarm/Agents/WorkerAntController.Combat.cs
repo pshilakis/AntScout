@@ -2,6 +2,7 @@ using System;
 using AntScout.Characters;
 using AntScout.Core.Interfaces;
 using AntScout.Core.Stats;
+using AntScout.Match;
 using AntScout.Swarm.Nest;
 using PGS.Combat.Targeting;
 using PGS.Effects;
@@ -138,8 +139,13 @@ namespace AntScout.Swarm.Agents
                 _follower.StopMovement();
             }
 
+            if (_homeNest != null)
+            {
+                _homeNest.UnregisterWorker(this);
+            }
+
             OnDied?.Invoke(this, context);
-            Destroy(gameObject);
+            SpawnPool.Despawn(gameObject);
         }
 
         #endregion
