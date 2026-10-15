@@ -270,8 +270,10 @@ namespace Pathfinding {
 				var endNNInfo2 = gridGraph.GetNearest(originalEndPoint, ref nn2);
 				var gridNode2 = endNNInfo2.node as GridNode;
 
-				// We know we can find a node here, since closestWalkableEndNode.node exists
-				UnityEngine.Assertions.Assert.IsNotNull(gridNode2);
+				// If no candidate grid node was found within tolerance, the special case cannot be applied
+				if (gridNode2 == null) {
+					return false;
+				}
 
 				// If the closest node is different from the closest walkable node
 				// then we might want to apply the special case.

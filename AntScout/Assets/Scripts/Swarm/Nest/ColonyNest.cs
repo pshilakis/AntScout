@@ -6,6 +6,7 @@ using AntScout.Core.Enums;
 using AntScout.Pheromone;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
+using Pathfinding;
 using PGS.Core.Time;
 using UnityEngine;
 
@@ -47,22 +48,49 @@ namespace AntScout.Swarm.Nest
         public event Action<ISwarmAgent> OnWorkerSpawned;
         public event Action<int, int> OnBiomassChanged; // (gainedAmount, newTotal)
 
-        public Vector3 DepotPosition => _spawnPoint != null ? _spawnPoint.position : transform.position;
+        public Vector3 SpawnPosition
+        {
+            get
+            {
+                if (_spawnPoint == null)
+                {
+                    throw new InvalidOperationException(
+                        $"[{name}] ColonyNest is missing an assigned _spawnPoint! Please assign a dedicated SpawnPoint Transform in the Inspector.");
+                }
+
+                Vector3 origin = _spawnPoint.position;
+                if (AstarPath.active != null)
+                {
+                    var nearest = AstarPath.active.GetNearest(origin, NearestNodeConstraint.Walkable);
+                    if (nearest.node != null)
+                    {
+                        return (Vector3)nearest.node.position;
+                    }
+                }
+                return origin;
+            }
+        }
         public bool IsTrailConnected => _isTrailConnected;
         public int ActiveWorkerCount => _activeWorkers.Count;
         public int MaxWorkers => _config != null ? _config.MaxActiveWorkers : 0;
         public int TotalBiomass => _totalBiomass;
 
+        private static readonly Dictionary<int, ColonyNest> s_nestsByTeam = new Dictionary<int, ColonyNest>();
+
+        public static bool TryGetForTeam(int teamId, out ColonyNest nest)
+        {
+            if (s_nestsByTeam.TryGetValue(teamId, out nest) && nest != null)
+            {
+                return true;
+            }
+            nest = null;
+            return false;
+        }
+
         private void Awake()
         {
             ValidateNestConfiguration();
             ResolveTrailEmitter();
-
-            if (_spawnPoint == null)
-            {
-                _spawnPoint = transform;
-            }
-
             BootstrapStructure();
         }
 
@@ -103,11 +131,16 @@ namespace AntScout.Swarm.Nest
 
         private void OnEnable()
         {
+            s_nestsByTeam[_colonyTeamId] = this;
             PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
         }
 
         private void OnDisable()
         {
+            if (s_nestsByTeam.TryGetValue(_colonyTeamId, out ColonyNest registered) && registered == this)
+            {
+                s_nestsByTeam.Remove(_colonyTeamId);
+            }
             PgsTime.Unregister(this);
         }
 
@@ -122,6 +155,7 @@ namespace AntScout.Swarm.Nest
             CleanupInactiveWorkers();
             EvaluateTrailConnection();
             ProcessDeployment(deltaTime);
+            ProcessAuras(deltaTime);
         }
 
         private void CleanupInactiveWorkers()

@@ -143,7 +143,7 @@ namespace AntScout.Swarm.Agents
                     _ai.maxSpeed = _config.WorkerMoveSpeed;
                     if (_homeNest != null)
                     {
-                        _ai.destination = _homeNest.DepotPosition;
+                        _ai.destination = _homeNest.SpawnPosition;
                     }
                 }
             }
@@ -157,7 +157,7 @@ namespace AntScout.Swarm.Agents
                 {
                     _ai.maxSpeed = _config.WorkerReturnWanderSpeed;
                 }
-                Vector3 nestPos = _homeNest != null ? _homeNest.DepotPosition : transform.position;
+                Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
                 PickNextMeanderWaypoint(transform.position, nestPos);
             }
         }
@@ -304,7 +304,7 @@ namespace AntScout.Swarm.Agents
             IReadOnlyList<PheromoneNode> nodes = segment.Nodes;
             if (nodes == null || nodes.Count == 0) return;
 
-            Vector3 nestPos = _homeNest != null ? _homeNest.DepotPosition : transform.position;
+            Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
             Vector3 firstNodePos = nodes[0].Position;
             Vector3 lastNodePos = nodes[nodes.Count - 1].Position;
 
@@ -396,7 +396,7 @@ namespace AntScout.Swarm.Agents
         {
             if (_homeNest == null) return;
 
-            Vector3 nestPos = _homeNest.DepotPosition;
+            Vector3 nestPos = _homeNest.SpawnPosition;
             _ai.destination = nestPos;
 
             Vector3 myPos = transform.position;
@@ -414,7 +414,7 @@ namespace AntScout.Swarm.Agents
         {
             if (_homeNest == null) return;
 
-            Vector3 nestPos = _homeNest.DepotPosition;
+            Vector3 nestPos = _homeNest.SpawnPosition;
             Vector3 myPos = transform.position;
 
             float dxNest = nestPos.x - myPos.x;
@@ -460,7 +460,18 @@ namespace AntScout.Swarm.Agents
             Vector3 meanderDir = rotation * dirToNest;
 
             float stepDistance = Mathf.Min(3.0f, distToNest);
-            _currentMeanderWaypoint = myPos + meanderDir * stepDistance;
+            Vector3 rawWaypoint = myPos + meanderDir * stepDistance;
+
+            if (AstarPath.active != null)
+            {
+                var nearest = AstarPath.active.GetNearest(rawWaypoint, NearestNodeConstraint.Walkable);
+                if (nearest.node != null)
+                {
+                    rawWaypoint = nearest.position;
+                }
+            }
+
+            _currentMeanderWaypoint = rawWaypoint;
             _ai.destination = _currentMeanderWaypoint;
         }
     }

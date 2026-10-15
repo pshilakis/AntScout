@@ -308,7 +308,7 @@ namespace AntScout.Characters.Brains
         {
             if (_homeNest == null) return;
 
-            Vector3 depotPos = _homeNest.DepotPosition;
+            Vector3 depotPos = _homeNest.SpawnPosition;
             Vector3 diff = depotPos - transform.position;
             diff.y = 0f;
             float distToNest = diff.magnitude;
@@ -383,7 +383,7 @@ namespace AntScout.Characters.Brains
                 return;
             }
 
-            Vector3 depotPos = _homeNest.DepotPosition;
+            Vector3 depotPos = _homeNest.SpawnPosition;
             Vector3 diff = depotPos - transform.position;
             diff.y = 0f;
             float planarDist = diff.magnitude;

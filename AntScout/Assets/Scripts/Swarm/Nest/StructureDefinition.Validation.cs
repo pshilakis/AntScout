@@ -33,6 +33,46 @@ namespace AntScout.Swarm.Nest
                 throw new InvalidOperationException(
                     $"[{contextName}] StructureDefinition '{name}' Defense BaseValue ({_defense.BaseValue}) cannot be negative!");
             }
+
+            if (_auras != null)
+            {
+                for (int i = 0; i < _auras.Length; i++)
+                {
+                    var aura = _auras[i];
+                    if (aura == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"[{contextName}] StructureDefinition '{name}' contains a null StructureAuraConfig at index {i}!");
+                    }
+
+                    if (aura.Shape == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"[{contextName}] StructureDefinition '{name}' aura '{aura.AuraName}' (index {i}) is missing an assigned ISpatialShape!");
+                    }
+
+                    if (aura.PulseInterval <= 0f)
+                    {
+                        throw new InvalidOperationException(
+                            $"[{contextName}] StructureDefinition '{name}' aura '{aura.AuraName}' PulseInterval ({aura.PulseInterval}) must be greater than zero!");
+                    }
+
+                    if (aura.Effects != null)
+                    {
+                        for (int e = 0; e < aura.Effects.Count; e++)
+                        {
+                            var effect = aura.Effects[e];
+                            if (effect == null)
+                            {
+                                throw new InvalidOperationException(
+                                    $"[{contextName}] StructureDefinition '{name}' aura '{aura.AuraName}' has a null IHitEffect at index {e}!");
+                            }
+
+                            effect.ValidateOrThrow($"StructureDefinition '{name}' -> Aura '{aura.AuraName}'");
+                        }
+                    }
+                }
+            }
         }
     }
 }

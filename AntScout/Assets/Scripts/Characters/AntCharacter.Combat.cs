@@ -301,6 +301,29 @@ namespace AntScout.Characters
         }
 
         /// <summary>
+        /// Revives and re-materializes the ant character at the specified spawn position with full health.
+        /// Unlocks locomotion, resets vitals/status, and re-activates the GameObject with zero GC allocations.
+        /// </summary>
+        public void Revive(Vector3 spawnPosition, Quaternion spawnRotation)
+        {
+            _vitals.Reset();
+            _currentHealth = _vitals.CurrentHealth;
+            _maxHealth = _vitals.MaxHealth;
+            _isAlive = _vitals.IsAlive;
+            _isStunned = false;
+            _speedMultiplier = 1.0f;
+
+            transform.SetPositionAndRotation(spawnPosition, spawnRotation);
+            gameObject.SetActive(true);
+
+            if (_motor != null)
+            {
+                _motor.UnlockLocomotion(this);
+                _motor.Teleport(spawnPosition, spawnRotation);
+            }
+        }
+
+        /// <summary>
         /// Attempts to execute a combat action (e.g. Dash, Bite, Spit) via the attached CombatActionExecutor.
         /// </summary>
         public bool TryExecuteAction(CombatActionDefinition action, Vector3 aimDirection)

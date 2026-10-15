@@ -124,6 +124,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3706301400813337328}
+  - {fileID: 6056873137358381847}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8919748608766039444
@@ -139,9 +140,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Nest.ColonyNest
   _config: {fileID: 11400000, guid: 174659f8cad8ace4096b02766f4d468f, type: 2}
-  _trailEmitter: {fileID: 0}
+  _trailEmitter: {fileID: 1000000000000004, guid: 9812ef4567ab4cd089ef12345678abcd, type: 3}
+  _pheromoneTrailPrefab: {fileID: 0}
   _workerPrefab: {fileID: 8079377051405443581, guid: 7061d7fe4f5fda64b95b1d7b3fd1832d, type: 3}
-  _spawnPoint: {fileID: 0}
+  _spawnPoint: {fileID: 6056873137358381847}
   _structureDefinition: {fileID: 11400000, guid: b6b2d6769b677f0429007ef8ea05e72b, type: 2}
   _colonyTeamId: 0
 --- !u!114 &904210175310236587
@@ -193,6 +195,37 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 1.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &4594111719318363900
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6056873137358381847}
+  m_Layer: 0
+  m_Name: Spawn Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6056873137358381847
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4594111719318363900}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 2.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 130768126300757909}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5384747535096589487
 GameObject:
   m_ObjectHideFlags: 0

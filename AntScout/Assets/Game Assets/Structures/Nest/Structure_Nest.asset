@@ -14,10 +14,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Nest.StructureDefinition
   _structureName: Colony Nest
   _icon: {fileID: 0}
-  _bodyRadius: 1.8
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
     BaseValue: 1000
   _defense:
     StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
     BaseValue: 250
+  _auras:
+  - _auraName: Nest Recovery Fountain
+    _shape:
+      rid: 7100000000000000001
+    _targetAffiliation: 2
+    _pulseInterval: 0.25
+    _effects:
+    - rid: 7100000000000000002
+  references:
+    version: 2
+    RefIds:
+    - rid: 7100000000000000001
+      type: {class: CircleShape, ns: PGS.Combat.Shapes, asm: PGS.Combat.Runtime}
+      data:
+        _radius: 5
+        _height: 3
+    - rid: 7100000000000000002
+      type: {class: DirectHealEffect, ns: AntScout.Combat, asm: Assembly-CSharp}
+      data:
+        _effectName: Direct Heal
+        _baseHealing: 4

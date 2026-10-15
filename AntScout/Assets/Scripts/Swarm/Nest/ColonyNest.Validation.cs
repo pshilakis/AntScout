@@ -23,6 +23,13 @@ namespace AntScout.Swarm.Nest
                     $"[ColonyNest] Missing required WorkerPrefab on GameObject '{gameObject.name}'. " +
                     $"Please assign a valid prefab in the Inspector.");
             }
+
+            if (_spawnPoint == null)
+            {
+                throw new InvalidOperationException(
+                    $"[ColonyNest] Missing required _spawnPoint Transform on GameObject '{gameObject.name}'. " +
+                    $"Please create a child GameObject named 'SpawnPoint' positioned on walkable ground outside the nest collider and assign it to the Spawn Point field.");
+            }
         }
 
         private void ValidateTrailEmitter()

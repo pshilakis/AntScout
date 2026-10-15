@@ -5,6 +5,7 @@ using AntScout.Resources.Components;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using AntScout.Swarm.Nest;
+using Pathfinding;
 using PGS.Core.Time;
 using UnityEngine;
 
@@ -165,7 +166,20 @@ namespace AntScout.Swarm.Agents
             if (_homeNest == null) return;
 
             Vector2 randomDisk = UnityEngine.Random.insideUnitCircle * _config.NestWanderRadius;
-            _currentWanderTarget = _homeNest.DepotPosition + new Vector3(randomDisk.x, 0f, randomDisk.y);
+            Vector3 rawTarget = _homeNest.SpawnPosition + new Vector3(randomDisk.x, 0f, randomDisk.y);
+
+            if (AstarPath.active != null)
+            {
+                var nearest = AstarPath.active.GetNearest(rawTarget, NearestNodeConstraint.Walkable);
+                if (nearest.node != null)
+                {
+                    _currentWanderTarget = nearest.position;
+                    _follower.WanderTo(_currentWanderTarget);
+                    return;
+                }
+            }
+
+            _currentWanderTarget = rawTarget;
             _follower.WanderTo(_currentWanderTarget);
         }
 
@@ -222,7 +236,7 @@ namespace AntScout.Swarm.Agents
                 {
                     if (newSeg.NodeCount > 0)
                     {
-                        Vector3 nestPos = _homeNest != null ? _homeNest.DepotPosition : transform.position;
+                        Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
                         Vector3 segFirst = newSeg.Nodes[0].Position;
                         Vector3 segLast = newSeg.Nodes[newSeg.Nodes.Count - 1].Position;
                         float distFirstSqr = (segFirst.x - nestPos.x) * (segFirst.x - nestPos.x) + (segFirst.z - nestPos.z) * (segFirst.z - nestPos.z);
@@ -276,7 +290,7 @@ namespace AntScout.Swarm.Agents
                 {
                     if (newSeg.NodeCount > 0)
                     {
-                        Vector3 nestPos = _homeNest != null ? _homeNest.DepotPosition : transform.position;
+                        Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
                         Vector3 myPos = transform.position;
 
                         Vector3 segFirst = newSeg.Nodes[0].Position;
