@@ -92,6 +92,14 @@
         "com.pgs.core": "1.0.0"
       }
     },
+    "com.pgs.ui": {
+      "version": "file:../../../_SharedPackages/com.pgs.ui",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.pgs.core": "1.5.0"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
       "depth": 0,

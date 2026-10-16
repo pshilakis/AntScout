@@ -36,6 +36,10 @@ namespace AntScout.Match
         [Tooltip("Reference to the SpawnController coordinating participant lifecycles.")]
         [SerializeField] private SpawnController _spawnController;
 
+        [ColoredHeader("UI Presentation", HeaderColor.Lavender)]
+        [Tooltip("Optional Match UI root prefab (containing Canvas, HUD, and Modals). If assigned and not already present in the scene, it will be instantiated during match setup.")]
+        [SerializeField] private GameObject _matchUiPrefab;
+
         private AsyncStateMachine<MatchDirector> _stateMachine;
         private float _preMatchTimer;
         private DateTimeOffset _startTimeUtc;
@@ -52,6 +56,7 @@ namespace AntScout.Match
         public static MatchDirector Instance => s_instance;
         public IAsyncStateMachine<MatchDirector> StateMachine => _stateMachine;
         public SpawnController SpawnController => _spawnController;
+        public GameObject MatchUiPrefab => _matchUiPrefab;
         public IAsyncState<MatchDirector> CurrentState => _stateMachine?.CurrentState;
 
         public MatchState State => _stateMachine?.CurrentState switch
