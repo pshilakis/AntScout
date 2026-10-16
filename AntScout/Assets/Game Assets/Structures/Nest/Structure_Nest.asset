@@ -16,10 +16,10 @@ MonoBehaviour:
   _icon: {fileID: 0}
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
-    BaseValue: 1000
+    BaseValue: 50
   _defense:
     StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
-    BaseValue: 250
+    BaseValue: 0
   _auras:
   - _auraName: Nest Recovery Fountain
     _shape:

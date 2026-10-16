@@ -47,6 +47,16 @@ namespace AntScout.Pheromone
         }
 
         /// <summary>
+        /// O(1) direct node reinforcement using local array index.
+        /// Refreshes timestamp and boosts traffic strength.
+        /// </summary>
+        public void ReinforceNode(int index, float currentTime, float strengthBoost = 0.5f)
+        {
+            if (index < 0 || index >= _nodes.Count) return;
+            _nodes[index] = _nodes[index].WithReinforcement(currentTime, strengthBoost);
+        }
+
+        /// <summary>
         /// Removes expired nodes from the head of this segment as time elapses.
         /// </summary>
         public int PruneExpired(float currentTime, float lifetime)

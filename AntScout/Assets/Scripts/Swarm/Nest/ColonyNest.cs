@@ -8,6 +8,7 @@ using AntScout.Pheromone;
 using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using Pathfinding;
+using PGS.Core;
 using PGS.Core.Time;
 using UnityEngine;
 
@@ -43,11 +44,14 @@ namespace AntScout.Swarm.Nest
         private readonly List<ISwarmAgent> _activeWorkers = new List<ISwarmAgent>();
         private bool _isTrailConnected;
         private float _spawnTimer;
-        private int _totalBiomass;
+
+        [Header("Live Colony Telemetry")]
+        [Tooltip("Live current and maximum biomass reserves for the colony nest.")]
+        [SerializeField] private BoundedInt _biomass;
 
         public event Action<bool> OnTrailConnectionChanged;
         public event Action<ISwarmAgent> OnWorkerSpawned;
-        public event Action<int, int> OnBiomassChanged; // (gainedAmount, newTotal)
+        public event Action<BoundedInt> OnBiomassChanged;
 
         public Vector3 SpawnPosition
         {
@@ -74,7 +78,8 @@ namespace AntScout.Swarm.Nest
         public bool IsTrailConnected => _isTrailConnected;
         public int ActiveWorkerCount => _activeWorkers.Count;
         public int MaxWorkers => _config != null ? _config.MaxActiveWorkers : 0;
-        public int TotalBiomass => _totalBiomass;
+        public BoundedInt Biomass => _biomass;
+        public int TotalBiomass => _biomass.Current;
 
         public PheromoneTrailEmitter TrailEmitter
         {
@@ -103,6 +108,10 @@ namespace AntScout.Swarm.Nest
         private void Awake()
         {
             ValidateNestConfiguration();
+            if (_config != null)
+            {
+                _biomass = _config.InitialBiomass;
+            }
             ResolveTrailEmitter();
             BootstrapStructure();
         }
@@ -218,7 +227,8 @@ namespace AntScout.Swarm.Nest
             if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float radiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
-                _isTrailConnected = emitter.HasRecruitmentNear(transform.position, radiusSqr);
+                _isTrailConnected = emitter.HasRecruitmentNear(transform.position, radiusSqr) ||
+                                    (_spawnPoint != null && emitter.HasRecruitmentNear(_spawnPoint.position, radiusSqr));
             }
 
             if (wasConnected != _isTrailConnected)
@@ -230,7 +240,7 @@ namespace AntScout.Swarm.Nest
         private void ProcessDeployment(float deltaTime)
         {
             // StarCraft-style economy: Nest incubates and hatches new workers by spending harvested biomass
-            if (_activeWorkers.Count >= _config.MaxActiveWorkers || _totalBiomass < _config.WorkerBiomassCost)
+            if (_activeWorkers.Count >= _config.MaxActiveWorkers || _biomass.Current < _config.WorkerBiomassCost)
             {
                 _spawnTimer = 0f;
                 return;
@@ -240,8 +250,8 @@ namespace AntScout.Swarm.Nest
             if (_spawnTimer >= _config.WorkerSpawnInterval)
             {
                 _spawnTimer = 0f;
-                _totalBiomass -= _config.WorkerBiomassCost;
-                OnBiomassChanged?.Invoke(-_config.WorkerBiomassCost, _totalBiomass);
+                _biomass -= _config.WorkerBiomassCost;
+                OnBiomassChanged?.Invoke(_biomass);
                 SpawnWorker();
             }
         }
@@ -269,8 +279,22 @@ namespace AntScout.Swarm.Nest
         public void DepositResource(ResourceType type, int amount, int biomassValue)
         {
             int earned = amount * biomassValue;
-            _totalBiomass += earned;
-            OnBiomassChanged?.Invoke(earned, _totalBiomass);
+            _biomass += earned;
+            OnBiomassChanged?.Invoke(_biomass);
+        }
+
+        /// <summary>
+        /// Attempts to spend the specified biomass cost from the colony's reserves.
+        /// Returns true if successful; false if insufficient biomass.
+        /// </summary>
+        public bool TrySpendBiomass(int cost)
+        {
+            if (cost < 0) throw new ArgumentOutOfRangeException(nameof(cost), "Biomass cost cannot be negative.");
+            if (_biomass.Current < cost) return false;
+
+            _biomass -= cost;
+            OnBiomassChanged?.Invoke(_biomass);
+            return true;
         }
 
         /// <summary>

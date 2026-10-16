@@ -5,19 +5,34 @@ namespace AntScout.Pheromone
 {
     /// <summary>
     /// Immutable representation of an individual chemical scent node deposited in 3D world space.
+    /// Tracks 3D position, drop timestamp, chemical type, and traffic strength/concentration.
     /// </summary>
     [System.Serializable]
     public readonly struct PheromoneNode
     {
         public Vector3 Position { get; }
         public float TimeStamp { get; }
+        public float Strength { get; }
         public PheromoneType Type { get; }
 
-        public PheromoneNode(Vector3 position, float timeStamp, PheromoneType type)
+        public const float DefaultInitialStrength = 1.0f;
+        public const float MaxStrength = 5.0f;
+
+        public PheromoneNode(Vector3 position, float timeStamp, PheromoneType type, float strength = DefaultInitialStrength)
         {
             Position = position;
             TimeStamp = timeStamp;
             Type = type;
+            Strength = Mathf.Clamp(strength, 0f, MaxStrength);
+        }
+
+        /// <summary>
+        /// Returns a copy of this node with an updated timestamp and boosted traffic strength.
+        /// </summary>
+        public PheromoneNode WithReinforcement(float currentTime, float strengthBoost = 0.5f)
+        {
+            float newStrength = Mathf.Min(Strength + strengthBoost, MaxStrength);
+            return new PheromoneNode(Position, currentTime, Type, newStrength);
         }
 
         /// <summary>

@@ -137,43 +137,30 @@ namespace AntScout.Swarm.Agents
             _trackedNodeIndex = initialNodeIndex;
             _lostTrailTimer = 0f;
             _freshnessCheckTimer = 0f;
-            if (_ai != null)
-            {
-                _ai.isStopped = false;
-                _ai.maxSpeed = _config.WorkerMoveSpeed;
-            }
+            ResumeMovement(_config.WorkerMoveSpeed);
         }
 
         public void ReturnToNest(bool hasCargo)
         {
-            _trackedSegment = null;
-            _trackedNodeIndex = -1;
-
-            if (_ai != null) _ai.isStopped = false;
-
             if (hasCargo)
             {
-                // Delivering food: direct A* route at full speed
+                // Inbound retracing along the active trail at full speed
                 _mode = FollowerMode.InboundNest;
-                if (_ai != null)
+                ResumeMovement(_config.WorkerMoveSpeed);
+                if (_trackedSegment == null && _homeNest != null && _ai != null)
                 {
-                    _ai.maxSpeed = _config.WorkerMoveSpeed;
-                    if (_homeNest != null)
-                    {
-                        _ai.destination = _homeNest.SpawnPosition;
-                    }
+                    _ai.destination = _homeNest.SpawnPosition;
                 }
             }
             else
             {
                 // Empty-handed: slow, organic biased meander toward nest
+                _trackedSegment = null;
+                _trackedNodeIndex = -1;
                 _mode = FollowerMode.MeanderHome;
                 _meanderTimer = 0f;
                 _currentMeanderWaypoint = Vector3.zero;
-                if (_ai != null)
-                {
-                    _ai.maxSpeed = _config.WorkerReturnWanderSpeed;
-                }
+                ResumeMovement(_config.WorkerReturnWanderSpeed);
                 Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
                 PickNextMeanderWaypoint(transform.position, nestPos);
             }
@@ -189,10 +176,23 @@ namespace AntScout.Swarm.Agents
             _mode = FollowerMode.Wander;
             _trackedSegment = null;
             _trackedNodeIndex = -1;
+            ResumeMovement(speed > 0f ? speed : _config.WorkerMoveSpeed);
             if (_ai != null)
             {
-                _ai.isStopped = false;
-                _ai.maxSpeed = speed > 0f ? speed : _config.WorkerMoveSpeed;
+                _ai.destination = targetPosition;
+            }
+        }
+
+        /// <summary>
+        /// Paths directly toward a target position (e.g. food cache) without clearing the active trail
+        /// segment context, allowing seamless inbound retracing once harvesting concludes.
+        /// </summary>
+        public void ApproachTarget(Vector3 targetPosition, float speed = -1f)
+        {
+            _mode = FollowerMode.Wander;
+            ResumeMovement(speed > 0f ? speed : _config.WorkerMoveSpeed);
+            if (_ai != null)
+            {
                 _ai.destination = targetPosition;
             }
         }
@@ -203,6 +203,35 @@ namespace AntScout.Swarm.Agents
             if (_ai != null)
             {
                 _ai.isStopped = true;
+                _ai.destination = transform.position;
+                if (_ai is AIPath aiPath)
+                {
+                    aiPath.updateRotation = false;
+                }
+            }
+            if (_rvoController != null)
+            {
+                _rvoController.locked = true;
+            }
+        }
+
+        private void ResumeMovement(float speed = -1f)
+        {
+            if (_ai != null)
+            {
+                _ai.isStopped = false;
+                if (speed > 0f)
+                {
+                    _ai.maxSpeed = speed;
+                }
+                if (_ai is AIPath aiPath)
+                {
+                    aiPath.updateRotation = true;
+                }
+            }
+            if (_rvoController != null)
+            {
+                _rvoController.locked = false;
             }
         }
 
@@ -239,7 +268,7 @@ namespace AntScout.Swarm.Agents
                     break;
 
                 case FollowerMode.InboundNest:
-                    NavigateInbound();
+                    NavigateInbound(deltaTime);
                     break;
 
                 case FollowerMode.MeanderHome:
@@ -318,6 +347,9 @@ namespace AntScout.Swarm.Agents
             _trackedNodeIndex = closestIndex;
             _lostTrailTimer = 0f;
             OnTrailResumed?.Invoke();
+
+            // Outbound traffic maintains the chemical corridor, preventing premature decay while foraging
+            segment.ReinforceNode(closestIndex, PgsTime.ElapsedTime, strengthBoost: 0.1f);
 
             IReadOnlyList<PheromoneNode> nodes = segment.Nodes;
             if (nodes == null || nodes.Count == 0) return;
@@ -410,21 +442,91 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void NavigateInbound()
+        private void NavigateInbound(float deltaTime)
         {
             if (_homeNest == null) return;
 
             Vector3 nestPos = _homeNest.SpawnPosition;
-            _ai.destination = nestPos;
-
             Vector3 myPos = transform.position;
             float dx = nestPos.x - myPos.x;
             float dz = nestPos.z - myPos.z;
             float distSqr = dx * dx + dz * dz;
 
+            // Arrival check at the home nest depot
             if (distSqr <= (_config.NestArrivalThreshold * _config.NestArrivalThreshold))
             {
                 OnReturnedToNest?.Invoke();
+                return;
+            }
+
+            PheromoneTrailEmitter emitter = Emitter;
+
+            // If we lost our segment or harvested food a few meters off the trail, re-acquire the nearest recruitment trail segment
+            if ((_trackedSegment == null || !emitter.IsSegmentActive(_trackedSegment)) && emitter != null && emitter.ActiveNodeCount > 0)
+            {
+                float reattachRadiusSqr = (_config.TrailSamplingRadius * 2.5f) * (_config.TrailSamplingRadius * 2.5f);
+                if (emitter.TryFindBestRecruitmentNode(myPos, reattachRadiusSqr, out PheromoneTrailSegment foundSeg, out int foundIdx))
+                {
+                    _trackedSegment = foundSeg;
+                    _trackedNodeIndex = foundIdx;
+                }
+            }
+
+            // If we have an active tracked segment, retrace it inbound toward the nest
+            if (_trackedSegment != null && emitter != null && emitter.IsSegmentActive(_trackedSegment) && _trackedSegment.NodeCount > 0)
+            {
+                IReadOnlyList<PheromoneNode> nodes = _trackedSegment.Nodes;
+
+                // Local window search to track current node position along the ribbon
+                float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
+                if (emitter.TryFindNearestNodeLocal(_trackedSegment, _trackedNodeIndex, _config.LocalSearchNodeWindow, myPos, samplingRadiusSqr, out int closestIndex))
+                {
+                    _trackedNodeIndex = closestIndex;
+                }
+
+                // Reinforce the current node: refresh timestamp and boost traffic strength
+                _trackedSegment.ReinforceNode(_trackedNodeIndex, PgsTime.ElapsedTime);
+
+                Vector3 firstNodePos = nodes[0].Position;
+                Vector3 lastNodePos = nodes[nodes.Count - 1].Position;
+                float distFirstSqr = (firstNodePos.x - nestPos.x) * (firstNodePos.x - nestPos.x) + (firstNodePos.z - nestPos.z) * (firstNodePos.z - nestPos.z);
+                float distLastSqr = (lastNodePos.x - nestPos.x) * (lastNodePos.x - nestPos.x) + (lastNodePos.z - nestPos.z) * (lastNodePos.z - nestPos.z);
+
+                // Inbound direction steps towards whichever end of the segment is closer to the nest
+                bool stepForward = distFirstSqr >= distLastSqr;
+                int stepDir = stepForward ? 1 : -1;
+                int nestEndIndex = stepForward ? (nodes.Count - 1) : 0;
+
+                // If reached the end of the ribbon closest to the nest, navigate final stretch directly into depot
+                if (_trackedNodeIndex == nestEndIndex)
+                {
+                    _ai.destination = nestPos;
+                    return;
+                }
+
+                int lookAheadCount = Mathf.Max(1, Mathf.RoundToInt(_config.WaypointLookAheadDistance / _config.ArrivalThreshold));
+                int targetIndex = Mathf.Clamp(_trackedNodeIndex + (stepDir * lookAheadCount), 0, nodes.Count - 1);
+                Vector3 baseWaypoint = nodes[targetIndex].Position;
+
+                // Lateral offset for two-way traffic separation
+                int priorIndex = Mathf.Clamp(targetIndex - stepDir, 0, nodes.Count - 1);
+                Vector3 forwardDir = baseWaypoint - nodes[priorIndex].Position;
+                forwardDir.y = 0f;
+
+                Vector3 targetWaypoint = baseWaypoint;
+                if (forwardDir.sqrMagnitude > 0.0001f)
+                {
+                    Vector3 tangent = forwardDir.normalized;
+                    Vector3 normal = new Vector3(-tangent.z, 0f, tangent.x);
+                    targetWaypoint = baseWaypoint + normal * (_lateralOffsetSeed * _config.TrailSwarmDispersion);
+                }
+
+                _ai.destination = targetWaypoint;
+            }
+            else
+            {
+                // Fallback to direct pathfinding if trail expired or was lost
+                _ai.destination = nestPos;
             }
         }
 

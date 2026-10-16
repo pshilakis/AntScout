@@ -41,9 +41,11 @@ namespace AntScout.Swarm.Agents
         private float _wanderTimer;
         private float _tipWanderTimer;
         private float _scentCheckCooldown;
+        private float _forageCheckTimer;
         private Vector3 _currentWanderTarget;
         private Vector3 _tipAnchorPosition;
         private PheromoneTrailSegment _lastExhaustedSegment;
+        private bool _isAtHarvestNode;
 
         private int _carriedAmount;
         private int _carriedBiomassPerUnit;
@@ -134,6 +136,7 @@ namespace AntScout.Swarm.Agents
             _carriedAmount = 0;
             _scentCheckCooldown = 0f;
             _lastExhaustedSegment = null;
+            _isAtHarvestNode = false;
 
             if (_carriedMorselVisual != null)
             {
@@ -147,6 +150,7 @@ namespace AntScout.Swarm.Agents
         public void OrderReturnHome()
         {
             _targetFood = null;
+            _isAtHarvestNode = false;
             bool hasCargo = _carriedAmount > 0;
             _follower.ReturnToNest(hasCargo);
             SetState(SwarmAgentState.ReturningHome);
@@ -158,6 +162,10 @@ namespace AntScout.Swarm.Agents
             {
                 case SwarmAgentState.WanderingAroundNest:
                     EvaluateNestWandering(deltaTime);
+                    break;
+
+                case SwarmAgentState.FollowingTrailOutbound:
+                    EvaluateOutboundForaging(deltaTime);
                     break;
 
                 case SwarmAgentState.AtTrailEnd:
@@ -343,11 +351,26 @@ namespace AntScout.Swarm.Agents
             _follower.WanderTo(target, _config.WorkerMoveSpeed);
         }
 
+        private void EvaluateOutboundForaging(float deltaTime)
+        {
+            _forageCheckTimer += deltaTime;
+            if (_forageCheckTimer < 0.25f) return;
+            _forageCheckTimer = 0f;
+
+            // Check if our outbound trail passed close enough to food to begin harvesting
+            float searchRadius = _config.FoodDetectionRadius;
+            FoodSource closestFood = FoodSource.FindClosest(transform.position, searchRadius);
+            if (closestFood != null && closestFood.CanHarvest)
+            {
+                StartHarvesting(closestFood);
+            }
+        }
+
         private void StartHarvesting(FoodSource food)
         {
             _targetFood = food;
             _harvestTimer = 0f;
-            _follower.StopMovement();
+            _isAtHarvestNode = false;
             SetState(SwarmAgentState.Harvesting);
         }
 
@@ -355,10 +378,45 @@ namespace AntScout.Swarm.Agents
         {
             if (_targetFood == null || !_targetFood.CanHarvest)
             {
+                _isAtHarvestNode = false;
                 OrderReturnHome();
                 return;
             }
 
+            Vector3 foodPos = _targetFood.WorldPosition;
+            Vector3 myPos = transform.position;
+
+            // 1. Move to contact distance of the food object if not yet locked at the perimeter ring
+            if (!_isAtHarvestNode)
+            {
+                float dx = foodPos.x - myPos.x;
+                float dz = foodPos.z - myPos.z;
+                float distSqr = dx * dx + dz * dz;
+                float harvestRange = Mathf.Max(_config.ArrivalThreshold * 3.0f, 1.8f);
+
+                if (distSqr > harvestRange * harvestRange)
+                {
+                    _follower.ApproachTarget(foodPos, _config.WorkerMoveSpeed);
+                    return;
+                }
+
+                // Contact established: lock in place at the perimeter ring
+                _isAtHarvestNode = true;
+                _follower.StopMovement();
+            }
+
+            // 2. In contact range: smoothly face the food source
+            Vector3 lookDir = foodPos - myPos;
+            lookDir.y = 0f;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation,
+                    Quaternion.LookRotation(lookDir),
+                    360f * deltaTime);
+            }
+
+            // 3. Harvest extraction timer
             _harvestTimer += deltaTime;
             float durationNeeded = _targetFood.HarvestDuration;
             int biomassPerUnit = _targetFood.BiomassValue;
@@ -366,6 +424,8 @@ namespace AntScout.Swarm.Agents
 
             if (_harvestTimer >= durationNeeded)
             {
+                _isAtHarvestNode = false;
+
                 if (_targetFood.TryHarvest(1, out int harvested) && harvested > 0)
                 {
                     _carriedAmount = harvested;

@@ -225,6 +225,11 @@ namespace AntScout.Pheromone
 
             float oldestIntensity = nodes[0].GetCurrentIntensity(currentTime, lifetime);
             float newestIntensity = nodes[count - 1].GetCurrentIntensity(currentTime, lifetime);
+            float avgStrength = (nodes[0].Strength + nodes[count - 1].Strength) * 0.5f;
+            float strengthMultiplier = Mathf.Lerp(1.0f, 1.5f, Mathf.Clamp01((avgStrength - 1f) / (PheromoneNode.MaxStrength - 1f)));
+            float currentWidth = _trailWidth * strengthMultiplier;
+            line.startWidth = currentWidth;
+            line.endWidth = currentWidth;
 
             _colorKeys[0] = new GradientColorKey(baseColor, 0.0f);
             _colorKeys[1] = new GradientColorKey(baseColor, 1.0f);

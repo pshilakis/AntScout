@@ -1,6 +1,8 @@
 using System;
 using AntScout.Match;
+using AntScout.Swarm.Interfaces;
 using AntScout.Swarm.Nest;
+using PGS.Core;
 using PGS.Core.Time;
 using PGS.UI.Gauges;
 using PGS.UI.Stack;
@@ -44,6 +46,16 @@ namespace AntScout.UI
         [Tooltip("Text label showing enemy nest health numbers (e.g. '1,000 / 1,000').")]
         [SerializeField] private TextMeshProUGUI _enemyNestHealthText;
 
+        [Header("Player Colony Economy Telemetry")]
+        [Tooltip("Shader-driven ResourceBar for the player's colony biomass reserves.")]
+        [SerializeField] private ResourceBar _playerBiomassBar;
+
+        [Tooltip("Text label displaying player colony biomass numbers (e.g. '100 / 500').")]
+        [SerializeField] private TextMeshProUGUI _playerBiomassText;
+
+        [Tooltip("Text label displaying active worker population (e.g. 'Workers: 6 / 20').")]
+        [SerializeField] private TextMeshProUGUI _playerWorkerText;
+
         [Header("Nest Scene References (Optional Override)")]
         [Tooltip("Direct reference to Player Nest. Auto-resolved if unassigned.")]
         [SerializeField] private ColonyNest _playerNest;
@@ -78,6 +90,7 @@ namespace AntScout.UI
         {
             UpdateClockDisplay();
             UpdateCountdownDisplay();
+            UpdateWorkerDisplay();
         }
 
         #endregion
@@ -93,8 +106,13 @@ namespace AntScout.UI
             if (_playerNest != null)
             {
                 _playerNest.OnHealthChanged += HandlePlayerNestHealthChanged;
+                _playerNest.OnBiomassChanged += HandlePlayerBiomassChanged;
+                _playerNest.OnWorkerSpawned += HandleWorkerSpawned;
+
                 _playerNestBar.SetValues(_playerNest.CurrentHealth, _playerNest.MaxHealth);
                 UpdateNestHealthText(_playerNestHealthText, _playerNest.CurrentHealth, _playerNest.MaxHealth);
+                UpdateBiomassDisplay(_playerNest.Biomass);
+                UpdateWorkerDisplay();
             }
 
             if (_enemyNest != null)
@@ -119,6 +137,8 @@ namespace AntScout.UI
             if (_playerNest != null)
             {
                 _playerNest.OnHealthChanged -= HandlePlayerNestHealthChanged;
+                _playerNest.OnBiomassChanged -= HandlePlayerBiomassChanged;
+                _playerNest.OnWorkerSpawned -= HandleWorkerSpawned;
             }
 
             if (_enemyNest != null)
@@ -168,6 +188,16 @@ namespace AntScout.UI
         {
             _playerNestBar.SetValues(current, max);
             UpdateNestHealthText(_playerNestHealthText, current, max);
+        }
+
+        private void HandlePlayerBiomassChanged(BoundedInt biomass)
+        {
+            UpdateBiomassDisplay(biomass);
+        }
+
+        private void HandleWorkerSpawned(ISwarmAgent agent)
+        {
+            UpdateWorkerDisplay();
         }
 
         private void HandleEnemyNestHealthChanged(float current, float max)
@@ -239,6 +269,32 @@ namespace AntScout.UI
             label.text = $"{Mathf.CeilToInt(current):N0} / {Mathf.CeilToInt(max):N0}";
         }
 
+        private void UpdateBiomassDisplay(BoundedInt biomass)
+        {
+            if (_playerBiomassBar != null)
+            {
+                _playerBiomassBar.SetValues(biomass.Current, biomass.Max);
+            }
+
+            if (_playerBiomassText != null)
+            {
+                _playerBiomassText.text = $"{biomass.Current:N0} / {biomass.Max:N0}";
+            }
+        }
+
+        private int _lastWorkerCount = -1;
+        private void UpdateWorkerDisplay()
+        {
+            if (_playerWorkerText == null || _playerNest == null) return;
+
+            int count = _playerNest.ActiveWorkerCount;
+            if (count != _lastWorkerCount)
+            {
+                _lastWorkerCount = count;
+                _playerWorkerText.text = $"Workers: {count} / {_playerNest.MaxWorkers}";
+            }
+        }
+
         #endregion
 
         #region Validation
@@ -265,9 +321,34 @@ namespace AntScout.UI
                 throw new InvalidOperationException($"[{name}] Player Nest ResourceBar is unassigned!");
             }
 
+            if (_playerNestHealthText == null)
+            {
+                throw new InvalidOperationException($"[{name}] Player Nest Health TextMeshProUGUI is unassigned!");
+            }
+
             if (_enemyNestBar == null)
             {
                 throw new InvalidOperationException($"[{name}] Enemy Nest ResourceBar is unassigned!");
+            }
+
+            if (_enemyNestHealthText == null)
+            {
+                throw new InvalidOperationException($"[{name}] Enemy Nest Health TextMeshProUGUI is unassigned!");
+            }
+
+            if (_playerBiomassBar == null)
+            {
+                throw new InvalidOperationException($"[{name}] Player Biomass ResourceBar is unassigned!");
+            }
+
+            if (_playerBiomassText == null)
+            {
+                throw new InvalidOperationException($"[{name}] Player Biomass TextMeshProUGUI is unassigned!");
+            }
+
+            if (_playerWorkerText == null)
+            {
+                throw new InvalidOperationException($"[{name}] Player Worker TextMeshProUGUI is unassigned!");
             }
         }
 

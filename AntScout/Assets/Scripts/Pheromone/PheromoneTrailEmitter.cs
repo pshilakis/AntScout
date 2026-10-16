@@ -26,7 +26,7 @@ namespace AntScout.Pheromone
 
         [Tooltip("Lifetime in seconds before a pheromone scent node completely expires and decays.")]
         [Min(0.5f)]
-        [SerializeField] private float _nodeLifetime = 12.0f;
+        [SerializeField] private float _nodeLifetime = 25.0f;
 
         private readonly List<PheromoneTrailSegment> _segments = new List<PheromoneTrailSegment>();
         private PheromoneTrailSegment _currentSegment;

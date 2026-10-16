@@ -1,3 +1,4 @@
+using PGS.Core;
 using UnityEngine;
 
 namespace AntScout.Config
@@ -23,6 +24,9 @@ namespace AntScout.Config
         [SerializeField] private int _maxActiveWorkers = 20;
 
         [Header("Colony RTS Economy")]
+        [Tooltip("Starting and maximum biomass capacity for the colony nest (Current = Starting Biomass, Max = Max Storage Capacity).")]
+        [SerializeField] private BoundedInt _initialBiomass = new BoundedInt(100, 500);
+
         [Tooltip("Number of persistent worker ants deployed at the start of the simulation.")]
         [Range(1, 30)]
         [SerializeField] private int _initialWorkerCount = 6;
@@ -90,6 +94,7 @@ namespace AntScout.Config
         public float WorkerSpawnInterval => _workerSpawnInterval;
         public int MaxActiveWorkers => _maxActiveWorkers;
         public int InitialWorkerCount => _initialWorkerCount;
+        public BoundedInt InitialBiomass => _initialBiomass;
         public int WorkerBiomassCost => _workerBiomassCost;
         public float NestWanderRadius => _nestWanderRadius;
 

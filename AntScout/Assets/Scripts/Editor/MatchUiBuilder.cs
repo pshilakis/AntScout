@@ -114,10 +114,10 @@ namespace AntScout.Editor
             headerRt.anchorMax = new Vector2(0.5f, 1f);
             headerRt.pivot = new Vector2(0.5f, 1f);
             headerRt.anchoredPosition = new Vector2(0f, -15f);
-            headerRt.sizeDelta = new Vector2(900f, 80f);
+            headerRt.sizeDelta = new Vector2(980f, 115f);
 
             var headerBg = headerGo.AddComponent<Image>();
-            headerBg.color = new Color(0.04f, 0.05f, 0.08f, 0.82f);
+            headerBg.color = new Color(0.04f, 0.05f, 0.08f, 0.85f);
 
             // Match Clock Text
             GameObject clockGo = CreateRectTransform("Clock Text", headerGo.transform);
@@ -135,22 +135,16 @@ namespace AntScout.Editor
             clockText.alignment = TextAlignmentOptions.Center;
             clockText.color = Color.white;
 
-            // Player Nest Bar (Left side)
-            var (playerBar, playerHpText) = BuildNestHealthMeter(
+            // Player Colony Card (Left side: Nest Health, Biomass Reserves, Worker Population)
+            var (playerBar, playerHpText, playerBiomassBar, playerBiomassText, playerWorkerText) = BuildPlayerColonyCard(
                 headerGo.transform,
-                "Player Nest Gauge",
-                "COLONY 1 (YOU)",
-                new Vector2(-280f, 0f),
-                new Color(0.2f, 0.85f, 0.3f, 1f),
+                new Vector2(-290f, 0f),
                 fillBarShader);
 
-            // Enemy Nest Bar (Right side)
-            var (enemyBar, enemyHpText) = BuildNestHealthMeter(
+            // Enemy Colony Card (Right side: Nest Health)
+            var (enemyBar, enemyHpText) = BuildEnemyColonyCard(
                 headerGo.transform,
-                "Enemy Nest Gauge",
-                "COLONY 2 (ENEMY)",
-                new Vector2(280f, 0f),
-                new Color(0.9f, 0.25f, 0.25f, 1f),
+                new Vector2(290f, 0f),
                 fillBarShader);
 
             // --- Pre-Match Countdown Overlay ---
@@ -184,49 +178,157 @@ namespace AntScout.Editor
             so.FindProperty("_playerNestHealthText").objectReferenceValue = playerHpText;
             so.FindProperty("_enemyNestBar").objectReferenceValue = enemyBar;
             so.FindProperty("_enemyNestHealthText").objectReferenceValue = enemyHpText;
+            so.FindProperty("_playerBiomassBar").objectReferenceValue = playerBiomassBar;
+            so.FindProperty("_playerBiomassText").objectReferenceValue = playerBiomassText;
+            so.FindProperty("_playerWorkerText").objectReferenceValue = playerWorkerText;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static (ResourceBar bar, TextMeshProUGUI hpText) BuildNestHealthMeter(
-            Transform parent,
-            string rootName,
-            string title,
-            Vector2 anchoredPos,
-            Color fillColor,
-            Shader fillBarShader)
+        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText, ResourceBar biomassBar, TextMeshProUGUI biomassText, TextMeshProUGUI workerText)
+            BuildPlayerColonyCard(Transform parent, Vector2 anchoredPos, Shader fillBarShader)
         {
-            GameObject container = CreateRectTransform(rootName, parent);
+            GameObject container = CreateRectTransform("Player Colony Card", parent);
             RectTransform containerRt = container.GetComponent<RectTransform>();
             containerRt.anchorMin = new Vector2(0.5f, 0.5f);
             containerRt.anchorMax = new Vector2(0.5f, 0.5f);
             containerRt.pivot = new Vector2(0.5f, 0.5f);
             containerRt.anchoredPosition = anchoredPos;
-            containerRt.sizeDelta = new Vector2(280f, 50f);
+            containerRt.sizeDelta = new Vector2(340f, 95f);
 
-            // Title Label
+            // Row 1: Title and Worker Count
+            GameObject titleRow = CreateRectTransform("Header Row", container.transform);
+            RectTransform titleRt = titleRow.GetComponent<RectTransform>();
+            titleRt.anchorMin = new Vector2(0f, 1f);
+            titleRt.anchorMax = new Vector2(1f, 1f);
+            titleRt.pivot = new Vector2(0.5f, 1f);
+            titleRt.anchoredPosition = new Vector2(0f, -4f);
+            titleRt.sizeDelta = new Vector2(0f, 20f);
+
+            // Title
+            GameObject titleGo = CreateRectTransform("Title Label", titleRow.transform);
+            RectTransform tRt = titleGo.GetComponent<RectTransform>();
+            tRt.anchorMin = new Vector2(0f, 0f);
+            tRt.anchorMax = new Vector2(0.55f, 1f);
+            tRt.offsetMin = Vector2.zero;
+            tRt.offsetMax = Vector2.zero;
+
+            var titleText = titleGo.AddComponent<TextMeshProUGUI>();
+            titleText.text = "COLONY 1 (YOU)";
+            titleText.fontSize = 13f;
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.alignment = TextAlignmentOptions.Left;
+            titleText.color = new Color(0.2f, 0.85f, 0.3f, 1f);
+
+            // Worker Count
+            GameObject workerGo = CreateRectTransform("Worker Count Text", titleRow.transform);
+            RectTransform wRt = workerGo.GetComponent<RectTransform>();
+            wRt.anchorMin = new Vector2(0.55f, 0f);
+            wRt.anchorMax = new Vector2(1f, 1f);
+            wRt.offsetMin = Vector2.zero;
+            wRt.offsetMax = Vector2.zero;
+
+            var workerText = workerGo.AddComponent<TextMeshProUGUI>();
+            workerText.text = "Workers: 6 / 20";
+            workerText.fontSize = 12f;
+            workerText.fontStyle = FontStyles.Bold;
+            workerText.alignment = TextAlignmentOptions.Right;
+            workerText.color = new Color(0.85f, 0.9f, 1f, 1f);
+
+            // Row 2: Nest Health Bar (Green, 1,000 / 1,000)
+            var (nestBar, nestHpText) = BuildResourceBarMeter(
+                container.transform,
+                "Nest Health Gauge",
+                new Vector2(0f, -28f),
+                new Vector2(0f, 22f),
+                new Color(0.2f, 0.85f, 0.3f, 1f),
+                1000f,
+                1000f,
+                100f,
+                fillBarShader,
+                "1,000 / 1,000",
+                new Color(0.95f, 0.6f, 0.15f, 1f));
+
+            // Row 3: Biomass Bar (Amber/Gold, 100 / 500, segment size 50 so 1 pip = 1 worker)
+            var (biomassBar, biomassText) = BuildResourceBarMeter(
+                container.transform,
+                "Biomass Gauge",
+                new Vector2(0f, -56f),
+                new Vector2(0f, 20f),
+                new Color(0.95f, 0.72f, 0.15f, 1f),
+                100f,
+                500f,
+                50f,
+                fillBarShader,
+                "100 / 500",
+                new Color(1f, 0.9f, 0.4f, 1f));
+
+            return (nestBar, nestHpText, biomassBar, biomassText, workerText);
+        }
+
+        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText)
+            BuildEnemyColonyCard(Transform parent, Vector2 anchoredPos, Shader fillBarShader)
+        {
+            GameObject container = CreateRectTransform("Enemy Colony Card", parent);
+            RectTransform containerRt = container.GetComponent<RectTransform>();
+            containerRt.anchorMin = new Vector2(0.5f, 0.5f);
+            containerRt.anchorMax = new Vector2(0.5f, 0.5f);
+            containerRt.pivot = new Vector2(0.5f, 0.5f);
+            containerRt.anchoredPosition = anchoredPos;
+            containerRt.sizeDelta = new Vector2(340f, 95f);
+
+            // Row 1: Title
             GameObject titleGo = CreateRectTransform("Title Label", container.transform);
             RectTransform titleRt = titleGo.GetComponent<RectTransform>();
             titleRt.anchorMin = new Vector2(0f, 1f);
             titleRt.anchorMax = new Vector2(1f, 1f);
             titleRt.pivot = new Vector2(0.5f, 1f);
-            titleRt.anchoredPosition = new Vector2(0f, 0f);
-            titleRt.sizeDelta = new Vector2(0f, 18f);
+            titleRt.anchoredPosition = new Vector2(0f, -4f);
+            titleRt.sizeDelta = new Vector2(0f, 20f);
 
             var titleText = titleGo.AddComponent<TextMeshProUGUI>();
-            titleText.text = title;
+            titleText.text = "COLONY 2 (ENEMY)";
             titleText.fontSize = 13f;
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Left;
-            titleText.color = fillColor;
+            titleText.color = new Color(0.9f, 0.25f, 0.25f, 1f);
 
-            // Resource Bar Graphic
-            GameObject barGo = CreateRectTransform("Bar Graphic", container.transform);
+            // Row 2: Nest Health Bar (Red, 1,000 / 1,000)
+            var (nestBar, nestHpText) = BuildResourceBarMeter(
+                container.transform,
+                "Nest Health Gauge",
+                new Vector2(0f, -28f),
+                new Vector2(0f, 22f),
+                new Color(0.9f, 0.25f, 0.25f, 1f),
+                1000f,
+                1000f,
+                100f,
+                fillBarShader,
+                "1,000 / 1,000",
+                new Color(0.95f, 0.6f, 0.15f, 1f));
+
+            return (nestBar, nestHpText);
+        }
+
+        private static (ResourceBar bar, TextMeshProUGUI text) BuildResourceBarMeter(
+            Transform parent,
+            string rootName,
+            Vector2 anchoredPos,
+            Vector2 size,
+            Color fillColor,
+            float current,
+            float max,
+            float segmentSize,
+            Shader fillBarShader,
+            string defaultText,
+            Color ghostColor)
+        {
+            GameObject barGo = CreateRectTransform(rootName, parent);
             RectTransform barRt = barGo.GetComponent<RectTransform>();
-            barRt.anchorMin = new Vector2(0f, 0f);
-            barRt.anchorMax = new Vector2(1f, 0f);
-            barRt.pivot = new Vector2(0.5f, 0f);
-            barRt.anchoredPosition = new Vector2(0f, 4f);
-            barRt.sizeDelta = new Vector2(0f, 22f);
+            barRt.anchorMin = new Vector2(0f, 1f);
+            barRt.anchorMax = new Vector2(1f, 1f);
+            barRt.pivot = new Vector2(0.5f, 1f);
+            barRt.anchoredPosition = anchoredPos;
+            barRt.sizeDelta = size;
 
             var barImg = barGo.AddComponent<Image>();
             barImg.color = Color.white;
@@ -239,33 +341,28 @@ namespace AntScout.Editor
             barSo.FindProperty("_fillColor").colorValue = fillColor;
             barSo.FindProperty("_emptyColor").colorValue = new Color(0.1f, 0.12f, 0.15f, 0.85f);
             barSo.FindProperty("_borderColor").colorValue = new Color(0.02f, 0.02f, 0.04f, 1f);
-            barSo.FindProperty("_current").floatValue = 1000f;
-            barSo.FindProperty("_max").floatValue = 1000f;
-            barSo.FindProperty("_segmentSize").floatValue = 100f;
+            barSo.FindProperty("_current").floatValue = current;
+            barSo.FindProperty("_max").floatValue = max;
+            barSo.FindProperty("_segmentSize").floatValue = segmentSize;
             barSo.FindProperty("_majorSegmentMultiplier").intValue = 5;
             barSo.FindProperty("_segmentGap").floatValue = 0.02f;
             barSo.FindProperty("_slant").floatValue = 0f;
             barSo.FindProperty("_enableGhostLag").boolValue = true;
-            barSo.FindProperty("_ghostColor").colorValue = new Color(0.95f, 0.6f, 0.15f, 1f);
+            barSo.FindProperty("_ghostColor").colorValue = ghostColor;
             barSo.ApplyModifiedPropertiesWithoutUndo();
 
-            // HP Text Numbers
-            GameObject hpTextGo = CreateRectTransform("HP Text", container.transform);
-            RectTransform hpRt = hpTextGo.GetComponent<RectTransform>();
-            hpRt.anchorMin = new Vector2(0f, 0f);
-            hpRt.anchorMax = new Vector2(1f, 0f);
-            hpRt.pivot = new Vector2(0.5f, 0f);
-            hpRt.anchoredPosition = new Vector2(0f, 4f);
-            hpRt.sizeDelta = new Vector2(0f, 22f);
+            // Label on top of the bar
+            GameObject textGo = CreateRectTransform("Value Text", barGo.transform);
+            StretchFull(textGo.GetComponent<RectTransform>());
 
-            var hpText = hpTextGo.AddComponent<TextMeshProUGUI>();
-            hpText.text = "1,000 / 1,000";
-            hpText.fontSize = 13f;
-            hpText.fontStyle = FontStyles.Bold;
-            hpText.alignment = TextAlignmentOptions.Center;
-            hpText.color = Color.white;
+            var textComp = textGo.AddComponent<TextMeshProUGUI>();
+            textComp.text = defaultText;
+            textComp.fontSize = 12f;
+            textComp.fontStyle = FontStyles.Bold;
+            textComp.alignment = TextAlignmentOptions.Center;
+            textComp.color = Color.white;
 
-            return (resourceBar, hpText);
+            return (resourceBar, textComp);
         }
 
         private static void BuildMatchConcludedModal(Transform canvasTransform)
