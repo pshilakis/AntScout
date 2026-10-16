@@ -2,6 +2,7 @@ using System;
 using AntScout.Core.Interfaces;
 using AntScout.Core.Stats;
 using PGS.Combat.Targeting;
+using PGS.Core;
 using PGS.Effects;
 using PGS.Stats;
 using UnityEngine;
@@ -25,6 +26,13 @@ namespace AntScout.Swarm.Nest
         [Tooltip("Numeric team identifier (0 = Colony 1 / Player, 1 = Colony 2 / Enemy AI).")]
         [SerializeField] private int _colonyTeamId = 0;
 
+        [Header("Vitals (Live Inspector Telemetry)")]
+        [Tooltip("Live current structural health for editor inspection.")]
+        [ReadOnly] [SerializeField] private float _currentHealth;
+
+        [Tooltip("Maximum structural health derived from StructureDefinition and stats.")]
+        [ReadOnly] [SerializeField] private float _maxHealth;
+
         private Collider _structureCollider;
         private StatsController _statsController;
         private readonly ColonyVitals _vitals = new ColonyVitals();
@@ -42,7 +50,8 @@ namespace AntScout.Swarm.Nest
             remove => _vitals.OnDamaged -= value;
         }
 
-        public event Action<ColonyNest, HitContext> OnNestDestroyed;
+        public event Action<ColonyNest> OnNestDestroyed;
+        public static event Action<ColonyNest> OnAnyNestDestroyed;
 
         public StructureDefinition StructureDefinition => _structureDefinition;
         public StatsController Stats => _statsController;
@@ -104,8 +113,12 @@ namespace AntScout.Swarm.Nest
                 _structureDefinition.MaxHealth,
                 _structureDefinition.Defense);
 
+            _currentHealth = _vitals.CurrentHealth;
+            _maxHealth = _vitals.MaxHealth;
+
             if (!_structureSubscribed)
             {
+                _vitals.OnHealthChanged += HandleHealthChanged;
                 _vitals.OnDied += HandleStructureDestroyed;
                 _structureSubscribed = true;
             }
@@ -115,6 +128,7 @@ namespace AntScout.Swarm.Nest
         {
             if (_structureSubscribed)
             {
+                _vitals.OnHealthChanged -= HandleHealthChanged;
                 _vitals.OnDied -= HandleStructureDestroyed;
                 _structureSubscribed = false;
             }
@@ -122,9 +136,16 @@ namespace AntScout.Swarm.Nest
             _vitals.Cleanup();
         }
 
+        private void HandleHealthChanged(float current, float max)
+        {
+            _currentHealth = current;
+            _maxHealth = max;
+        }
+
         private void HandleStructureDestroyed(HitContext context)
         {
-            OnNestDestroyed?.Invoke(this, context);
+            OnNestDestroyed?.Invoke(this);
+            OnAnyNestDestroyed?.Invoke(this);
         }
 
         #endregion

@@ -53,6 +53,10 @@ namespace AntScout.Characters.Brains
             set
             {
                 _isEnabled = value;
+                if (_playerBrain != null)
+                {
+                    _playerBrain.IsEnabled = value;
+                }
                 if (!_isEnabled)
                 {
                     ResetInput();

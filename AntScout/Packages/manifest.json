@@ -1,11 +1,13 @@
 {
   "dependencies": {
+    "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
     "com.pgs.camera": "file:../../../_SharedPackages/com.pgs.camera",
     "com.pgs.combat": "file:../../../_SharedPackages/com.pgs.combat",
     "com.pgs.core": "file:../../../_SharedPackages/com.pgs.core",
     "com.pgs.effects": "file:../../../_SharedPackages/com.pgs.effects",
     "com.pgs.input": "file:../../../_SharedPackages/com.pgs.input",
     "com.pgs.player": "file:../../../_SharedPackages/com.pgs.player",
+    "com.pgs.states": "file:../../../_SharedPackages/com.pgs.states",
     "com.pgs.stats": "file:../../../_SharedPackages/com.pgs.stats",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.10.2",

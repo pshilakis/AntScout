@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using AntScout.Characters;
 using AntScout.Characters.Brains;
 using AntScout.Swarm.Nest;
+using Cysharp.Threading.Tasks;
 using PGS.Camera.VirtualCameras;
 using PGS.Combat.Execution;
 using PGS.Combat.Targeting;
@@ -50,8 +52,12 @@ namespace AntScout.Match
         public IReadOnlyList<SpawnSlot> Slots => _slots;
         public IsometricVirtualCamera VirtualCamera => _virtualCamera;
         public float CorpseDespawnDelay => _corpseDespawnDelay;
+        public bool IsLocomotionLocked => _isLocomotionLocked;
 
         #endregion
+
+        private bool _isLocomotionLocked;
+        private bool _hasSpawned;
 
         #region Lifecycle & Initialization
 
@@ -67,7 +73,26 @@ namespace AntScout.Match
 
         private void Start()
         {
-            SpawnAll();
+            if (!_hasSpawned)
+            {
+                SpawnAll();
+                _hasSpawned = true;
+            }
+        }
+
+        /// <summary>
+        /// Explicit async initialization called by match setup state machine to guarantee
+        /// all participants are spawned and camera-bound before the match timeline advances.
+        /// Eliminates [DefaultExecutionOrder] race conditions.
+        /// </summary>
+        public UniTask InitializeAndSpawnAllAsync(CancellationToken ct = default)
+        {
+            if (!_hasSpawned)
+            {
+                SpawnAll();
+                _hasSpawned = true;
+            }
+            return UniTask.CompletedTask;
         }
 
         private void OnDestroy()
@@ -128,6 +153,15 @@ namespace AntScout.Match
             if (brain != null)
             {
                 brain.SetBrainMode(slot.IsPlayerControlled ? BrainMode.Player : BrainMode.AI);
+            }
+
+            if (_isLocomotionLocked)
+            {
+                characterInstance.IsLocomotionLocked = true;
+                if (brain != null)
+                {
+                    brain.IsEnabled = false;
+                }
             }
 
             if (slot.IsPlayerControlled && _virtualCamera != null)
@@ -216,7 +250,10 @@ namespace AntScout.Match
             }
         }
 
-        private void CancelAllRespawnTimers()
+        /// <summary>
+        /// Cancels all pending participant respawn timers (e.g. on match conclusion or scene exit).
+        /// </summary>
+        public void CancelAllRespawnTimers()
         {
             if (_slots == null) return;
 
@@ -224,6 +261,33 @@ namespace AntScout.Match
             {
                 _slots[i]?.CancelRespawnTimer();
             }
+        }
+
+        /// <summary>
+        /// Locks or unlocks locomotion on all currently active slot characters (e.g. on match conclusion).
+        /// </summary>
+        public void SetAllCharactersLocomotionLocked(bool locked)
+        {
+            _isLocomotionLocked = locked;
+            if (_slots == null) return;
+
+            int count = 0;
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                AntCharacter character = _slots[i]?.ActiveCharacter;
+                if (character != null && character.isActiveAndEnabled)
+                {
+                    character.IsLocomotionLocked = locked;
+                    AntBrainController brain = character.GetComponent<AntBrainController>();
+                    if (brain != null)
+                    {
+                        brain.IsEnabled = !locked;
+                    }
+                    count++;
+                }
+            }
+
+            Debug.Log($"[SpawnController] Locomotion locked={locked} for {count} character(s).");
         }
 
         #endregion

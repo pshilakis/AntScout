@@ -537,6 +537,39 @@ MonoBehaviour:
   movementPlane: 0
   useNavmeshAsObstacle: 0
   drawQuadtree: 0
+--- !u!1 &756546168
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 756546169}
+  m_Layer: 0
+  m_Name: '[ Managers ]'
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &756546169
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 756546168}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1927592036}
+  - {fileID: 852374378}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &813961487
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -661,8 +694,9 @@ GameObject:
   m_Component:
   - component: {fileID: 852374378}
   - component: {fileID: 852374379}
+  - component: {fileID: 852374380}
   m_Layer: 0
-  m_Name: '[ Match Managers ]'
+  m_Name: SpawnController and Pool
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -676,12 +710,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 852374377}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 756546169}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &852374379
 MonoBehaviour:
@@ -710,6 +744,22 @@ MonoBehaviour:
     _respawnDelay: 5
   _virtualCamera: {fileID: 910000003}
   _corpseDespawnDelay: 2
+--- !u!114 &852374380
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 852374377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85574dfdc7beac428465411507dcf3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Match.SpawnPool
+  _prewarmEntries:
+  - _prefab: {fileID: 8079377051405443581, guid: 7061d7fe4f5fda64b95b1d7b3fd1832d, type: 3}
+    _prewarmCount: 24
+  _globalMaxPoolCapacity: 200
 --- !u!1 &910000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -951,6 +1001,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1927592035
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1927592036}
+  - component: {fileID: 1927592037}
+  m_Layer: 0
+  m_Name: MatchDirector
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1927592036
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1927592035}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 756546169}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1927592037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1927592035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff19f610a71fef64dbc2f3946221c073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Match.MatchDirector
+  _preMatchDuration: 2
+  _playerTeamId: 0
+  _autoLockParticipantsOnConclusion: 1
+  _spawnController: {fileID: 852374379}
 --- !u!1001 &562298555112415107
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1021,4 +1119,4 @@ SceneRoots:
   - {fileID: 1819214178}
   - {fileID: 910000002}
   - {fileID: 920000002}
-  - {fileID: 852374378}
+  - {fileID: 756546169}
