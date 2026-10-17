@@ -138,6 +138,7 @@ GameObject:
   - component: {fileID: 9054211985227436922}
   - component: {fileID: 6506247184042379439}
   - component: {fileID: 218508178701343779}
+  - component: {fileID: 8721345601289473214}
   m_Layer: 0
   m_Name: Worker
   m_TagString: Untagged
@@ -353,3 +354,20 @@ MonoBehaviour:
   _timeChannel: 0
   _maxConcurrentStatuses: 16
   _immuneStatusTypes: []
+--- !u!114 &8721345601289473214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8079377051405443581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56cf7ed4515c46d4aad64ca89b47c1eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PGS.Combat.Runtime::PGS.Combat.Execution.CombatActionExecutor
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _timeChannel: 1
+

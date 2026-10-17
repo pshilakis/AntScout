@@ -5,8 +5,10 @@ using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Match;
 using AntScout.Pheromone;
+using AntScout.Swarm.Agents;
 using AntScout.Swarm.Interfaces;
 using Pathfinding;
+using PGS.Combat.Targeting;
 using PGS.Core;
 using PGS.Core.Time;
 using UnityEngine;
@@ -193,6 +195,51 @@ namespace AntScout.Swarm.Nest
             EvaluateTrailConnection();
             ProcessDeployment(deltaTime);
             ProcessAuras(deltaTime);
+            EvaluateNestDefensePerimeter();
+        }
+
+        private static readonly Collider[] s_defensePerimeterBuffer = new Collider[16];
+
+        private void EvaluateNestDefensePerimeter()
+        {
+            if (_config == null) return;
+
+            float radius = _config.NestDefenseRadius;
+            int count = Physics.OverlapSphereNonAlloc(transform.position, radius, s_defensePerimeterBuffer, ~0, QueryTriggerInteraction.Collide);
+            if (count == 0) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider col = s_defensePerimeterBuffer[i];
+                if (col == null) continue;
+
+                IAttackable attackable = col.GetComponent<IAttackable>() ?? col.GetComponentInParent<IAttackable>();
+                if (attackable == null || !attackable.IsAttackable || attackable == (this as IAttackable)) continue;
+
+                IFactionMember faction = (attackable as IFactionMember) ?? col.GetComponentInParent<IFactionMember>();
+                if (faction != null && GetAffiliationTowards(faction) == TargetAffiliation.Enemy)
+                {
+                    RallyNestDefenders(attackable);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rallies all active defenders in this colony to converge on and attack a hostile intruder (Red Alert).
+        /// </summary>
+        public void RallyNestDefenders(IAttackable hostileTarget)
+        {
+            if (hostileTarget == null || !hostileTarget.IsAttackable) return;
+
+            for (int i = 0; i < _activeWorkers.Count; i++)
+            {
+                ISwarmAgent agent = _activeWorkers[i];
+                if (agent is SwarmAgent swarmAgent)
+                {
+                    swarmAgent.EngageTarget(hostileTarget);
+                }
+            }
         }
 
         private void CleanupInactiveWorkers()
@@ -216,6 +263,39 @@ namespace AntScout.Swarm.Nest
             if (agent != null)
             {
                 _activeWorkers.Remove(agent);
+            }
+        }
+
+        /// <summary>
+        /// Broadcasts an alarm signal to all active swarm agents within the specified radius of the origin.
+        /// Zero heap allocation (iterates internal active worker list).
+        /// </summary>
+        public void BroadcastSwarmAlarm(ISwarmAgent instigatorAgent, IAttackable hostileTarget, float radius)
+        {
+            if (hostileTarget == null || !hostileTarget.IsAttackable || instigatorAgent == null) return;
+            Transform originTrans = instigatorAgent.AgentTransform;
+            if (originTrans == null) return;
+
+            Vector3 origin = originTrans.position;
+            float radiusSqr = radius * radius;
+
+            for (int i = 0; i < _activeWorkers.Count; i++)
+            {
+                ISwarmAgent agent = _activeWorkers[i];
+                if (agent == null || agent == instigatorAgent) continue;
+
+                Transform t = agent.AgentTransform;
+                if (t == null) continue;
+
+                Vector3 diff = t.position - origin;
+                float dSqr = diff.x * diff.x + diff.z * diff.z;
+                if (dSqr <= radiusSqr)
+                {
+                    if (agent is SwarmAgent swarmAgent)
+                    {
+                        swarmAgent.OnAlarmReceived(hostileTarget);
+                    }
+                }
             }
         }
 

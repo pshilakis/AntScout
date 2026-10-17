@@ -24,7 +24,7 @@ MonoBehaviour:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
     BaseValue: 4
   _baseMoveSpeed: 3.75
-  _primaryAction: {fileID: 0}
+  _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}
   _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _secondaryAction: {fileID: 0}
   _secondaryInput: {fileID: 6645002542129529566, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}

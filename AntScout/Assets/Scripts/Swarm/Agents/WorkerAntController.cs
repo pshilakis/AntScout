@@ -6,33 +6,24 @@ using AntScout.Resources.Components;
 using AntScout.Swarm.Interfaces;
 using AntScout.Swarm.Nest;
 using Pathfinding;
-using PGS.Core.Time;
+using PGS.Combat.Targeting;
 using UnityEngine;
 
 namespace AntScout.Swarm.Agents
 {
     /// <summary>
     /// High-level behavioral controller and state machine for Worker Ants.
-    /// Split across partial classes:
-    /// - WorkerAntController.cs: Outbound trail following, food source harvesting, and inbound delivery to the home nest.
-    /// - WorkerAntController.Combat.cs: Colony team identity (IColonyFactionMember), spatial attackability (IAttackable), and vitals (IDamageReceiver, IHealReceiver).
-    /// Implements ISwarmAgent and IUpdatable to allow polymorphic management and deterministic time stepping on TimeChannel.World.
+    /// Inherits universal locomotion, pooling, vitals, primary action execution, and reactive enmity from SwarmAgent.
+    /// Grounded in Single Responsibility (SRP) and Liskov Substitution (LSP) by specializing solely in
+    /// food source harvesting, cargo transport, and delivery to the home nest depot.
     /// </summary>
     [RequireComponent(typeof(AntTrailFollower))]
-    public partial class WorkerAntController : MonoBehaviour, ISwarmAgent, IUpdatable, IPoolable
+    public partial class WorkerAntController : SwarmAgent
     {
-        [Header("Configuration")]
-        [Tooltip("Source of truth for worker balance parameters.")]
-        [SerializeField] private SwarmDefinition _config;
-
         [Header("Carried Cargo Visual")]
         [Tooltip("Visual representation of food morsel held in mandibles. Auto-created if unassigned.")]
         [SerializeField] private GameObject _carriedMorselVisual;
 
-        private AntTrailFollower _follower;
-        private ColonyNest _homeNest;
-        private PheromoneTrailEmitter _trailEmitter;
-        private SwarmAgentState _currentState = SwarmAgentState.Idle;
         private FoodSource _targetFood;
 
         private float _searchTimer;
@@ -49,40 +40,13 @@ namespace AntScout.Swarm.Agents
         private int _carriedAmount;
         private ResourceDefinition _carriedResource;
 
-        public SwarmAgentState CurrentState => _currentState;
-        public Transform AgentTransform => transform;
-        public ColonyNest HomeNest => _homeNest;
         public int CarriedAmount => _carriedAmount;
         public ResourceDefinition CarriedResource => _carriedResource;
 
-        public PheromoneTrailEmitter TrailEmitter
+        protected override void Awake()
         {
-            get
-            {
-                if (_trailEmitter == null || !_trailEmitter.gameObject.scene.IsValid())
-                {
-                    if (_homeNest != null)
-                    {
-                        _trailEmitter = _homeNest.TrailEmitter;
-                    }
-                    else if (PheromoneTrailEmitter.TryGetForColony(ColonyTeamId, out var emitter))
-                    {
-                        _trailEmitter = emitter;
-                    }
-                }
-                return _trailEmitter;
-            }
-        }
-
-        public event Action<SwarmAgentState> OnStateChanged;
-
-        private void Awake()
-        {
-            _follower = GetComponent<AntTrailFollower>();
-            ValidateSwarmConfigurationAndComponents();
-
+            base.Awake();
             EnsureCarriedVisual();
-            BootstrapCombat();
         }
 
         private void EnsureCarriedVisual()
@@ -102,39 +66,16 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void OnEnable()
+        public override void Initialize(ColonyNest homeNest, PheromoneTrailEmitter trailEmitter)
         {
-            PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
-            _follower.OnReachedTrailTip += HandleReachedTrailTip;
-            _follower.OnTrailResumed += HandleTrailResumed;
-            _follower.OnTrailLost += HandleTrailLost;
-            _follower.OnReturnedToNest += HandleReturnedToNest;
-        }
+            base.Initialize(homeNest, trailEmitter);
 
-        private void OnDisable()
-        {
-            PgsTime.Unregister(this);
-            _follower.OnReachedTrailTip -= HandleReachedTrailTip;
-            _follower.OnTrailResumed -= HandleTrailResumed;
-            _follower.OnTrailLost -= HandleTrailLost;
-            _follower.OnReturnedToNest -= HandleReturnedToNest;
-        }
-
-        private void OnDestroy()
-        {
-            CleanupCombat();
-        }
-
-        public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter trailEmitter)
-        {
-            _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
-            _trailEmitter = trailEmitter ?? throw new ArgumentNullException(nameof(trailEmitter));
-            InitializeCombat(homeNest);
-            _follower.Initialize(homeNest, trailEmitter, _config, _characterDefinition);
             _carriedAmount = 0;
+            _carriedResource = null;
             _scentCheckCooldown = 0f;
             _lastExhaustedSegment = null;
             _isAtHarvestNode = false;
+            _targetFood = null;
 
             if (_carriedMorselVisual != null)
             {
@@ -145,16 +86,21 @@ namespace AntScout.Swarm.Agents
             StartWanderingAroundNest();
         }
 
-        public void OrderReturnHome()
+        public override void OrderReturnHome()
         {
+            if (_currentState == SwarmAgentState.ReturningHome) return;
+
             _targetFood = null;
             _isAtHarvestNode = false;
             bool hasCargo = _carriedAmount > 0;
-            _follower.ReturnToNest(hasCargo);
-            SetState(SwarmAgentState.ReturningHome);
+            if (_follower != null)
+            {
+                _follower.ReturnToNest(hasCargo);
+            }
+            base.OrderReturnHome();
         }
 
-        public void OnUpdate(float deltaTime)
+        protected override void EvaluateAgentState(float deltaTime)
         {
             switch (_currentState)
             {
@@ -211,12 +157,20 @@ namespace AntScout.Swarm.Agents
 
         private void EvaluateNestWandering(float deltaTime)
         {
+            // 1. Hostile intruder proximity detection (Self-Defense)
+            if (TryDetectHostileIntruder(_config.SwarmAggroRadius, out IAttackable intruder))
+            {
+                EngageTarget(intruder);
+                BroadcastAlarmToSisters(intruder);
+                return;
+            }
+
             if (_scentCheckCooldown > 0f)
             {
                 _scentCheckCooldown -= deltaTime;
             }
 
-            // 1. Sniff for active recruitment pheromone nearby
+            // 2. Sniff for active recruitment pheromone nearby
             PheromoneTrailEmitter emitter = TrailEmitter;
             if (_scentCheckCooldown <= 0f && emitter != null && emitter.ActiveNodeCount > 0)
             {
@@ -230,7 +184,7 @@ namespace AntScout.Swarm.Agents
                 }
             }
 
-            // 2. Roam smoothly around the nest yard
+            // 3. Roam smoothly around the nest yard
             _wanderTimer += deltaTime;
             Vector3 myPos = transform.position;
             float dx = _currentWanderTarget.x - myPos.x;
@@ -246,7 +200,15 @@ namespace AntScout.Swarm.Agents
 
         private void EvaluateFoodSearch(float deltaTime)
         {
-            // 1. Sniff for harvestable food sources
+            // 1. Hostile intruder proximity detection
+            if (TryDetectHostileIntruder(_config.SwarmAggroRadius, out IAttackable intruder))
+            {
+                EngageTarget(intruder);
+                BroadcastAlarmToSisters(intruder);
+                return;
+            }
+
+            // 2. Sniff for harvestable food sources
             float searchRadius = _config.FoodDetectionRadius;
             FoodSource closestFood = FoodSource.FindClosest(transform.position, searchRadius);
 
@@ -256,7 +218,7 @@ namespace AntScout.Swarm.Agents
                 return;
             }
 
-            // 2. Sniff for continuing or staggered pheromone trail extensions
+            // 3. Sniff for continuing or staggered pheromone trail extensions
             PheromoneTrailEmitter emitter = TrailEmitter;
             if (emitter != null && emitter.ActiveNodeCount > 0)
             {
@@ -290,7 +252,7 @@ namespace AntScout.Swarm.Agents
                 }
             }
 
-            // 3. Actively wander around the trail tip area (Area-Restricted Search)
+            // 4. Actively wander around the trail tip area (Area-Restricted Search)
             _tipWanderTimer += deltaTime;
             if (_tipWanderTimer >= 2.0f)
             {
@@ -298,7 +260,7 @@ namespace AntScout.Swarm.Agents
                 PickNewTipWanderTarget();
             }
 
-            // 4. Timeout -> Begin organic return toward home along the highway
+            // 5. Timeout -> Begin organic return toward home along the highway
             _searchTimer += deltaTime;
             float maxTipSearchDuration = Mathf.Min(1.5f, _config.TrailTipWanderDuration);
             if (_searchTimer >= maxTipSearchDuration)
@@ -313,7 +275,7 @@ namespace AntScout.Swarm.Agents
             // If carrying food, deliver directly to nest without distraction
             if (_carriedAmount > 0) return;
 
-            // If empty-handed, actively sniff for fresh or extended recruitment trails to resume foraging!
+            // If empty-handed, actively sniff for fresh or extended recruitment trails to resume foraging
             PheromoneTrailEmitter emitter = TrailEmitter;
             if (emitter != null && emitter.ActiveNodeCount > 0)
             {
@@ -442,7 +404,52 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void HandleReachedTrailTip()
+        #region Enmity Overrides
+
+        /// <summary>
+        /// Enforces cargo preservation: Workers laden with harvested cargo ignore calls to arms
+        /// to prioritize safely delivering food to the depot.
+        /// </summary>
+        public override void OnAlarmReceived(IAttackable hostileTarget)
+        {
+            if (_carriedAmount > 0)
+            {
+                return;
+            }
+
+            base.OnAlarmReceived(hostileTarget);
+        }
+
+        /// <summary>
+        /// Resumes normal caste routine when combat terminates.
+        /// </summary>
+        protected override void OnCombatDisengaged()
+        {
+            if (_currentState == SwarmAgentState.ReturningHome)
+            {
+                return;
+            }
+
+            if (_carriedAmount > 0)
+            {
+                OrderReturnHome();
+            }
+            else if (_follower != null && _follower.TrackedSegment != null && _follower.TrackedSegment.NodeCount > 0)
+            {
+                _follower.FollowTrailOutbound();
+                SetState(SwarmAgentState.FollowingTrailOutbound);
+            }
+            else
+            {
+                StartWanderingAroundNest();
+            }
+        }
+
+        #endregion
+
+        #region Locomotion & Nest Event Handlers
+
+        protected override void HandleReachedTrailTip()
         {
             if (_currentState == SwarmAgentState.FollowingTrailOutbound)
             {
@@ -455,7 +462,7 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void HandleTrailResumed()
+        protected override void HandleTrailResumed()
         {
             if (_currentState == SwarmAgentState.AtTrailEnd)
             {
@@ -466,7 +473,7 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void HandleTrailLost()
+        protected override void HandleTrailLost()
         {
             if (_currentState == SwarmAgentState.FollowingTrailOutbound || _currentState == SwarmAgentState.AtTrailEnd)
             {
@@ -474,7 +481,7 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void HandleReturnedToNest()
+        protected override void HandleReturnedToNest()
         {
             _lastExhaustedSegment = null;
             bool broughtFood = _carriedAmount > 0 && _carriedResource != null;
@@ -523,12 +530,7 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void SetState(SwarmAgentState newState)
-        {
-            if (_currentState == newState) return;
-            _currentState = newState;
-            OnStateChanged?.Invoke(_currentState);
-        }
+        #endregion
 
         private void OnDrawGizmosSelected()
         {
@@ -548,12 +550,15 @@ namespace AntScout.Swarm.Agents
 
         #region IPoolable Implementation
 
-        public void OnSpawnedFromPool()
+        public override void OnSpawnedFromPool()
         {
+            base.OnSpawnedFromPool();
             _carriedAmount = 0;
+            _carriedResource = null;
             _targetFood = null;
             _scentCheckCooldown = 0f;
             _lastExhaustedSegment = null;
+            _isAtHarvestNode = false;
 
             if (_carriedMorselVisual != null)
             {
@@ -561,15 +566,13 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        public void OnDespawnedToPool()
+        public override void OnDespawnedToPool()
         {
-            if (_follower != null)
-            {
-                _follower.StopMovement();
-            }
-
+            base.OnDespawnedToPool();
             _carriedAmount = 0;
+            _carriedResource = null;
             _targetFood = null;
+            _isAtHarvestNode = false;
 
             if (_carriedMorselVisual != null)
             {

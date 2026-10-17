@@ -120,6 +120,7 @@ namespace AntScout.Swarm.Nest
             {
                 _vitals.OnHealthChanged += HandleHealthChanged;
                 _vitals.OnDied += HandleStructureDestroyed;
+                _vitals.OnDamaged += HandleStructureDamaged;
                 _structureSubscribed = true;
             }
         }
@@ -130,10 +131,23 @@ namespace AntScout.Swarm.Nest
             {
                 _vitals.OnHealthChanged -= HandleHealthChanged;
                 _vitals.OnDied -= HandleStructureDestroyed;
+                _vitals.OnDamaged -= HandleStructureDamaged;
                 _structureSubscribed = false;
             }
 
             _vitals.Cleanup();
+        }
+
+        private void HandleStructureDamaged(DamageResult result, HitContext context)
+        {
+            if (context.Instigator == null || context.Instigator == gameObject) return;
+
+            IAttackable attacker = context.Instigator.GetComponent<IAttackable>() ??
+                                   context.Instigator.GetComponentInParent<IAttackable>();
+            if (attacker != null && attacker.IsAttackable)
+            {
+                RallyNestDefenders(attacker);
+            }
         }
 
         private void HandleHealthChanged(float current, float max)

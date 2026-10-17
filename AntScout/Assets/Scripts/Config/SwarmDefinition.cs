@@ -115,6 +115,27 @@ namespace AntScout.Config
         [Range(0.0f, 0.5f)]
         [SerializeField] private float _trailSwitchEfficiencyAdvantage = 0.15f;
 
+        [ColoredHeader("Swarm Defense & Aggression", HeaderColor.Coral)]
+        [Tooltip("Sensory radius in meters within which non-player ants passively detect hostile intruders.")]
+        [Range(1.0f, 10.0f)]
+        [SerializeField] private float _swarmAggroRadius = 2.5f;
+
+        [Tooltip("Maximum pursuit distance in meters from where the fight began before ants abandon the chase and leash back to work.")]
+        [Range(3.0f, 20.0f)]
+        [SerializeField] private float _swarmLeashRadius = 7.0f;
+
+        [Tooltip("Broadcast radius in meters alerting nearby sister ants in the colony when an ant is attacked.")]
+        [Range(1.0f, 15.0f)]
+        [SerializeField] private float _swarmAlarmRadius = 4.5f;
+
+        [Tooltip("Seconds of inactivity with no damage dealt or taken before an ant de-escalates and returns to its routine.")]
+        [Range(1.0f, 10.0f)]
+        [SerializeField] private float _swarmCombatTimeout = 3.0f;
+
+        [Tooltip("Sensory defense perimeter in meters around the nest depot. If an enemy enters this zone or attacks the nest, the entire colony rallies to attack.")]
+        [Range(3.0f, 25.0f)]
+        [SerializeField] private float _nestDefenseRadius = 8.0f;
+
         // Public read-only accessors
         public float NestRecruitmentRadius => _nestRecruitmentRadius;
         public float WorkerSpawnInterval => _workerSpawnInterval;
@@ -150,5 +171,11 @@ namespace AntScout.Config
         public float NewTrailPriorityDuration => _newTrailPriorityDuration;
         public float NewTrailPriorityMultiplier => _newTrailPriorityMultiplier;
         public float TrailSwitchEfficiencyAdvantage => _trailSwitchEfficiencyAdvantage;
+
+        public float SwarmAggroRadius => _swarmAggroRadius;
+        public float SwarmLeashRadius => _swarmLeashRadius;
+        public float SwarmAlarmRadius => _swarmAlarmRadius;
+        public float SwarmCombatTimeout => _swarmCombatTimeout;
+        public float NestDefenseRadius => _nestDefenseRadius;
     }
 }

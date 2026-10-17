@@ -15,7 +15,8 @@ namespace AntScout.Swarm.Interfaces
         AtTrailEnd = 3,
         Harvesting = 4,
         ReturningHome = 5,
-        WanderingAroundNest = 6
+        WanderingAroundNest = 6,
+        Defending = 7
     }
 
     /// <summary>

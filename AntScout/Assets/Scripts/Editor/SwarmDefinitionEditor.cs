@@ -45,12 +45,20 @@ namespace AntScout.Editor
         private SerializedProperty _newTrailPriorityMultiplierProp;
         private SerializedProperty _trailSwitchEfficiencyAdvantageProp;
 
+        // Tab 3: Defense & Aggression
+        private SerializedProperty _swarmAggroRadiusProp;
+        private SerializedProperty _swarmLeashRadiusProp;
+        private SerializedProperty _swarmAlarmRadiusProp;
+        private SerializedProperty _swarmCombatTimeoutProp;
+        private SerializedProperty _nestDefenseRadiusProp;
+
         private int _selectedTab = 0;
         private static readonly string[] TabNames = new string[]
         {
             "Colony & Economy",
             "Navigation & Sensing",
-            "Trail & Swarm"
+            "Trail & Swarm",
+            "Defense & Aggression"
         };
 
         private void OnEnable()
@@ -84,6 +92,13 @@ namespace AntScout.Editor
             _newTrailPriorityDurationProp = serializedObject.FindProperty("_newTrailPriorityDuration");
             _newTrailPriorityMultiplierProp = serializedObject.FindProperty("_newTrailPriorityMultiplier");
             _trailSwitchEfficiencyAdvantageProp = serializedObject.FindProperty("_trailSwitchEfficiencyAdvantage");
+
+            // Tab 3: Defense & Aggression
+            _swarmAggroRadiusProp = serializedObject.FindProperty("_swarmAggroRadius");
+            _swarmLeashRadiusProp = serializedObject.FindProperty("_swarmLeashRadius");
+            _swarmAlarmRadiusProp = serializedObject.FindProperty("_swarmAlarmRadius");
+            _swarmCombatTimeoutProp = serializedObject.FindProperty("_swarmCombatTimeout");
+            _nestDefenseRadiusProp = serializedObject.FindProperty("_nestDefenseRadius");
         }
 
         public override void OnInspectorGUI()
@@ -104,6 +119,9 @@ namespace AntScout.Editor
                     break;
                 case 2:
                     DrawTrailAndSwarmTab();
+                    break;
+                case 3:
+                    DrawDefenseAndAggressionTab();
                     break;
             }
 
@@ -154,6 +172,15 @@ namespace AntScout.Editor
             EditorGUILayout.PropertyField(_newTrailPriorityDurationProp);
             EditorGUILayout.PropertyField(_newTrailPriorityMultiplierProp);
             EditorGUILayout.PropertyField(_trailSwitchEfficiencyAdvantageProp);
+        }
+
+        private void DrawDefenseAndAggressionTab()
+        {
+            EditorGUILayout.PropertyField(_swarmAggroRadiusProp);
+            EditorGUILayout.PropertyField(_swarmLeashRadiusProp);
+            EditorGUILayout.PropertyField(_swarmAlarmRadiusProp);
+            EditorGUILayout.PropertyField(_swarmCombatTimeoutProp);
+            EditorGUILayout.PropertyField(_nestDefenseRadiusProp);
         }
     }
 }
