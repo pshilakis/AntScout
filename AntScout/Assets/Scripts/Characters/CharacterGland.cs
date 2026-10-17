@@ -1,6 +1,7 @@
 using System;
 using AntScout.Core.Enums;
 using AntScout.Pheromone;
+using AntScout.Swarm.Nest;
 using PGS.Core.Time;
 using UnityEngine;
 
@@ -46,6 +47,7 @@ namespace AntScout.Characters
         public float NormalizedCapacity => MaxCapacity > 0f ? Mathf.Clamp01(_currentCapacity / MaxCapacity) : 0f;
         public bool IsLayingTrail => _isLayingTrail;
         public bool IsDepleted => _isDepleted;
+        public bool IsInitialized => _definition != null;
         public PheromoneTrailEmitter Emitter => _emitter;
 
         public void Initialize(CharacterDefinition definition, int colonyTeamId, PheromoneTrailEmitter emitter = null)
@@ -101,23 +103,28 @@ namespace AntScout.Characters
 
         private void ResolveEmitter()
         {
-            if (_emitter != null && _emitter.ColonyTeamId == _colonyTeamId)
+            if (_emitter != null && _emitter.gameObject != null && _emitter.gameObject.scene.IsValid() && _emitter.ColonyTeamId == _colonyTeamId)
             {
                 return;
             }
 
-            if (!PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _emitter))
+            // 1. Try static colony registry (Single Source of Truth)
+            if (PheromoneTrailEmitter.TryGetForColony(_colonyTeamId, out _emitter) &&
+                _emitter != null &&
+                _emitter.gameObject != null &&
+                _emitter.gameObject.scene.IsValid())
             {
-                if (_pheromoneTrailPrefab != null)
-                {
-                    GameObject instance = Instantiate(_pheromoneTrailPrefab, transform.position, Quaternion.identity);
-                    instance.name = $"PheromoneTrail_Colony{_colonyTeamId}";
-                    _emitter = instance.GetComponent<PheromoneTrailEmitter>();
-                    ValidateSpawnedEmitter();
-                    _emitter.SetColonyTeam(_colonyTeamId);
-                }
+                return;
             }
 
+            // 2. Try ColonyNest authoritative depot for this team (DIP)
+            if (ColonyNest.TryGetForTeam(_colonyTeamId, out ColonyNest nest) && nest != null && nest.TrailEmitter != null)
+            {
+                _emitter = nest.TrailEmitter;
+                return;
+            }
+
+            // Strict Fail-Fast: No silent fallback or duplicate ghost emitter instantiation
             ValidateEmitterResolved();
         }
 

@@ -5,7 +5,6 @@ using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Match;
 using AntScout.Pheromone;
-using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using Pathfinding;
 using PGS.Core;
@@ -26,7 +25,7 @@ namespace AntScout.Swarm.Nest
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for nest recruitment radius, spawn timers, and population limits.")]
-        [SerializeField] private SwarmConfigSO _config;
+        [SerializeField] private SwarmDefinition _config;
 
         [Header("References")]
         [Tooltip("The pheromone trail emitter tracked by the colony.")]
@@ -94,6 +93,8 @@ namespace AntScout.Swarm.Nest
         }
 
         private static readonly Dictionary<int, ColonyNest> s_nestsByTeam = new Dictionary<int, ColonyNest>();
+
+        public static IReadOnlyCollection<ColonyNest> ActiveNests => s_nestsByTeam.Values;
 
         public static bool TryGetForTeam(int teamId, out ColonyNest nest)
         {
@@ -276,9 +277,10 @@ namespace AntScout.Swarm.Nest
         /// <summary>
         /// Deposits harvested food into the colony's biomass stores.
         /// </summary>
-        public void DepositResource(ResourceType type, int amount, int biomassValue)
+        public void DepositResource(ResourceDefinition resource, int amount)
         {
-            int earned = amount * biomassValue;
+            if (resource == null) throw new ArgumentNullException(nameof(resource));
+            int earned = amount * resource.BiomassPerUnit;
             _biomass += earned;
             OnBiomassChanged?.Invoke(_biomass);
         }

@@ -1,4 +1,5 @@
-using AntScout.Resources.Enums;
+using AntScout.Config;
+using PGS.Core;
 using UnityEngine;
 
 namespace AntScout.Resources.Interfaces
@@ -6,11 +7,12 @@ namespace AntScout.Resources.Interfaces
     /// <summary>
     /// Contract for harvestable food entities.
     /// Grounded in Interface Segregation Principle (ISP) and Open/Closed Principle (OCP)
-    /// to decouple swarm foraging behavior from concrete food types.
+    /// to decouple swarm foraging behavior and UI from concrete food implementations.
     /// </summary>
     public interface IHarvestable
     {
-        ResourceType Type { get; }
+        ResourceDefinition Definition { get; }
+        BoundedInt Units { get; }
         int RemainingUnits { get; }
         bool CanHarvest { get; }
         float HarvestDuration { get; }

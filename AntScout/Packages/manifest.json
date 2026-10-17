@@ -6,6 +6,7 @@
     "com.pgs.core": "file:../../../_SharedPackages/com.pgs.core",
     "com.pgs.effects": "file:../../../_SharedPackages/com.pgs.effects",
     "com.pgs.input": "file:../../../_SharedPackages/com.pgs.input",
+    "com.pgs.loot": "file:../../../_SharedPackages/com.pgs.loot",
     "com.pgs.player": "file:../../../_SharedPackages/com.pgs.player",
     "com.pgs.states": "file:../../../_SharedPackages/com.pgs.states",
     "com.pgs.stats": "file:../../../_SharedPackages/com.pgs.stats",

@@ -36,6 +36,16 @@ namespace AntScout.Pheromone
         }
 
         /// <summary>
+        /// Returns a copy of this node with migrated 3D position, refreshed timestamp, and boosted traffic strength.
+        /// Used by worker stigmergic optimization to gently pull curves toward actual traveled paths.
+        /// </summary>
+        public PheromoneNode WithAdjustedPosition(Vector3 newPosition, float currentTime, float strengthBoost = 0.5f)
+        {
+            float newStrength = Mathf.Min(Strength + strengthBoost, MaxStrength);
+            return new PheromoneNode(newPosition, currentTime, Type, newStrength);
+        }
+
+        /// <summary>
         /// Calculates the remaining normalized scent intensity (1.0 down to 0.0) based on elapsed time and lifetime.
         /// </summary>
         /// <param name="currentTime">Current time in seconds (Time.time).</param>

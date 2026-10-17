@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ada5915947c9f344bfe51321169eed4, type: 3}
+  m_Name: ResourceDefinition_FallenFruit
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Config.ResourceDefinition
+  _displayName: Fallen Fruit
+  _rarity: {fileID: 11400000, guid: 89321edba2a04e26bf891eb0d09fdf7d, type: 2}
+  _prefab: {fileID: 8945266248274463465, guid: 8274368c3769cde42ac38f9bcccfe6f0, type: 3}
+  _capacityRange:
+    _min: 60
+    _max: 90
+  _harvestDuration: 1.8
+  _biomassPerUnit: 15
+  _scaleRange: {x: 0.9, y: 1.4}

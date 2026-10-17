@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterDefinition
   _characterName: Worker
   _icon: {fileID: 0}
-  _bodyRadius: 0.25
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
     BaseValue: 35
@@ -24,8 +23,7 @@ MonoBehaviour:
   _attack:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
     BaseValue: 4
-  _motorSettings: {fileID: 0}
-  _traversalDefinition: {fileID: 0}
+  _baseMoveSpeed: 3.75
   _primaryAction: {fileID: 0}
   _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _secondaryAction: {fileID: 0}

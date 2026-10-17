@@ -24,6 +24,7 @@ MonoBehaviour:
   _attack:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
     BaseValue: 8
+  _baseMoveSpeed: 7
   _motorSettings: {fileID: 11400000, guid: d71a8123ef454c76b91122a0011bb221, type: 2}
   _traversalDefinition: {fileID: 11400000, guid: 89ab34cd56ef401289abcdef01234567, type: 2}
   _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}

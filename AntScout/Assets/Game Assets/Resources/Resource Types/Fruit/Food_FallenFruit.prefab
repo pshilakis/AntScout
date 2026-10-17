@@ -125,7 +125,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b402744a5439844ebc98411cdc149cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Resources.Components.FoodSource
-  _config: {fileID: 11400000, guid: ba7d32bb4ce4a0748a1efc464819bb5f, type: 2}
-  _type: 1
   _shrinkOnDeplete: 1
   _minScaleRatio: 0.25

@@ -154,33 +154,49 @@ namespace AntScout.UI
             _isBound = false;
         }
 
+        /// <summary>
+        /// Explicit top-down Dependency Injection (DIP) entrypoint to bind allied and enemy nests.
+        /// Invoked deterministically by MatchSetupState. Eliminates ambient scene searching.
+        /// </summary>
+        public void BindNests(ColonyNest playerNest, ColonyNest enemyNest)
+        {
+            UnbindEvents();
+            _playerNest = playerNest ?? throw new ArgumentNullException(nameof(playerNest));
+            _enemyNest = enemyNest ?? throw new ArgumentNullException(nameof(enemyNest));
+            BindToNestsAndMatchDirector();
+        }
+
         private void ResolveNestReferences()
         {
             if (_playerNest != null && _enemyNest != null) return;
 
-            var allNests = FindObjectsByType<ColonyNest>(FindObjectsSortMode.None);
             int playerTeamId = MatchDirector.Instance != null ? MatchDirector.Instance.PlayerTeamId : 0;
 
-            foreach (var nest in allNests)
+            if (_playerNest == null && ColonyNest.TryGetForTeam(playerTeamId, out ColonyNest pNest))
             {
-                if (nest.ColonyTeamId == playerTeamId && _playerNest == null)
+                _playerNest = pNest;
+            }
+
+            if (_enemyNest == null)
+            {
+                foreach (var nest in ColonyNest.ActiveNests)
                 {
-                    _playerNest = nest;
-                }
-                else if (nest.ColonyTeamId != playerTeamId && _enemyNest == null)
-                {
-                    _enemyNest = nest;
+                    if (nest != null && nest.ColonyTeamId != playerTeamId)
+                    {
+                        _enemyNest = nest;
+                        break;
+                    }
                 }
             }
 
             if (_playerNest == null)
             {
-                Debug.LogWarning($"[{name}] Player ColonyNest (Team {playerTeamId}) was not found in the active scene!");
+                throw new InvalidOperationException($"[{name}] MatchHudView: Player ColonyNest (Team {playerTeamId}) is not registered!");
             }
 
             if (_enemyNest == null)
             {
-                Debug.LogWarning($"[{name}] Enemy ColonyNest was not found in the active scene!");
+                throw new InvalidOperationException($"[{name}] MatchHudView: Enemy ColonyNest is not registered!");
             }
         }
 

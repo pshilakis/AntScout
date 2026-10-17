@@ -20,6 +20,7 @@ namespace AntScout.Editor
         private SerializedProperty _maxHealthProp;
         private SerializedProperty _defenseProp;
         private SerializedProperty _attackProp;
+        private SerializedProperty _baseMoveSpeedProp;
 
         private SerializedProperty _primaryActionProp;
         private SerializedProperty _primaryInputProp;
@@ -47,6 +48,7 @@ namespace AntScout.Editor
             _maxHealthProp = serializedObject.FindProperty("_maxHealth");
             _defenseProp = serializedObject.FindProperty("_defense");
             _attackProp = serializedObject.FindProperty("_attack");
+            _baseMoveSpeedProp = serializedObject.FindProperty("_baseMoveSpeed");
 
             _primaryActionProp = serializedObject.FindProperty("_primaryAction");
             _primaryInputProp = serializedObject.FindProperty("_primaryInput");
@@ -92,6 +94,9 @@ namespace AntScout.Editor
             EditorGUILayout.PropertyField(_maxHealthProp);
             EditorGUILayout.PropertyField(_defenseProp);
             EditorGUILayout.PropertyField(_attackProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.PropertyField(_baseMoveSpeedProp);
         }
 
         #endregion

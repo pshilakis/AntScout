@@ -1,11 +1,14 @@
 using System;
 using AntScout.Characters;
+using AntScout.Pheromone;
+using AntScout.Swarm.Nest;
 using PGS.Camera.Interfaces;
 using PGS.Combat.Execution;
 using PGS.Core.Time;
 using PGS.Effects;
 using PGS.Player.Controller;
 using PGS.Player.Motor.ThreeD;
+using PGS.Player.Traversal.Modules;
 using PGS.Stats;
 using UnityEngine;
 
@@ -106,6 +109,7 @@ namespace AntScout.Characters
         private void Start()
         {
             ValidateLocomotionModules();
+            ApplyLocomotionOverrides();
         }
 
         private void OnEnable()
@@ -125,12 +129,52 @@ namespace AntScout.Characters
             CleanupCombat();
         }
 
-        public void SetDefinition(CharacterDefinition definition)
+        /// <summary>
+        /// Explicit top-down initialization method invoked deterministically by SpawnController.
+        /// Grounded in Dependency Inversion Principle (DIP): Receives allied ColonyNest depot,
+        /// authoritative PheromoneTrailEmitter, and optional CharacterDefinition override directly.
+        /// </summary>
+        public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter emitter, CharacterDefinition definitionOverride = null)
         {
-            _definition = definition ?? throw new ArgumentNullException(nameof(definition));
-            ValidateConfiguration();
-            BootstrapCombat();
-            BootstrapGland();
+            if (homeNest == null) throw new ArgumentNullException(nameof(homeNest));
+
+            if (definitionOverride != null)
+            {
+                _definition = definitionOverride;
+                ValidateConfiguration();
+                BootstrapCombat();
+                ApplyLocomotionOverrides();
+            }
+
+            SetColonyTeam(homeNest.ColonyTeamId);
+
+            if (_definition != null && _definition.HasTrailActions)
+            {
+                _gland = GetComponent<CharacterGland>();
+                if (_gland == null)
+                {
+                    _gland = gameObject.AddComponent<CharacterGland>();
+                }
+                _gland.Initialize(_definition, _colonyTeamId, emitter);
+            }
+
+            var aiBrain = GetComponent<Brains.AntAiBrain>();
+            if (aiBrain != null)
+            {
+                aiBrain.Initialize(homeNest);
+            }
+        }
+
+        private void ApplyLocomotionOverrides()
+        {
+            if (_playerController != null && _definition != null && _definition.BaseMoveSpeed > 0.001f)
+            {
+                var groundModule = _playerController.GetModule<GroundTraversalModule>();
+                if (groundModule != null)
+                {
+                    groundModule.SpeedOverride = _definition.BaseMoveSpeed;
+                }
+            }
         }
 
         private void BootstrapChassis()
@@ -163,7 +207,10 @@ namespace AntScout.Characters
                 {
                     _gland = gameObject.AddComponent<CharacterGland>();
                 }
-                _gland.Initialize(_definition, _colonyTeamId);
+                if (!_gland.IsInitialized)
+                {
+                    _gland.Initialize(_definition, _colonyTeamId);
+                }
             }
         }
 

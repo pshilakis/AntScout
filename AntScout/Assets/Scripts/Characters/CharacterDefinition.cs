@@ -31,6 +31,11 @@ namespace AntScout.Characters
         [Tooltip("Base Attack Damage StatTypeSO and starting base value seeded into StatsController (scales CombatAction potency).")]
         [SerializeField] private StatsController.InitialStatConfig _attack;
 
+        [ColoredHeader("Locomotion", HeaderColor.LightBlue)]
+        [Tooltip("Base movement speed in meters per second. Drives player ground locomotion and AI navigation.")]
+        [Range(1.0f, 25.0f)]
+        [SerializeField] private float _baseMoveSpeed = 7.0f;
+
         [ColoredHeader("Primary Slot", HeaderColor.Coral)]
         [Tooltip("Primary offensive action (e.g. Mandible Bite).")]
         [SerializeField] private CombatActionDefinition _primaryAction;
@@ -76,6 +81,7 @@ namespace AntScout.Characters
         public StatsController.InitialStatConfig MaxHealth => _maxHealth;
         public StatsController.InitialStatConfig Defense => _defense;
         public StatsController.InitialStatConfig Attack => _attack;
+        public float BaseMoveSpeed => _baseMoveSpeed;
         public CombatActionDefinition PrimaryAction => _primaryAction;
         public InputActionReference PrimaryInput => _primaryInput;
         public CombatActionDefinition SecondaryAction => _secondaryAction;

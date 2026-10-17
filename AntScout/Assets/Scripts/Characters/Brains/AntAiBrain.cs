@@ -138,6 +138,16 @@ namespace AntScout.Characters.Brains
             }
         }
 
+        /// <summary>
+        /// Explicit top-down initialization called deterministically by AntCharacter or SpawnController.
+        /// Grounded in Dependency Inversion Principle (DIP): Injects allied home nest depot directly.
+        /// </summary>
+        public void Initialize(ColonyNest homeNest)
+        {
+            _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
+            ValidateHomeNest();
+        }
+
         public void ResetBrain()
         {
             _desiredMovement = Vector3.zero;
@@ -160,16 +170,15 @@ namespace AntScout.Characters.Brains
 
             if (_homeNest != null && _homeNest.ColonyTeamId == _character.ColonyTeamId) return;
 
-            _homeNest = null;
-            ColonyNest[] nests = FindObjectsByType<ColonyNest>(FindObjectsSortMode.None);
-            for (int i = 0; i < nests.Length; i++)
+            if (ColonyNest.TryGetForTeam(_character.ColonyTeamId, out ColonyNest registeredNest) && registeredNest != null)
             {
-                if (nests[i].ColonyTeamId == _character.ColonyTeamId)
-                {
-                    _homeNest = nests[i];
-                    break;
-                }
+                _homeNest = registeredNest;
+                return;
             }
+
+            throw new InvalidOperationException(
+                $"[{name}] AntAiBrain: No ColonyNest registered for Team {_character.ColonyTeamId}! " +
+                "Ensure the allied ColonyNest is initialized before spawning AI units.");
         }
 
         #endregion

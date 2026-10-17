@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using AntScout.Characters;
 using AntScout.Config;
 using AntScout.Core.Enums;
 using AntScout.Match;
@@ -28,12 +28,18 @@ namespace AntScout.Swarm.Agents
     /// Bridges the pheromone trail simulation with A* Pathfinding Project Pro (IAstarAI).
     /// Samples scent gradients from PheromoneTrailEmitter and projects navigation destinations to A*.
     /// Implements IUpdatable to receive deterministic simulation updates on TimeChannel.World.
+    /// 
+    /// Split across partial classes for strict Single Responsibility (SRP):
+    /// - AntTrailFollower.cs: Core lifecycle, fields, properties, A* bridging, and simulation tick dispatcher.
+    /// - AntTrailFollower.Outbound.cs: Outbound trail following, lookahead projection, lateral lane dispersion, defection, and tip arrival.
+    /// - AntTrailFollower.Inbound.cs: Inbound nest retracing, highway lookahead shortcuts, and food cargo stigmergy trail reinforcement/migration.
+    /// - AntTrailFollower.Wander.cs: Freeform roaming, target approach steering, and biased random-walk home meandering.
     /// </summary>
-    public class AntTrailFollower : MonoBehaviour, IUpdatable, IPoolable
+    public partial class AntTrailFollower : MonoBehaviour, IUpdatable, IPoolable
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for worker movement speed, sensory radii, and waypoint lookahead.")]
-        [SerializeField] private SwarmConfigSO _config;
+        [SerializeField] private SwarmDefinition _config;
 
         private IAstarAI _ai;
         private RVOController _rvoController;
@@ -51,6 +57,8 @@ namespace AntScout.Swarm.Agents
 
         private FollowerMode _mode = FollowerMode.Inactive;
         private bool _isInitialized;
+        private bool _hasCargo;
+        private CharacterDefinition _characterDefinition;
 
         public event Action OnReachedTrailTip;
         public event Action OnTrailLost;
@@ -59,7 +67,16 @@ namespace AntScout.Swarm.Agents
 
         public FollowerMode CurrentMode => _mode;
         public bool IsOutbound => _mode == FollowerMode.OutboundTrail;
+        public bool HasCargo => _hasCargo;
         public PheromoneTrailSegment TrackedSegment => _trackedSegment;
+
+        /// <summary>
+        /// Effective base movement speed. Resolves from the assigned CharacterDefinition (Single Source of Truth),
+        /// with graceful fallback to SwarmDefinition or default.
+        /// </summary>
+        public float MoveSpeed => (_characterDefinition != null && _characterDefinition.BaseMoveSpeed > 0.001f)
+            ? _characterDefinition.BaseMoveSpeed
+            : (_config != null ? _config.WorkerMoveSpeed : 5.5f);
 
         public PheromoneTrailEmitter Emitter
         {
@@ -93,13 +110,14 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter emitter, SwarmConfigSO config)
+        public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter emitter, SwarmDefinition config, CharacterDefinition characterDefinition = null)
         {
             _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
             _emitter = emitter ?? throw new ArgumentNullException(nameof(emitter));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _characterDefinition = characterDefinition;
 
-            _ai.maxSpeed = _config.WorkerMoveSpeed;
+            _ai.maxSpeed = MoveSpeed;
             _ai.canSearch = true;
             _ai.isStopped = false;
 
@@ -128,73 +146,6 @@ namespace AntScout.Swarm.Agents
             _freshnessCheckTimer = 0f;
             _mode = FollowerMode.Inactive;
             _isInitialized = true;
-        }
-
-        public void FollowTrailOutbound(PheromoneTrailSegment initialSegment = null, int initialNodeIndex = -1)
-        {
-            _mode = FollowerMode.OutboundTrail;
-            _trackedSegment = initialSegment;
-            _trackedNodeIndex = initialNodeIndex;
-            _lostTrailTimer = 0f;
-            _freshnessCheckTimer = 0f;
-            ResumeMovement(_config.WorkerMoveSpeed);
-        }
-
-        public void ReturnToNest(bool hasCargo)
-        {
-            if (hasCargo)
-            {
-                // Inbound retracing along the active trail at full speed
-                _mode = FollowerMode.InboundNest;
-                ResumeMovement(_config.WorkerMoveSpeed);
-                if (_trackedSegment == null && _homeNest != null && _ai != null)
-                {
-                    _ai.destination = _homeNest.SpawnPosition;
-                }
-            }
-            else
-            {
-                // Empty-handed: slow, organic biased meander toward nest
-                _trackedSegment = null;
-                _trackedNodeIndex = -1;
-                _mode = FollowerMode.MeanderHome;
-                _meanderTimer = 0f;
-                _currentMeanderWaypoint = Vector3.zero;
-                ResumeMovement(_config.WorkerReturnWanderSpeed);
-                Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
-                PickNextMeanderWaypoint(transform.position, nestPos);
-            }
-        }
-
-        public void ReturnToNest()
-        {
-            ReturnToNest(false);
-        }
-
-        public void WanderTo(Vector3 targetPosition, float speed = -1f)
-        {
-            _mode = FollowerMode.Wander;
-            _trackedSegment = null;
-            _trackedNodeIndex = -1;
-            ResumeMovement(speed > 0f ? speed : _config.WorkerMoveSpeed);
-            if (_ai != null)
-            {
-                _ai.destination = targetPosition;
-            }
-        }
-
-        /// <summary>
-        /// Paths directly toward a target position (e.g. food cache) without clearing the active trail
-        /// segment context, allowing seamless inbound retracing once harvesting concludes.
-        /// </summary>
-        public void ApproachTarget(Vector3 targetPosition, float speed = -1f)
-        {
-            _mode = FollowerMode.Wander;
-            ResumeMovement(speed > 0f ? speed : _config.WorkerMoveSpeed);
-            if (_ai != null)
-            {
-                _ai.destination = targetPosition;
-            }
         }
 
         public void StopMovement()
@@ -281,320 +232,6 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        private void NavigateOutbound(float deltaTime)
-        {
-            PheromoneTrailEmitter emitter = Emitter;
-            if (emitter == null || emitter.ActiveNodeCount == 0)
-            {
-                _trackedSegment = null;
-                _trackedNodeIndex = -1;
-                HandleTrailAbsence(deltaTime);
-                return;
-            }
-
-            Vector3 myPos = transform.position;
-            float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-
-            PheromoneTrailSegment segment = null;
-            int closestIndex = -1;
-
-            // 1. Fast O(1) local window search if already tracking a valid segment
-            if (_trackedSegment != null && _trackedNodeIndex >= 0 && emitter.IsSegmentActive(_trackedSegment))
-            {
-                if (emitter.TryFindNearestNodeLocal(_trackedSegment, _trackedNodeIndex, _config.LocalSearchNodeWindow, myPos, samplingRadiusSqr, out closestIndex))
-                {
-                    segment = _trackedSegment;
-                }
-            }
-
-            // 2. Periodic freshness evaluation: if a much fresher segment was drawn nearby, switch to it!
-            _freshnessCheckTimer += deltaTime;
-            if (_freshnessCheckTimer >= 0.5f)
-            {
-                _freshnessCheckTimer = 0f;
-                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx))
-                {
-                    if (freshSeg != segment && freshSeg.NodeCount > 0)
-                    {
-                        float freshIntensity = freshSeg.Nodes[freshIdx].GetCurrentIntensity(PgsTime.ElapsedTime, emitter.NodeLifetime);
-                        float currIntensity = (segment != null && closestIndex >= 0 && closestIndex < segment.NodeCount)
-                            ? segment.Nodes[closestIndex].GetCurrentIntensity(PgsTime.ElapsedTime, emitter.NodeLifetime)
-                            : 0f;
-
-                        if (freshIntensity > currIntensity + 0.35f)
-                        {
-                            segment = freshSeg;
-                            closestIndex = freshIdx;
-                        }
-                    }
-                }
-            }
-
-            // 3. Fall back to best recruitment node if local window lost scent
-            if (segment == null)
-            {
-                if (!emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out segment, out closestIndex))
-                {
-                    _trackedSegment = null;
-                    _trackedNodeIndex = -1;
-                    HandleTrailAbsence(deltaTime);
-                    return;
-                }
-            }
-
-            // Scent confirmed, update local tracking cache and reset lost timer
-            _trackedSegment = segment;
-            _trackedNodeIndex = closestIndex;
-            _lostTrailTimer = 0f;
-            OnTrailResumed?.Invoke();
-
-            // Outbound traffic maintains the chemical corridor, preventing premature decay while foraging
-            segment.ReinforceNode(closestIndex, PgsTime.ElapsedTime, strengthBoost: 0.1f);
-
-            IReadOnlyList<PheromoneNode> nodes = segment.Nodes;
-            if (nodes == null || nodes.Count == 0) return;
-
-            Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
-            Vector3 firstNodePos = nodes[0].Position;
-            Vector3 lastNodePos = nodes[nodes.Count - 1].Position;
-
-            float distFirstSqr = (firstNodePos.x - nestPos.x) * (firstNodePos.x - nestPos.x) + (firstNodePos.z - nestPos.z) * (firstNodePos.z - nestPos.z);
-            float distLastSqr = (lastNodePos.x - nestPos.x) * (lastNodePos.x - nestPos.x) + (lastNodePos.z - nestPos.z) * (lastNodePos.z - nestPos.z);
-
-            // Determine traversal direction: Outbound always steps toward the end furthest from the nest
-            bool stepForward = distLastSqr >= distFirstSqr;
-            int stepDir = stepForward ? 1 : -1;
-            int tipIndex = stepForward ? (nodes.Count - 1) : 0;
-
-            int lookAheadCount = Mathf.Max(1, Mathf.RoundToInt(_config.WaypointLookAheadDistance / _config.ArrivalThreshold));
-            int targetIndex = Mathf.Clamp(closestIndex + (stepDir * lookAheadCount), 0, nodes.Count - 1);
-            Vector3 baseWaypoint = nodes[targetIndex].Position;
-
-            // Calculate forward direction along true travel trajectory
-            int priorIndex = Mathf.Clamp(targetIndex - stepDir, 0, nodes.Count - 1);
-            Vector3 forwardDir = baseWaypoint - nodes[priorIndex].Position;
-            forwardDir.y = 0f;
-
-            Vector3 targetWaypoint = baseWaypoint;
-            if (forwardDir.sqrMagnitude > 0.0001f)
-            {
-                Vector3 tangent = forwardDir.normalized;
-                Vector3 normal = new Vector3(-tangent.z, 0f, tangent.x);
-
-                // Combine persistent unique lane offset with a gentle organic tropotaxis sine wobble
-                float wander = Mathf.Sin(PgsTime.ElapsedTime * 3.0f + _lateralOffsetSeed * 10f) * 0.25f;
-                float totalOffset = (_lateralOffsetSeed + wander) * _config.TrailSwarmDispersion;
-                targetWaypoint = baseWaypoint + normal * totalOffset;
-            }
-
-            // Directly assign destination: lookahead point remains ~1.2m ahead, preventing slowdown/stop stuttering
-            _ai.destination = targetWaypoint;
-
-            // Check if we are approaching the outer tip of the active stroke
-            bool isNearTip = (targetIndex == tipIndex) || (Mathf.Abs(closestIndex - tipIndex) <= lookAheadCount);
-            if (isNearTip)
-            {
-                // Staggered Trail Chaining: Check if another segment is available before declaring trail end!
-                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx, excludeSegment: segment))
-                {
-                    if (candidateSeg.NodeCount > 0)
-                    {
-                        Vector3 candFirst = candidateSeg.Nodes[0].Position;
-                        Vector3 candLast = candidateSeg.Nodes[candidateSeg.NodeCount - 1].Position;
-                        float candFirstDistSqr = (candFirst.x - nestPos.x) * (candFirst.x - nestPos.x) + (candFirst.z - nestPos.z) * (candFirst.z - nestPos.z);
-                        float candLastDistSqr = (candLast.x - nestPos.x) * (candLast.x - nestPos.x) + (candLast.z - nestPos.z) * (candLast.z - nestPos.z);
-                        float candTipDistSqr = Mathf.Max(candFirstDistSqr, candLastDistSqr);
-
-                        float dxTipCoord = baseWaypoint.x - nestPos.x;
-                        float dzTipCoord = baseWaypoint.z - nestPos.z;
-                        float currentTipDistSqr = dxTipCoord * dxTipCoord + dzTipCoord * dzTipCoord;
-
-                        // Accept candidate trail if it extends outward at least as far as the current stroke's tip
-                        if (candTipDistSqr >= currentTipDistSqr - 2.0f)
-                        {
-                            _trackedSegment = candidateSeg;
-                            _trackedNodeIndex = candidateIdx;
-                            return;
-                        }
-                    }
-                }
-            }
-
-            // Check if we reached the physical tip of the trail
-            if (targetIndex == tipIndex)
-            {
-                float dxTip = baseWaypoint.x - myPos.x;
-                float dzTip = baseWaypoint.z - myPos.z;
-                float tipArrivalThreshold = Mathf.Max(_config.ArrivalThreshold * 2.5f, 1.5f);
-                if ((dxTip * dxTip + dzTip * dzTip) <= (tipArrivalThreshold * tipArrivalThreshold))
-                {
-                    OnReachedTrailTip?.Invoke();
-                }
-            }
-        }
-
-        private void HandleTrailAbsence(float deltaTime)
-        {
-            _lostTrailTimer += deltaTime;
-            if (_lostTrailTimer >= _config.TrailEndSearchDuration)
-            {
-                OnTrailLost?.Invoke();
-            }
-        }
-
-        private void NavigateInbound(float deltaTime)
-        {
-            if (_homeNest == null) return;
-
-            Vector3 nestPos = _homeNest.SpawnPosition;
-            Vector3 myPos = transform.position;
-            float dx = nestPos.x - myPos.x;
-            float dz = nestPos.z - myPos.z;
-            float distSqr = dx * dx + dz * dz;
-
-            // Arrival check at the home nest depot
-            if (distSqr <= (_config.NestArrivalThreshold * _config.NestArrivalThreshold))
-            {
-                OnReturnedToNest?.Invoke();
-                return;
-            }
-
-            PheromoneTrailEmitter emitter = Emitter;
-
-            // If we lost our segment or harvested food a few meters off the trail, re-acquire the nearest recruitment trail segment
-            if ((_trackedSegment == null || !emitter.IsSegmentActive(_trackedSegment)) && emitter != null && emitter.ActiveNodeCount > 0)
-            {
-                float reattachRadiusSqr = (_config.TrailSamplingRadius * 2.5f) * (_config.TrailSamplingRadius * 2.5f);
-                if (emitter.TryFindBestRecruitmentNode(myPos, reattachRadiusSqr, out PheromoneTrailSegment foundSeg, out int foundIdx))
-                {
-                    _trackedSegment = foundSeg;
-                    _trackedNodeIndex = foundIdx;
-                }
-            }
-
-            // If we have an active tracked segment, retrace it inbound toward the nest
-            if (_trackedSegment != null && emitter != null && emitter.IsSegmentActive(_trackedSegment) && _trackedSegment.NodeCount > 0)
-            {
-                IReadOnlyList<PheromoneNode> nodes = _trackedSegment.Nodes;
-
-                // Local window search to track current node position along the ribbon
-                float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-                if (emitter.TryFindNearestNodeLocal(_trackedSegment, _trackedNodeIndex, _config.LocalSearchNodeWindow, myPos, samplingRadiusSqr, out int closestIndex))
-                {
-                    _trackedNodeIndex = closestIndex;
-                }
-
-                // Reinforce the current node: refresh timestamp and boost traffic strength
-                _trackedSegment.ReinforceNode(_trackedNodeIndex, PgsTime.ElapsedTime);
-
-                Vector3 firstNodePos = nodes[0].Position;
-                Vector3 lastNodePos = nodes[nodes.Count - 1].Position;
-                float distFirstSqr = (firstNodePos.x - nestPos.x) * (firstNodePos.x - nestPos.x) + (firstNodePos.z - nestPos.z) * (firstNodePos.z - nestPos.z);
-                float distLastSqr = (lastNodePos.x - nestPos.x) * (lastNodePos.x - nestPos.x) + (lastNodePos.z - nestPos.z) * (lastNodePos.z - nestPos.z);
-
-                // Inbound direction steps towards whichever end of the segment is closer to the nest
-                bool stepForward = distFirstSqr >= distLastSqr;
-                int stepDir = stepForward ? 1 : -1;
-                int nestEndIndex = stepForward ? (nodes.Count - 1) : 0;
-
-                // If reached the end of the ribbon closest to the nest, navigate final stretch directly into depot
-                if (_trackedNodeIndex == nestEndIndex)
-                {
-                    _ai.destination = nestPos;
-                    return;
-                }
-
-                int lookAheadCount = Mathf.Max(1, Mathf.RoundToInt(_config.WaypointLookAheadDistance / _config.ArrivalThreshold));
-                int targetIndex = Mathf.Clamp(_trackedNodeIndex + (stepDir * lookAheadCount), 0, nodes.Count - 1);
-                Vector3 baseWaypoint = nodes[targetIndex].Position;
-
-                // Lateral offset for two-way traffic separation
-                int priorIndex = Mathf.Clamp(targetIndex - stepDir, 0, nodes.Count - 1);
-                Vector3 forwardDir = baseWaypoint - nodes[priorIndex].Position;
-                forwardDir.y = 0f;
-
-                Vector3 targetWaypoint = baseWaypoint;
-                if (forwardDir.sqrMagnitude > 0.0001f)
-                {
-                    Vector3 tangent = forwardDir.normalized;
-                    Vector3 normal = new Vector3(-tangent.z, 0f, tangent.x);
-                    targetWaypoint = baseWaypoint + normal * (_lateralOffsetSeed * _config.TrailSwarmDispersion);
-                }
-
-                _ai.destination = targetWaypoint;
-            }
-            else
-            {
-                // Fallback to direct pathfinding if trail expired or was lost
-                _ai.destination = nestPos;
-            }
-        }
-
-        private void NavigateMeanderHome(float deltaTime)
-        {
-            if (_homeNest == null) return;
-
-            Vector3 nestPos = _homeNest.SpawnPosition;
-            Vector3 myPos = transform.position;
-
-            float dxNest = nestPos.x - myPos.x;
-            float dzNest = nestPos.z - myPos.z;
-            float distToNestSqr = dxNest * dxNest + dzNest * dzNest;
-
-            if (distToNestSqr <= (_config.NestArrivalThreshold * _config.NestArrivalThreshold))
-            {
-                OnReturnedToNest?.Invoke();
-                return;
-            }
-
-            _meanderTimer += deltaTime;
-            float dxWay = _currentMeanderWaypoint.x - myPos.x;
-            float dzWay = _currentMeanderWaypoint.z - myPos.z;
-            bool reachedWaypoint = (dxWay * dxWay + dzWay * dzWay) <= (_config.ArrivalThreshold * _config.ArrivalThreshold);
-
-            if (_meanderTimer >= 2.0f || reachedWaypoint || _currentMeanderWaypoint == Vector3.zero)
-            {
-                _meanderTimer = 0f;
-                PickNextMeanderWaypoint(myPos, nestPos);
-            }
-        }
-
-        private void PickNextMeanderWaypoint(Vector3 myPos, Vector3 nestPos)
-        {
-            Vector3 dirToNest = nestPos - myPos;
-            dirToNest.y = 0f;
-
-            float distToNest = dirToNest.magnitude;
-            if (distToNest <= 3.0f)
-            {
-                _currentMeanderWaypoint = nestPos;
-                _ai.destination = nestPos;
-                return;
-            }
-
-            dirToNest.Normalize();
-
-            // Biased random walk: rotate base direction toward nest by a random jitter angle
-            float jitterAngle = UnityEngine.Random.Range(-_config.MeanderJitterAngle, _config.MeanderJitterAngle);
-            Quaternion rotation = Quaternion.Euler(0f, jitterAngle, 0f);
-            Vector3 meanderDir = rotation * dirToNest;
-
-            float stepDistance = Mathf.Min(3.0f, distToNest);
-            Vector3 rawWaypoint = myPos + meanderDir * stepDistance;
-
-            if (AstarPath.active != null)
-            {
-                var nearest = AstarPath.active.GetNearest(rawWaypoint, NearestNodeConstraint.Walkable);
-                if (nearest.node != null)
-                {
-                    rawWaypoint = nearest.position;
-                }
-            }
-
-            _currentMeanderWaypoint = rawWaypoint;
-            _ai.destination = _currentMeanderWaypoint;
-        }
-
         #region IPoolable Implementation
 
         public void OnSpawnedFromPool()
@@ -622,6 +259,8 @@ namespace AntScout.Swarm.Agents
             StopMovement();
             _trackedSegment = null;
             _trackedNodeIndex = -1;
+            _lostTrailTimer = 0f;
+            _freshnessCheckTimer = 0f;
             _mode = FollowerMode.Inactive;
         }
 

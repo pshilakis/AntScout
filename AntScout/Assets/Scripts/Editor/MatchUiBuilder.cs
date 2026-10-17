@@ -23,7 +23,7 @@ namespace AntScout.Editor
         private const string CanvasName = "[ Match UI Canvas - Screen Space ]";
         private const string ShaderName = "PGS/UI/FillBar";
 
-        [MenuItem("Tools/AntScout/Setup Match Scene UI", false, 100)]
+        [MenuItem("AntScout/Setup Match Scene UI", false, 100)]
         public static void BuildMatchUi()
         {
             var activeScene = EditorSceneManager.GetActiveScene();

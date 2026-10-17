@@ -142,12 +142,8 @@ namespace AntScout.Match
             AntCharacter characterInstance = Instantiate(slot.CharacterPrefab, spawnPos, spawnRot);
             characterInstance.name = $"{slot.SlotName}_{characterInstance.GetInstanceID()}";
 
-            if (slot.DefinitionOverride != null)
-            {
-                characterInstance.SetDefinition(slot.DefinitionOverride);
-            }
-
-            characterInstance.SetColonyTeam(slot.TeamId);
+            // Explicit top-down Dependency Injection (DIP): Injects allied nest, trail emitter, and definition override
+            characterInstance.Initialize(nest, nest.TrailEmitter, slot.DefinitionOverride);
 
             AntBrainController brain = characterInstance.GetComponent<AntBrainController>();
             if (brain != null)
@@ -233,6 +229,7 @@ namespace AntScout.Match
             if (character != null)
             {
                 character.Revive(nest.SpawnPosition, nest.transform.rotation);
+                character.Initialize(nest, nest.TrailEmitter);
                 HookDeathListener(slot, character);
                 slot.OnRespawnCompleted();
 

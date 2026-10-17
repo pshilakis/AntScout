@@ -13,8 +13,8 @@ namespace AntScout.Swarm.Agents
             if (_config == null)
             {
                 throw new InvalidOperationException(
-                    $"[WorkerAntController] Missing required SwarmConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid SwarmConfigSO in the Inspector.");
+                    $"[WorkerAntController] Missing required SwarmDefinition on GameObject '{gameObject.name}'. " +
+                    $"Please assign a valid SwarmDefinition in the Inspector.");
             }
 
             if (_follower == null)

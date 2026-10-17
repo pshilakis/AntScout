@@ -28,6 +28,7 @@ namespace AntScout.Pheromone
         [Min(0.5f)]
         [SerializeField] private float _nodeLifetime = 25.0f;
 
+
         private readonly List<PheromoneTrailSegment> _segments = new List<PheromoneTrailSegment>();
         private PheromoneTrailSegment _currentSegment;
 
@@ -41,6 +42,7 @@ namespace AntScout.Pheromone
         public float NodePlacementDistance => _nodePlacementDistance;
         public float NodeLifetime => _nodeLifetime;
         public bool IsSegmentActive(PheromoneTrailSegment segment) => segment != null && _segments.Contains(segment);
+
 
         public int ActiveNodeCount
         {
@@ -57,7 +59,12 @@ namespace AntScout.Pheromone
 
         public void SetColonyTeam(int teamId)
         {
-            if (_colonyTeamId == teamId) return;
+            if (_colonyTeamId == teamId)
+            {
+                // Ensure registered under this team ID even if already matching
+                RegisterInColonyRegistry();
+                return;
+            }
 
             UnregisterFromColonyRegistry();
             _colonyTeamId = teamId;
@@ -70,7 +77,10 @@ namespace AntScout.Pheromone
 
         public static bool TryGetForColony(int colonyTeamId, out PheromoneTrailEmitter emitter)
         {
-            if (_colonyEmitters.TryGetValue(colonyTeamId, out emitter) && emitter != null)
+            if (_colonyEmitters.TryGetValue(colonyTeamId, out emitter) &&
+                emitter != null &&
+                emitter.gameObject != null &&
+                emitter.gameObject.scene.IsValid())
             {
                 return true;
             }
@@ -99,11 +109,24 @@ namespace AntScout.Pheromone
 
         private void RegisterInColonyRegistry()
         {
+            // Single Source of Truth protection:
+            // If an active, valid emitter already exists in the scene for this colony team,
+            // do NOT overwrite it (e.g. when an unconfigured prefab instance awakes before its team ID is set).
+            if (_colonyEmitters.TryGetValue(_colonyTeamId, out PheromoneTrailEmitter existing) &&
+                existing != null &&
+                existing != this &&
+                existing.gameObject != null &&
+                existing.gameObject.scene.IsValid())
+            {
+                return;
+            }
+
             _colonyEmitters[_colonyTeamId] = this;
         }
 
         private void UnregisterFromColonyRegistry()
         {
+            // Only unregister if this instance is indeed the active registered emitter for _colonyTeamId
             if (_colonyEmitters.TryGetValue(_colonyTeamId, out PheromoneTrailEmitter registered) && registered == this)
             {
                 _colonyEmitters.Remove(_colonyTeamId);
@@ -260,7 +283,9 @@ namespace AntScout.Pheromone
             float maxRadiusSqr,
             out PheromoneTrailSegment bestSegment,
             out int bestNodeIndex,
-            PheromoneTrailSegment excludeSegment = null)
+            PheromoneTrailSegment excludeSegment = null,
+            float priorityDuration = 0f,
+            float priorityMultiplier = 1f)
         {
             bestSegment = null;
             bestNodeIndex = -1;
@@ -273,6 +298,19 @@ namespace AntScout.Pheromone
                 PheromoneTrailSegment seg = _segments[s];
                 if (seg.Type != PheromoneType.Recruitment) continue;
                 if (excludeSegment != null && seg == excludeSegment) continue;
+
+                float freshnessMultiplier = 1.0f;
+                if (priorityDuration > 0f && priorityMultiplier > 1.0f)
+                {
+                    float age = currentTime - seg.CreatedAt;
+                    if (age >= 0f && age < priorityDuration)
+                    {
+                        float t = 1.0f - (age / priorityDuration);
+                        freshnessMultiplier += (priorityMultiplier - 1.0f) * t;
+                    }
+                }
+
+                float effFactor = 0.5f + 0.5f * seg.CurrentEfficiency;
 
                 IReadOnlyList<PheromoneNode> nodes = seg.Nodes;
                 for (int i = 0; i < nodes.Count; i++)
@@ -287,8 +325,11 @@ namespace AntScout.Pheromone
                         float intensity = nodes[i].GetCurrentIntensity(currentTime, lifetime);
                         if (intensity <= 0.01f) continue;
 
-                        // Potency Score: Intensity / (1.0 + distance)
-                        float score = intensity / (1.0f + Mathf.Sqrt(distSqr));
+                        // Potency Score: (Intensity * FreshnessMultiplier * Efficiency) / (1.0 + distance * 2.0)
+                        // Uses realistic chemical attenuation (2.0f) so nearby nodes (e.g. food tip) are not
+                        // bypassed in favor of distant bright highway nodes.
+                        float dist = Mathf.Sqrt(distSqr);
+                        float score = (intensity * freshnessMultiplier * effFactor) / (1.0f + dist * 2.0f);
 
                         if (score > bestScore)
                         {

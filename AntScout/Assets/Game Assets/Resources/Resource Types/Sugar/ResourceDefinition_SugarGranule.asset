@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ada5915947c9f344bfe51321169eed4, type: 3}
+  m_Name: ResourceDefinition_SugarGranule
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Config.ResourceDefinition
+  _displayName: Sugar Granule
+  _rarity: {fileID: 11400000, guid: be49f9c10f374ae7ab3869c2d11e41b7, type: 2}
+  _prefab: {fileID: 4956914398828691525, guid: bf9e558b45217a84d941b65ed7e1cdfc, type: 3}
+  _capacityRange:
+    _min: 15
+    _max: 25
+  _harvestDuration: 1
+  _biomassPerUnit: 5
+  _scaleRange: {x: 0.7, y: 1.1}

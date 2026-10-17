@@ -14,8 +14,8 @@ namespace AntScout.Swarm.Nest
             if (_config == null)
             {
                 throw new InvalidOperationException(
-                    $"[ColonyNest] Missing required SwarmConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid SwarmConfigSO in the Inspector.");
+                    $"[ColonyNest] Missing required SwarmDefinition on GameObject '{gameObject.name}'. " +
+                    $"Please assign a valid SwarmDefinition in the Inspector.");
             }
 
             if (_workerPrefab == null)

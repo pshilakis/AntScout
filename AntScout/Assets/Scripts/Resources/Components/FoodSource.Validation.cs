@@ -10,11 +10,17 @@ namespace AntScout.Resources.Components
     {
         private void ValidateConfiguration()
         {
-            if (_config == null)
+            if (_definition == null)
             {
                 throw new InvalidOperationException(
-                    $"[FoodSource] Missing required ResourceConfigSO on GameObject '{gameObject.name}'. " +
-                    $"Please assign a valid ResourceConfigSO in the Inspector.");
+                    $"[{name}] FoodSource: Missing injected ResourceDefinition! " +
+                    $"FoodSource prefabs must be spawned and initialized dynamically via Initialize(ResourceDefinition, Vector3, int).");
+            }
+
+            if (_units.Max <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"[{name}] FoodSource: Uninitialized capacity units for '{_definition.DisplayName}'! Total units must be greater than 0.");
             }
         }
     }

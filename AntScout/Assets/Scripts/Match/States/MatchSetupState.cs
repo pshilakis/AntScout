@@ -1,4 +1,7 @@
+using System;
 using System.Threading;
+using AntScout.Resources.Components;
+using AntScout.Swarm.Nest;
 using AntScout.UI;
 using Cysharp.Threading.Tasks;
 using PGS.States;
@@ -9,27 +12,62 @@ namespace AntScout.Match.States
     /// <summary>
     /// Initial match setup state. Explicitly orchestrates participant spawning, UI instantiation, and camera targeting
     /// before the match countdown begins, completely eliminating [DefaultExecutionOrder] race conditions.
-    /// Strictly adheres to Single Responsibility (SRP) and Open/Closed (OCP).
+    /// Strictly adheres to Single Responsibility (SRP), Open/Closed (OCP), and Dependency Inversion (DIP).
     /// </summary>
     public sealed class MatchSetupState : AsyncStateBase<MatchDirector>
     {
         public override async UniTask EnterAsync(MatchDirector director, CancellationToken ct)
         {
-            // Instantiate Match UI prefab if assigned and not already present in the active scene
-            if (director.MatchUiPrefab != null && Object.FindFirstObjectByType<MatchHudView>() == null)
+            // 1. Resolve and validate colony nests
+            int playerTeamId = director.PlayerTeamId;
+            if (!ColonyNest.TryGetForTeam(playerTeamId, out ColonyNest playerNest) || playerNest == null)
             {
-                Object.Instantiate(director.MatchUiPrefab);
+                throw new InvalidOperationException($"[MatchSetupState] Player ColonyNest (Team {playerTeamId}) is missing or not registered!");
+            }
+
+            ColonyNest enemyNest = null;
+            foreach (var nest in ColonyNest.ActiveNests)
+            {
+                if (nest != null && nest.ColonyTeamId != playerTeamId)
+                {
+                    enemyNest = nest;
+                    break;
+                }
+            }
+
+            if (enemyNest == null)
+            {
+                throw new InvalidOperationException("[MatchSetupState] Enemy ColonyNest is missing or not registered!");
+            }
+
+            // 2. Explicitly bind Colony Nests to ResourceSpawnManager
+            if (ResourceSpawnManager.Instance != null)
+            {
+                ResourceSpawnManager.Instance.BindColonyNests(ColonyNest.ActiveNests);
+            }
+
+            // 3. Instantiate and bind Match UI
+            MatchHudView hudView = UnityEngine.Object.FindFirstObjectByType<MatchHudView>();
+            if (hudView == null && director.MatchUiPrefab != null)
+            {
+                GameObject hudObj = UnityEngine.Object.Instantiate(director.MatchUiPrefab);
+                hudView = hudObj.GetComponentInChildren<MatchHudView>();
                 Debug.Log("[MatchSetupState] Match UI prefab instantiated.");
             }
 
-            // Explicit deterministic spawning of all participants
+            if (hudView != null)
+            {
+                hudView.BindNests(playerNest, enemyNest);
+            }
+
+            // 4. Explicit deterministic spawning of all participants
             if (director.SpawnController != null)
             {
                 await director.SpawnController.InitializeAndSpawnAllAsync(ct);
                 director.SpawnController.SetAllCharactersLocomotionLocked(true);
             }
 
-            Debug.Log("[MatchSetupState] Setup complete. All participants spawned and locked.");
+            Debug.Log("[MatchSetupState] Setup complete. All nests registered, UI bound, and participants spawned.");
 
             // Advance to the pre-match countdown phase
             await director.StateMachine.TransitionToAsync<MatchPreCountdownState>(ct);

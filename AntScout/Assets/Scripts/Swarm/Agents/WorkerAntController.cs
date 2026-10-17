@@ -3,7 +3,6 @@ using AntScout.Config;
 using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Resources.Components;
-using AntScout.Resources.Enums;
 using AntScout.Swarm.Interfaces;
 using AntScout.Swarm.Nest;
 using Pathfinding;
@@ -24,7 +23,7 @@ namespace AntScout.Swarm.Agents
     {
         [Header("Configuration")]
         [Tooltip("Source of truth for worker balance parameters.")]
-        [SerializeField] private SwarmConfigSO _config;
+        [SerializeField] private SwarmDefinition _config;
 
         [Header("Carried Cargo Visual")]
         [Tooltip("Visual representation of food morsel held in mandibles. Auto-created if unassigned.")]
@@ -48,14 +47,13 @@ namespace AntScout.Swarm.Agents
         private bool _isAtHarvestNode;
 
         private int _carriedAmount;
-        private int _carriedBiomassPerUnit;
-        private ResourceType _carriedType;
+        private ResourceDefinition _carriedResource;
 
         public SwarmAgentState CurrentState => _currentState;
         public Transform AgentTransform => transform;
         public ColonyNest HomeNest => _homeNest;
         public int CarriedAmount => _carriedAmount;
-        public ResourceType CarriedType => _carriedType;
+        public ResourceDefinition CarriedResource => _carriedResource;
 
         public PheromoneTrailEmitter TrailEmitter
         {
@@ -132,7 +130,7 @@ namespace AntScout.Swarm.Agents
             _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
             _trailEmitter = trailEmitter ?? throw new ArgumentNullException(nameof(trailEmitter));
             InitializeCombat(homeNest);
-            _follower.Initialize(homeNest, trailEmitter, _config);
+            _follower.Initialize(homeNest, trailEmitter, _config, _characterDefinition);
             _carriedAmount = 0;
             _scentCheckCooldown = 0f;
             _lastExhaustedSegment = null;
@@ -223,9 +221,10 @@ namespace AntScout.Swarm.Agents
             if (_scentCheckCooldown <= 0f && emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float recruitRadiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
-                if (emitter.HasRecruitmentNear(transform.position, recruitRadiusSqr))
+                if (emitter.TryFindBestRecruitmentNode(transform.position, recruitRadiusSqr, out PheromoneTrailSegment bestSeg, out int bestIdx,
+                    priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
-                    _follower.FollowTrailOutbound();
+                    _follower.FollowTrailOutbound(bestSeg, bestIdx);
                     SetState(SwarmAgentState.FollowingTrailOutbound);
                     return;
                 }
@@ -262,7 +261,8 @@ namespace AntScout.Swarm.Agents
             if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
+                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx,
+                    excludeSegment: _lastExhaustedSegment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
                     if (newSeg.NodeCount > 0)
                     {
@@ -298,9 +298,10 @@ namespace AntScout.Swarm.Agents
                 PickNewTipWanderTarget();
             }
 
-            // 4. Timeout -> Begin slow, organic meander toward home
+            // 4. Timeout -> Begin organic return toward home along the highway
             _searchTimer += deltaTime;
-            if (_searchTimer >= _config.TrailTipWanderDuration)
+            float maxTipSearchDuration = Mathf.Min(1.5f, _config.TrailTipWanderDuration);
+            if (_searchTimer >= maxTipSearchDuration)
             {
                 _searchTimer = 0f;
                 OrderReturnHome();
@@ -317,7 +318,8 @@ namespace AntScout.Swarm.Agents
             if (emitter != null && emitter.ActiveNodeCount > 0)
             {
                 float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
-                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx, excludeSegment: _lastExhaustedSegment))
+                if (emitter.TryFindBestRecruitmentNode(transform.position, samplingRadiusSqr, out PheromoneTrailSegment newSeg, out int newIdx,
+                    excludeSegment: _lastExhaustedSegment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
                     if (newSeg.NodeCount > 0)
                     {
@@ -332,8 +334,8 @@ namespace AntScout.Swarm.Agents
 
                         float myDistSqr = (myPos.x - nestPos.x) * (myPos.x - nestPos.x) + (myPos.z - nestPos.z) * (myPos.z - nestPos.z);
 
-                        // Only resume outbound foraging if this trail extends further out than where we currently are
-                        if (maxSegDistSqr > myDistSqr)
+                        // Only resume outbound foraging if this candidate trail extends substantially further outward than where we currently are
+                        if (maxSegDistSqr > myDistSqr + 3.0f)
                         {
                             _lastExhaustedSegment = null;
                             _follower.FollowTrailOutbound(newSeg, newIdx);
@@ -348,7 +350,7 @@ namespace AntScout.Swarm.Agents
         {
             Vector2 randomCircle = UnityEngine.Random.insideUnitCircle * _config.TrailTipWanderRadius;
             Vector3 target = _tipAnchorPosition + new Vector3(randomCircle.x, 0f, randomCircle.y);
-            _follower.WanderTo(target, _config.WorkerMoveSpeed);
+            _follower.WanderTo(target);
         }
 
         private void EvaluateOutboundForaging(float deltaTime)
@@ -396,7 +398,7 @@ namespace AntScout.Swarm.Agents
 
                 if (distSqr > harvestRange * harvestRange)
                 {
-                    _follower.ApproachTarget(foodPos, _config.WorkerMoveSpeed);
+                    _follower.ApproachTarget(foodPos);
                     return;
                 }
 
@@ -419,8 +421,7 @@ namespace AntScout.Swarm.Agents
             // 3. Harvest extraction timer
             _harvestTimer += deltaTime;
             float durationNeeded = _targetFood.HarvestDuration;
-            int biomassPerUnit = _targetFood.BiomassValue;
-            ResourceType foodType = _targetFood.Type;
+            ResourceDefinition foodDef = _targetFood.Definition;
 
             if (_harvestTimer >= durationNeeded)
             {
@@ -429,8 +430,7 @@ namespace AntScout.Swarm.Agents
                 if (_targetFood.TryHarvest(1, out int harvested) && harvested > 0)
                 {
                     _carriedAmount = harvested;
-                    _carriedBiomassPerUnit = biomassPerUnit;
-                    _carriedType = foodType;
+                    _carriedResource = foodDef;
 
                     if (_carriedMorselVisual != null)
                     {
@@ -477,12 +477,12 @@ namespace AntScout.Swarm.Agents
         private void HandleReturnedToNest()
         {
             _lastExhaustedSegment = null;
-            bool broughtFood = _carriedAmount > 0;
+            bool broughtFood = _carriedAmount > 0 && _carriedResource != null;
             if (broughtFood && _homeNest != null)
             {
-                _homeNest.DepositResource(_carriedType, _carriedAmount, _carriedBiomassPerUnit);
+                _homeNest.DepositResource(_carriedResource, _carriedAmount);
                 _carriedAmount = 0;
-                _carriedBiomassPerUnit = 0;
+                _carriedResource = null;
             }
 
             if (_carriedMorselVisual != null)
@@ -499,7 +499,17 @@ namespace AntScout.Swarm.Agents
             // If the worker brought food and the recruitment trail is still connected to the nest, head back out immediately!
             if (broughtFood && _homeNest != null && _homeNest.IsTrailConnected)
             {
-                _follower.FollowTrailOutbound();
+                PheromoneTrailEmitter emitter = TrailEmitter;
+                float recruitRadiusSqr = _config.NestRecruitmentRadius * _config.NestRecruitmentRadius;
+                if (emitter != null && emitter.TryFindBestRecruitmentNode(transform.position, recruitRadiusSqr, out PheromoneTrailSegment bestSeg, out int bestIdx,
+                    priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
+                {
+                    _follower.FollowTrailOutbound(bestSeg, bestIdx);
+                }
+                else
+                {
+                    _follower.FollowTrailOutbound();
+                }
                 SetState(SwarmAgentState.FollowingTrailOutbound);
             }
             else

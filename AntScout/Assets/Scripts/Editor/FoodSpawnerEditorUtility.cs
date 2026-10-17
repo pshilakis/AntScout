@@ -2,9 +2,7 @@ using System;
 using System.IO;
 using AntScout.Config;
 using AntScout.Resources.Components;
-using AntScout.Resources.Enums;
-using AntScout.Swarm.Nest;
-using Pathfinding;
+using PGS.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -12,8 +10,8 @@ using UnityEngine;
 namespace AntScout.Editor
 {
     /// <summary>
-    /// Editor utility to generate food source prefabs (Sugar Granule, Fallen Fruit) and
-    /// spawn test food drops or spawner systems in the active scene.
+    /// Editor utility to generate food source prefabs (Sugar Granule, Fallen Fruit),
+    /// physical ResourceDefinition assets, RarityDefinitions, and configure ResourceSpawnManager in the active scene.
     /// </summary>
     public static class FoodSpawnerEditorUtility
     {
@@ -23,113 +21,93 @@ namespace AntScout.Editor
         private const string FruitPrefabPath = "Assets/Game Assets/Resources/Food_FallenFruit.prefab";
         private const string SugarMaterialPath = "Assets/Game Assets/Resources/Materials/SugarMaterial.mat";
         private const string FruitMaterialPath = "Assets/Game Assets/Resources/Materials/FruitMaterial.mat";
-        private const string DefaultConfigPath = "Assets/Game Assets/ResourceConfig.asset";
+        private const string CommonRarityPath = "Assets/Game Assets/Resources/Rarity_Common.asset";
+        private const string UncommonRarityPath = "Assets/Game Assets/Resources/Rarity_Uncommon.asset";
+        private const string SugarDefPath = "Assets/Game Assets/Resources/ResourceDefinition_SugarGranule.asset";
+        private const string FruitDefPath = "Assets/Game Assets/Resources/ResourceDefinition_FallenFruit.asset";
+        private const string DefaultMapDefPath = "Assets/Game Assets/MapResourceDefinition_Default.asset";
 
-        [MenuItem("Tools/AntScout/Resources/Create or Update Food Prefabs", priority = 20)]
+        [MenuItem("AntScout/Resources/Create or Update Food Prefabs", priority = 20)]
         public static void CreateOrUpdateFoodPrefabs()
         {
             EnsureFoldersExist();
 
-            ResourceConfigSO config = ResolveResourceConfig();
+            RarityDefinition commonRarity = GetOrCreateRarity(
+                CommonRarityPath, "Common", Color.white, HeaderColor.White, false, 60);
+            RarityDefinition uncommonRarity = GetOrCreateRarity(
+                UncommonRarityPath, "Uncommon", new Color(0.3f, 0.9f, 0.4f), HeaderColor.Green, true, 40);
+
+            ResourceDefinition sugarDef = GetOrCreateResourceDefinition(
+                SugarDefPath, "Sugar Granule", commonRarity, new IntRange(15, 25), 1.0f, 5, new Vector2(0.7f, 1.1f));
+            ResourceDefinition fruitDef = GetOrCreateResourceDefinition(
+                FruitDefPath, "Fallen Fruit", uncommonRarity, new IntRange(60, 90), 1.8f, 15, new Vector2(0.9f, 1.4f));
+
             Material sugarMat = GetOrCreateMaterial(SugarMaterialPath, new Color(0.92f, 0.96f, 1.0f, 1.0f), 0.85f, 0.1f);
             Material fruitMat = GetOrCreateMaterial(FruitMaterialPath, new Color(0.85f, 0.15f, 0.25f, 1.0f), 0.6f, 0.0f);
 
-            CreateOrUpdatePrefab(SugarPrefabPath, PrimitiveType.Cube, new Vector3(0.6f, 0.6f, 0.6f), sugarMat, config, ResourceType.SugarGranule);
-            CreateOrUpdatePrefab(FruitPrefabPath, PrimitiveType.Sphere, new Vector3(1.2f, 1.2f, 1.2f), fruitMat, config, ResourceType.FallenFruit);
+            FoodSource sugarPrefab = CreateOrUpdatePrefab(SugarPrefabPath, PrimitiveType.Cube, new Vector3(0.6f, 0.6f, 0.6f), sugarMat);
+            FoodSource fruitPrefab = CreateOrUpdatePrefab(FruitPrefabPath, PrimitiveType.Sphere, new Vector3(1.2f, 1.2f, 1.2f), fruitMat);
+
+            // Wire prefabs back into their definitions
+            SerializedObject sugarSo = new SerializedObject(sugarDef);
+            sugarSo.FindProperty("_prefab").objectReferenceValue = sugarPrefab;
+            sugarSo.FindProperty("_rarity").objectReferenceValue = commonRarity;
+            sugarSo.ApplyModifiedProperties();
+
+            SerializedObject fruitSo = new SerializedObject(fruitDef);
+            fruitSo.FindProperty("_prefab").objectReferenceValue = fruitPrefab;
+            fruitSo.FindProperty("_rarity").objectReferenceValue = uncommonRarity;
+            fruitSo.ApplyModifiedProperties();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[FoodSpawnerEditorUtility] Food prefabs successfully generated at '{ResourcesFolder}'.");
+            Debug.Log($"[FoodSpawnerEditorUtility] Food prefabs, RarityDefinitions, and ResourceDefinitions successfully generated at '{ResourcesFolder}'.");
         }
 
-        [MenuItem("Tools/AntScout/Resources/Spawn Test Sugar Cache in Match Scene", priority = 21)]
-        public static void SpawnTestSugarCacheInScene()
+        [MenuItem("AntScout/Resources/Setup Resource Spawn Manager in Match Scene", priority = 21)]
+        public static void SetupResourceSpawnManagerInScene()
         {
             CreateOrUpdateFoodPrefabs();
 
-            GameObject sugarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SugarPrefabPath);
-            if (sugarPrefab == null)
+            MapResourceDefinition mapDef = ResolveMapResourceDefinition();
+
+            ResourceSpawnManager existingManager = UnityEngine.Object.FindAnyObjectByType<ResourceSpawnManager>();
+            GameObject managerObj = existingManager != null ? existingManager.gameObject : new GameObject("[ Resource Spawn Manager ]");
+
+            if (existingManager == null)
             {
-                throw new InvalidOperationException($"[FoodSpawnerEditorUtility] Failed to load prefab at '{SugarPrefabPath}'.");
-            }
-
-            ColonyNest playerNest = null;
-            ColonyNest[] nests = UnityEngine.Object.FindObjectsByType<ColonyNest>(FindObjectsSortMode.None);
-            for (int i = 0; i < nests.Length; i++)
-            {
-                if (nests[i].ColonyTeamId == 0)
-                {
-                    playerNest = nests[i];
-                    break;
-                }
-            }
-
-            if (playerNest == null && nests.Length > 0)
-            {
-                playerNest = nests[0];
-            }
-
-            Vector3 spawnOrigin = playerNest != null ? playerNest.SpawnPosition : Vector3.zero;
-            Vector3 forwardOffset = playerNest != null ? playerNest.transform.forward * 9.0f : new Vector3(0f, 0f, 9.0f);
-            Vector3 testTargetPos = spawnOrigin + forwardOffset;
-
-            // Snap to nearest walkable node if Astar is present
-            if (AstarPath.active != null)
-            {
-                var nearest = AstarPath.active.GetNearest(testTargetPos, NearestNodeConstraint.Walkable);
-                if (nearest.node != null)
-                {
-                    testTargetPos = (Vector3)nearest.node.position;
-                }
-            }
-
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(sugarPrefab);
-            instance.name = "Food_SugarGranule_TestCache";
-            instance.transform.position = testTargetPos;
-
-            Undo.RegisterCreatedObjectUndo(instance, "Spawn Test Sugar Cache");
-            Selection.activeGameObject = instance;
-            EditorSceneManager.MarkSceneDirty(instance.scene);
-
-            Debug.Log($"[FoodSpawnerEditorUtility] Spawned test Sugar Granule cache at {testTargetPos} (~9m from player nest).");
-        }
-
-        [MenuItem("Tools/AntScout/Resources/Setup Bonanza Spawner in Match Scene", priority = 22)]
-        public static void SetupBonanzaSpawnerInScene()
-        {
-            CreateOrUpdateFoodPrefabs();
-
-            ResourceConfigSO config = ResolveResourceConfig();
-            GameObject sugarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SugarPrefabPath);
-            GameObject fruitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(FruitPrefabPath);
-
-            BonanzaSpawner existingSpawner = UnityEngine.Object.FindAnyObjectByType<BonanzaSpawner>();
-            GameObject spawnerObj = existingSpawner != null ? existingSpawner.gameObject : new GameObject("[ Bonanza Spawner ]");
-
-            if (existingSpawner == null)
-            {
-                existingSpawner = spawnerObj.AddComponent<BonanzaSpawner>();
-                Undo.RegisterCreatedObjectUndo(spawnerObj, "Create Bonanza Spawner");
+                existingManager = managerObj.AddComponent<ResourceSpawnManager>();
+                Undo.RegisterCreatedObjectUndo(managerObj, "Create Resource Spawn Manager");
             }
             else
             {
-                Undo.RecordObject(existingSpawner, "Configure Bonanza Spawner");
+                Undo.RecordObject(existingManager, "Configure Resource Spawn Manager");
             }
 
-            SerializedObject so = new SerializedObject(existingSpawner);
-            so.FindProperty("_config").objectReferenceValue = config;
+            // Nest under [ Managers ] if present in the scene
+            GameObject managersRoot = GameObject.Find("[ Managers ]");
+            if (managersRoot != null && managerObj.transform.parent != managersRoot.transform)
+            {
+                managerObj.transform.SetParent(managersRoot.transform);
+            }
 
-            SerializedProperty prefabsProp = so.FindProperty("_foodPrefabs");
-            prefabsProp.arraySize = 2;
-            prefabsProp.GetArrayElementAtIndex(0).objectReferenceValue = sugarPrefab;
-            prefabsProp.GetArrayElementAtIndex(1).objectReferenceValue = fruitPrefab;
-
+            SerializedObject so = new SerializedObject(existingManager);
+            so.FindProperty("_mapDefinition").objectReferenceValue = mapDef;
             so.ApplyModifiedProperties();
-            EditorSceneManager.MarkSceneDirty(spawnerObj.scene);
-            Selection.activeGameObject = spawnerObj;
 
-            Debug.Log("[FoodSpawnerEditorUtility] Configured [ Bonanza Spawner ] in active scene.");
+            // Clean up legacy static test cache object if present
+            GameObject testCache = GameObject.Find("Food_SugarGranule_TestCache");
+            if (testCache != null)
+            {
+                Undo.DestroyObjectImmediate(testCache);
+                Debug.Log("[FoodSpawnerEditorUtility] Cleaned up legacy 'Food_SugarGranule_TestCache'.");
+            }
+
+            EditorSceneManager.MarkSceneDirty(managerObj.scene);
+            Selection.activeGameObject = managerObj;
+
+            Debug.Log("[FoodSpawnerEditorUtility] Configured [ Resource Spawn Manager ] in active scene with MapResourceDefinition.");
         }
 
         private static void EnsureFoldersExist()
@@ -148,22 +126,48 @@ namespace AntScout.Editor
             }
         }
 
-        private static ResourceConfigSO ResolveResourceConfig()
+        private static RarityDefinition GetOrCreateRarity(
+            string path, string rarityName, Color color, HeaderColor headerColor, bool isHighTier, int weight)
         {
-            ResourceConfigSO config = AssetDatabase.LoadAssetAtPath<ResourceConfigSO>(DefaultConfigPath);
-            if (config != null) return config;
+            RarityDefinition rarity = AssetDatabase.LoadAssetAtPath<RarityDefinition>(path);
+            if (rarity == null)
+            {
+                rarity = ScriptableObject.CreateInstance<RarityDefinition>();
+                rarity.SetRuntimeValues(rarityName, color, headerColor, isHighTier, new ConstantTierWeight(weight));
+                AssetDatabase.CreateAsset(rarity, path);
+            }
+            return rarity;
+        }
 
-            string[] guids = AssetDatabase.FindAssets("t:ResourceConfigSO");
+        private static ResourceDefinition GetOrCreateResourceDefinition(
+            string path, string displayName, RarityDefinition rarity, IntRange capacityRange, float harvestDuration, int biomassPerUnit, Vector2 scaleRange)
+        {
+            ResourceDefinition def = AssetDatabase.LoadAssetAtPath<ResourceDefinition>(path);
+            if (def == null)
+            {
+                def = ScriptableObject.CreateInstance<ResourceDefinition>();
+                def.SetRuntimeValues(displayName, rarity, null, capacityRange, harvestDuration, biomassPerUnit, scaleRange);
+                AssetDatabase.CreateAsset(def, path);
+            }
+            return def;
+        }
+
+        private static MapResourceDefinition ResolveMapResourceDefinition()
+        {
+            MapResourceDefinition def = AssetDatabase.LoadAssetAtPath<MapResourceDefinition>(DefaultMapDefPath);
+            if (def != null) return def;
+
+            string[] guids = AssetDatabase.FindAssets("t:MapResourceDefinition");
             if (guids.Length > 0)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                config = AssetDatabase.LoadAssetAtPath<ResourceConfigSO>(path);
-                if (config != null) return config;
+                def = AssetDatabase.LoadAssetAtPath<MapResourceDefinition>(path);
+                if (def != null) return def;
             }
 
             throw new InvalidOperationException(
-                $"[FoodSpawnerEditorUtility] Could not find a valid ResourceConfigSO asset at '{DefaultConfigPath}'. " +
-                $"Please create one via Assets -> Create -> AntScout -> Config -> ResourceConfig.");
+                $"[FoodSpawnerEditorUtility] Could not find a valid MapResourceDefinition asset at '{DefaultMapDefPath}'. " +
+                $"Please create one via Assets -> Create -> AntScout -> Config -> Map Resource Definition.");
         }
 
         private static Material GetOrCreateMaterial(string materialPath, Color albedoColor, float smoothness, float metallic)
@@ -176,7 +180,7 @@ namespace AntScout.Editor
 
                 mat = new Material(litShader)
                 {
-                    name = System.IO.Path.GetFileNameWithoutExtension(materialPath)
+                    name = Path.GetFileNameWithoutExtension(materialPath)
                 };
 
                 if (mat.HasProperty("_BaseColor"))
@@ -203,18 +207,16 @@ namespace AntScout.Editor
             return mat;
         }
 
-        private static void CreateOrUpdatePrefab(
+        private static FoodSource CreateOrUpdatePrefab(
             string prefabPath,
             PrimitiveType primitiveType,
             Vector3 localScale,
-            Material material,
-            ResourceConfigSO config,
-            ResourceType resourceType)
+            Material material)
         {
             GameObject temp = GameObject.CreatePrimitive(primitiveType);
             try
             {
-                temp.name = System.IO.Path.GetFileNameWithoutExtension(prefabPath);
+                temp.name = Path.GetFileNameWithoutExtension(prefabPath);
                 temp.transform.localScale = localScale;
 
                 Renderer rend = temp.GetComponent<Renderer>();
@@ -231,13 +233,12 @@ namespace AntScout.Editor
 
                 FoodSource foodSource = temp.AddComponent<FoodSource>();
                 SerializedObject so = new SerializedObject(foodSource);
-                so.FindProperty("_config").objectReferenceValue = config;
-                so.FindProperty("_type").enumValueIndex = (int)resourceType;
                 so.FindProperty("_shrinkOnDeplete").boolValue = true;
                 so.FindProperty("_minScaleRatio").floatValue = 0.25f;
                 so.ApplyModifiedPropertiesWithoutUndo();
 
-                PrefabUtility.SaveAsPrefabAsset(temp, prefabPath);
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(temp, prefabPath);
+                return savedPrefab.GetComponent<FoodSource>();
             }
             finally
             {
