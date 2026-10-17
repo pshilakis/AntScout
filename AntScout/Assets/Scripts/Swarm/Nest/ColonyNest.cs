@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using AntScout.Characters;
 using AntScout.Config;
-using AntScout.FogOfWar.Core;
+using PGS.FogOfWar.Core;
 using AntScout.Core.Enums;
 using AntScout.Match;
 using AntScout.Pheromone;

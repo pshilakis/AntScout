@@ -5,6 +5,7 @@
     "com.pgs.combat": "file:../../../_SharedPackages/com.pgs.combat",
     "com.pgs.core": "file:../../../_SharedPackages/com.pgs.core",
     "com.pgs.effects": "file:../../../_SharedPackages/com.pgs.effects",
+    "com.pgs.fogofwar": "file:../../../_SharedPackages/com.pgs.fogofwar",
     "com.pgs.input": "file:../../../_SharedPackages/com.pgs.input",
     "com.pgs.loot": "file:../../../_SharedPackages/com.pgs.loot",
     "com.pgs.player": "file:../../../_SharedPackages/com.pgs.player",

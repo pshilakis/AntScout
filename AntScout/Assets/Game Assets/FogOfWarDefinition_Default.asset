@@ -14,9 +14,6 @@ MonoBehaviour:
   _mapMin: {x: -30, y: -30}
   _mapMax: {x: 30, y: 30}
   _resolution: 256
-  _heroVisionRadius: 12
-  _nestVisionRadius: 15
-  _workerVisionRadius: 5
   _unexploredColor: {r: 0, g: 0, b: 0, a: 1}
   _exploredColor: {r: 0.08, g: 0.08, b: 0.12, a: 0.65}
   _edgeFeather: 0.2

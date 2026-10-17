@@ -36,6 +36,11 @@ namespace AntScout.Characters
         [Range(1.0f, 25.0f)]
         [SerializeField] private float _baseMoveSpeed = 7.0f;
 
+        [ColoredHeader("Vision & Sensing", HeaderColor.Yellow)]
+        [Tooltip("Sensory sight radius in meters projected into the Fog of War.")]
+        [Min(0.5f)]
+        [SerializeField] private float _visionRadius = 12.0f;
+
         [ColoredHeader("Primary Slot", HeaderColor.Coral)]
         [Tooltip("Primary offensive action (e.g. Mandible Bite).")]
         [SerializeField] private CombatActionDefinition _primaryAction;
@@ -82,6 +87,7 @@ namespace AntScout.Characters
         public StatsController.InitialStatConfig Defense => _defense;
         public StatsController.InitialStatConfig Attack => _attack;
         public float BaseMoveSpeed => _baseMoveSpeed;
+        public float VisionRadius => _visionRadius;
         public CombatActionDefinition PrimaryAction => _primaryAction;
         public InputActionReference PrimaryInput => _primaryInput;
         public CombatActionDefinition SecondaryAction => _secondaryAction;

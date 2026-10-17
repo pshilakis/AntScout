@@ -34,6 +34,12 @@ namespace AntScout.Swarm.Nest
                     $"[{contextName}] StructureDefinition '{name}' Defense BaseValue ({_defense.BaseValue}) cannot be negative!");
             }
 
+            if (_visionRadius <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"[{contextName}] StructureDefinition '{name}' VisionRadius ({_visionRadius}) must be greater than zero!");
+            }
+
             if (_auras != null)
             {
                 for (int i = 0; i < _auras.Length; i++)

@@ -1,5 +1,5 @@
-using AntScout.FogOfWar.Core;
-using AntScout.FogOfWar.Interfaces;
+using PGS.FogOfWar.Core;
+using PGS.FogOfWar.Interfaces;
 using UnityEngine;
 
 namespace AntScout.Swarm.Agents
@@ -18,7 +18,7 @@ namespace AntScout.Swarm.Agents
 
         Vector3 IFogCullable.CullPosition => transform.position;
 
-        int IFogCullable.ColonyTeamId => _homeNest != null ? _homeNest.ColonyTeamId : 0;
+        int IFogCullable.TeamId => _homeNest != null ? _homeNest.ColonyTeamId : 0;
 
         bool IFogCullable.IsCullableActive => IsAlive && gameObject.activeInHierarchy && _homeNest != null;
 

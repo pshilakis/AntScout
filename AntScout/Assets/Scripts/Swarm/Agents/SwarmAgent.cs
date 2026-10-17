@@ -1,7 +1,7 @@
 using System;
 using AntScout.Characters;
 using AntScout.Config;
-using AntScout.FogOfWar.Core;
+using PGS.FogOfWar.Core;
 using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Swarm.Interfaces;

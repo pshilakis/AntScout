@@ -20,6 +20,7 @@ MonoBehaviour:
   _defense:
     StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
     BaseValue: 0
+  _visionRadius: 15
   _auras:
   - _auraName: Nest Recovery Fountain
     _shape:

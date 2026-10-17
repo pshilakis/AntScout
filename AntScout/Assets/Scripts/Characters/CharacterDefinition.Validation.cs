@@ -72,6 +72,11 @@ namespace AntScout.Characters
         {
             ValidateVitals(name);
 
+            if (_visionRadius <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition VisionRadius ({_visionRadius}) must be greater than zero!");
+            }
+
             if (_primaryAction != null || _secondaryAction != null || _utilityAction != null)
             {
                 if (_attack.StatType == null)

@@ -17,6 +17,7 @@ namespace AntScout.Editor
         private SerializedProperty _iconProp;
         private SerializedProperty _maxHealthProp;
         private SerializedProperty _defenseProp;
+        private SerializedProperty _visionRadiusProp;
         private SerializedProperty _aurasProp;
 
         private int _selectedTab = 0;
@@ -32,6 +33,7 @@ namespace AntScout.Editor
             _iconProp = serializedObject.FindProperty("_icon");
             _maxHealthProp = serializedObject.FindProperty("_maxHealth");
             _defenseProp = serializedObject.FindProperty("_defense");
+            _visionRadiusProp = serializedObject.FindProperty("_visionRadius");
             _aurasProp = serializedObject.FindProperty("_auras");
         }
 
@@ -64,6 +66,9 @@ namespace AntScout.Editor
             EditorGUILayout.Space(6);
             EditorGUILayout.PropertyField(_maxHealthProp);
             EditorGUILayout.PropertyField(_defenseProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.PropertyField(_visionRadiusProp);
         }
 
         private void DrawAurasTab()

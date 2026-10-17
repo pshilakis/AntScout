@@ -1,6 +1,6 @@
 using System;
 using AntScout.Characters;
-using AntScout.FogOfWar.Core;
+using PGS.FogOfWar.Core;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
 using PGS.Camera.Interfaces;

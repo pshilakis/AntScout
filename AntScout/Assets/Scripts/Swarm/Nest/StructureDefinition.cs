@@ -61,6 +61,11 @@ namespace AntScout.Swarm.Nest
         [Tooltip("Flat Armor/Defense StatTypeSO and starting base value seeded into StatsController.")]
         [SerializeField] private StatsController.InitialStatConfig _defense;
 
+        [ColoredHeader("Vision Perimeter", HeaderColor.Yellow)]
+        [Tooltip("Perimeter sight radius in meters projected into the Fog of War.")]
+        [Min(1.0f)]
+        [SerializeField] private float _visionRadius = 15.0f;
+
         [Tooltip("Autonomous spatial auras continuously projected around this structure.")]
         [SerializeField] private StructureAuraConfig[] _auras = Array.Empty<StructureAuraConfig>();
 
@@ -68,6 +73,7 @@ namespace AntScout.Swarm.Nest
         public Sprite Icon => _icon;
         public StatsController.InitialStatConfig MaxHealth => _maxHealth;
         public StatsController.InitialStatConfig Defense => _defense;
+        public float VisionRadius => _visionRadius;
         public IReadOnlyList<StructureAuraConfig> Auras => _auras;
         public bool HasAuras => _auras != null && _auras.Length > 0;
     }

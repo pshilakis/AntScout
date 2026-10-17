@@ -21,6 +21,7 @@ namespace AntScout.Editor
         private SerializedProperty _defenseProp;
         private SerializedProperty _attackProp;
         private SerializedProperty _baseMoveSpeedProp;
+        private SerializedProperty _visionRadiusProp;
 
         private SerializedProperty _primaryActionProp;
         private SerializedProperty _primaryInputProp;
@@ -49,6 +50,7 @@ namespace AntScout.Editor
             _defenseProp = serializedObject.FindProperty("_defense");
             _attackProp = serializedObject.FindProperty("_attack");
             _baseMoveSpeedProp = serializedObject.FindProperty("_baseMoveSpeed");
+            _visionRadiusProp = serializedObject.FindProperty("_visionRadius");
 
             _primaryActionProp = serializedObject.FindProperty("_primaryAction");
             _primaryInputProp = serializedObject.FindProperty("_primaryInput");
@@ -97,6 +99,7 @@ namespace AntScout.Editor
 
             EditorGUILayout.Space(6);
             EditorGUILayout.PropertyField(_baseMoveSpeedProp);
+            EditorGUILayout.PropertyField(_visionRadiusProp);
         }
 
         #endregion

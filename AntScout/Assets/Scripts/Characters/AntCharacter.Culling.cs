@@ -1,5 +1,5 @@
-using AntScout.FogOfWar.Core;
-using AntScout.FogOfWar.Interfaces;
+using PGS.FogOfWar.Core;
+using PGS.FogOfWar.Interfaces;
 using UnityEngine;
 
 namespace AntScout.Characters
@@ -17,7 +17,7 @@ namespace AntScout.Characters
 
         Vector3 IFogCullable.CullPosition => transform.position;
 
-        int IFogCullable.ColonyTeamId => _colonyTeamId;
+        int IFogCullable.TeamId => _colonyTeamId;
 
         bool IFogCullable.IsCullableActive => _isAlive && gameObject.activeInHierarchy;
 
