@@ -18,6 +18,7 @@ namespace AntScout.Swarm.Agents
             _mode = FollowerMode.OutboundTrail;
             _hasCargo = false;
             _trackedSegment = initialSegment;
+            _lastChainedSegment = null;
             _trackedNodeIndex = initialNodeIndex;
             _lostTrailTimer = 0f;
             _freshnessCheckTimer = 0f;
@@ -36,6 +37,7 @@ namespace AntScout.Swarm.Agents
             }
 
             Vector3 myPos = transform.position;
+            Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : myPos;
             float samplingRadiusSqr = _config.TrailSamplingRadius * _config.TrailSamplingRadius;
 
             PheromoneTrailSegment segment = null;
@@ -58,7 +60,7 @@ namespace AntScout.Swarm.Agents
                 if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx,
                     excludeSegment: segment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
-                    if (freshSeg != null && freshSeg.NodeCount > 0)
+                    if (freshSeg != null && freshSeg.NodeCount > 0 && freshSeg != _lastChainedSegment)
                     {
                         // Defection Criterion 1: Candidate segment was drawn by player more recently than our current segment and within priority duration
                         float segAge = PgsTime.ElapsedTime - freshSeg.CreatedAt;
@@ -70,11 +72,26 @@ namespace AntScout.Swarm.Agents
 
                         if (isNewerPlayerTrail || isMoreEfficient)
                         {
-                            segment = freshSeg;
-                            closestIndex = freshIdx;
-                            _trackedSegment = segment;
-                            _trackedNodeIndex = closestIndex;
-                            _lostTrailTimer = 0f;
+                            // Directional Hysteresis: Ensure candidate trail leads further outward from the nest than ant's current position,
+                            // preventing backwards ping-pong defection across gaps
+                            Vector3 candFirst = freshSeg.Nodes[0].Position;
+                            Vector3 candLast = freshSeg.Nodes[freshSeg.NodeCount - 1].Position;
+                            float candFirstDistSqr = (candFirst.x - nestPos.x) * (candFirst.x - nestPos.x) + (candFirst.z - nestPos.z) * (candFirst.z - nestPos.z);
+                            float candLastDistSqr = (candLast.x - nestPos.x) * (candLast.x - nestPos.x) + (candLast.z - nestPos.z) * (candLast.z - nestPos.z);
+                            float candTipDistSqr = Mathf.Max(candFirstDistSqr, candLastDistSqr);
+
+                            float dxMy = myPos.x - nestPos.x;
+                            float dzMy = myPos.z - nestPos.z;
+                            float myDistSqr = dxMy * dxMy + dzMy * dzMy;
+
+                            if (candTipDistSqr > myDistSqr + 2.0f)
+                            {
+                                segment = freshSeg;
+                                closestIndex = freshIdx;
+                                _trackedSegment = segment;
+                                _trackedNodeIndex = closestIndex;
+                                _lostTrailTimer = 0f;
+                            }
                         }
                     }
                 }
@@ -104,7 +121,6 @@ namespace AntScout.Swarm.Agents
             IReadOnlyList<PheromoneNode> nodes = segment.Nodes;
             if (nodes == null || nodes.Count == 0) return;
 
-            Vector3 nestPos = _homeNest != null ? _homeNest.SpawnPosition : transform.position;
             Vector3 firstNodePos = nodes[0].Position;
             Vector3 lastNodePos = nodes[nodes.Count - 1].Position;
 
@@ -184,10 +200,13 @@ namespace AntScout.Swarm.Agents
             if (isNearTip)
             {
                 // Staggered Trail Chaining: Check if another segment is available before declaring trail end!
-                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx,
+                // Expand bridge radius up to 1.5x sampling radius (~6m) to bridge mid-field stroke gaps
+                float bridgeRadius = _config.TrailSamplingRadius * 1.5f;
+                float bridgeRadiusSqr = bridgeRadius * bridgeRadius;
+                if (emitter.TryFindBestRecruitmentNode(myPos, bridgeRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx,
                     excludeSegment: segment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
-                    if (candidateSeg.NodeCount > 0)
+                    if (candidateSeg.NodeCount > 0 && candidateSeg != _lastChainedSegment)
                     {
                         Vector3 candFirst = candidateSeg.Nodes[0].Position;
                         Vector3 candLast = candidateSeg.Nodes[candidateSeg.NodeCount - 1].Position;
@@ -202,6 +221,7 @@ namespace AntScout.Swarm.Agents
                         // Accept candidate trail if it extends outward at least as far as the current stroke's tip
                         if (candTipDistSqr >= currentTipDistSqr - 2.0f)
                         {
+                            _lastChainedSegment = segment;
                             _trackedSegment = candidateSeg;
                             _trackedNodeIndex = candidateIdx;
                             return;

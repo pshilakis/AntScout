@@ -47,6 +47,7 @@ namespace AntScout.Swarm.Agents
         private ColonyNest _homeNest;
 
         private PheromoneTrailSegment _trackedSegment;
+        private PheromoneTrailSegment _lastChainedSegment;
         private int _trackedNodeIndex = -1;
         private float _lateralOffsetSeed;
         private float _lostTrailTimer;
@@ -141,6 +142,7 @@ namespace AntScout.Swarm.Agents
             // Assign each ant a unique lateral lane across the pheromone plume
             _lateralOffsetSeed = UnityEngine.Random.Range(-1.0f, 1.0f);
             _trackedSegment = null;
+            _lastChainedSegment = null;
             _trackedNodeIndex = -1;
             _lostTrailTimer = 0f;
             _freshnessCheckTimer = 0f;
@@ -183,18 +185,6 @@ namespace AntScout.Swarm.Agents
             if (_rvoController != null)
             {
                 _rvoController.locked = false;
-            }
-        }
-
-        public void SetOutbound(bool outbound)
-        {
-            if (outbound)
-            {
-                FollowTrailOutbound();
-            }
-            else
-            {
-                ReturnToNest();
             }
         }
 
@@ -248,6 +238,7 @@ namespace AntScout.Swarm.Agents
             }
 
             _trackedSegment = null;
+            _lastChainedSegment = null;
             _trackedNodeIndex = -1;
             _lostTrailTimer = 0f;
             _freshnessCheckTimer = 0f;
@@ -258,6 +249,7 @@ namespace AntScout.Swarm.Agents
         {
             StopMovement();
             _trackedSegment = null;
+            _lastChainedSegment = null;
             _trackedNodeIndex = -1;
             _lostTrailTimer = 0f;
             _freshnessCheckTimer = 0f;

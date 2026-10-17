@@ -14,6 +14,7 @@ namespace AntScout.Swarm.Agents
         {
             _mode = FollowerMode.Wander;
             _trackedSegment = null;
+            _lastChainedSegment = null;
             _trackedNodeIndex = -1;
             ResumeMovement(speed > 0f ? speed : MoveSpeed);
             if (_ai != null)

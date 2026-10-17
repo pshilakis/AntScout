@@ -16,6 +16,7 @@ namespace AntScout.Swarm.Agents
         {
             _hasCargo = hasCargo;
             _mode = FollowerMode.InboundNest;
+            _lastChainedSegment = null;
             ResumeMovement(MoveSpeed);
 
             PheromoneTrailEmitter emitter = Emitter;
@@ -57,11 +58,6 @@ namespace AntScout.Swarm.Agents
             }
         }
 
-        public void ReturnToNest()
-        {
-            ReturnToNest(false);
-        }
-
         private void NavigateInbound(float deltaTime)
         {
             if (_homeNest == null) return;
@@ -75,6 +71,8 @@ namespace AntScout.Swarm.Agents
             // Arrival check at the home nest depot
             if (distSqr <= (_config.NestArrivalThreshold * _config.NestArrivalThreshold))
             {
+                _trackedSegment = null;
+                _trackedNodeIndex = -1;
                 OnReturnedToNest?.Invoke();
                 return;
             }
@@ -86,10 +84,23 @@ namespace AntScout.Swarm.Agents
             {
                 float reattachRadiusSqr = (_config.TrailSamplingRadius * 2.5f) * (_config.TrailSamplingRadius * 2.5f);
                 if (emitter.TryFindBestRecruitmentNode(myPos, reattachRadiusSqr, out PheromoneTrailSegment foundSeg, out int foundIdx,
-                    priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
+                    excludeSegment: _lastChainedSegment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
-                    _trackedSegment = foundSeg;
-                    _trackedNodeIndex = foundIdx;
+                    if (foundSeg != null && foundSeg.NodeCount > 0)
+                    {
+                        Vector3 fFirst = foundSeg.Nodes[0].Position;
+                        Vector3 fLast = foundSeg.Nodes[foundSeg.NodeCount - 1].Position;
+                        float fFirstDistSqr = (fFirst.x - nestPos.x) * (fFirst.x - nestPos.x) + (fFirst.z - nestPos.z) * (fFirst.z - nestPos.z);
+                        float fLastDistSqr = (fLast.x - nestPos.x) * (fLast.x - nestPos.x) + (fLast.z - nestPos.z) * (fLast.z - nestPos.z);
+                        float fClosestToNestSqr = Mathf.Min(fFirstDistSqr, fLastDistSqr);
+
+                        // Only reattach if candidate trail leads closer to the nest than our current position
+                        if (fClosestToNestSqr < distSqr)
+                        {
+                            _trackedSegment = foundSeg;
+                            _trackedNodeIndex = foundIdx;
+                        }
+                    }
                 }
             }
 
@@ -102,7 +113,7 @@ namespace AntScout.Swarm.Agents
                 if (emitter != null && emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx,
                     excludeSegment: _trackedSegment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
-                    if (freshSeg != null && freshSeg.NodeCount > 0)
+                    if (freshSeg != null && freshSeg.NodeCount > 0 && freshSeg != _lastChainedSegment)
                     {
                         float segAge = PgsTime.ElapsedTime - freshSeg.CreatedAt;
                         bool isNewerPlayerTrail = freshSeg.CreatedAt > (_trackedSegment != null ? _trackedSegment.CreatedAt : 0f) && segAge < _config.NewTrailPriorityDuration;
@@ -112,8 +123,18 @@ namespace AntScout.Swarm.Agents
 
                         if (isNewerPlayerTrail || isMoreEfficient)
                         {
-                            _trackedSegment = freshSeg;
-                            _trackedNodeIndex = freshIdx;
+                            Vector3 freshFirst = freshSeg.Nodes[0].Position;
+                            Vector3 freshLast = freshSeg.Nodes[freshSeg.NodeCount - 1].Position;
+                            float freshFirstDistSqr = (freshFirst.x - nestPos.x) * (freshFirst.x - nestPos.x) + (freshFirst.z - nestPos.z) * (freshFirst.z - nestPos.z);
+                            float freshLastDistSqr = (freshLast.x - nestPos.x) * (freshLast.x - nestPos.x) + (freshLast.z - nestPos.z) * (freshLast.z - nestPos.z);
+                            float freshClosestToNestSqr = Mathf.Min(freshFirstDistSqr, freshLastDistSqr);
+
+                            // Only defect if candidate trail actually leads closer to the nest than our current position
+                            if (freshClosestToNestSqr < distSqr)
+                            {
+                                _trackedSegment = freshSeg;
+                                _trackedNodeIndex = freshIdx;
+                            }
                         }
                     }
                 }
@@ -155,9 +176,40 @@ namespace AntScout.Swarm.Agents
                 int stepDir = stepForward ? 1 : -1;
                 int nestEndIndex = stepForward ? (nodes.Count - 1) : 0;
 
-                // If reached the end of the ribbon closest to the nest, navigate final stretch directly into depot
+                // If reached the end of the ribbon closest to the nest, check for bridging segment or navigate final stretch into depot
                 if (_trackedNodeIndex == nestEndIndex)
                 {
+                    // Staggered Trail Chaining (Inbound): Check if another segment closer to the nest is within bridge radius across the gap!
+                    float bridgeRadius = _config.TrailSamplingRadius * 1.5f;
+                    float bridgeRadiusSqr = bridgeRadius * bridgeRadius;
+                    if (emitter != null && emitter.TryFindBestRecruitmentNode(myPos, bridgeRadiusSqr, out PheromoneTrailSegment candidateSeg, out int candidateIdx,
+                        excludeSegment: _trackedSegment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
+                    {
+                        if (candidateSeg != null && candidateSeg.NodeCount > 0 && candidateSeg != _lastChainedSegment)
+                        {
+                            Vector3 candFirst = candidateSeg.Nodes[0].Position;
+                            Vector3 candLast = candidateSeg.Nodes[candidateSeg.NodeCount - 1].Position;
+                            float candFirstDistSqr = (candFirst.x - nestPos.x) * (candFirst.x - nestPos.x) + (candFirst.z - nestPos.z) * (candFirst.z - nestPos.z);
+                            float candLastDistSqr = (candLast.x - nestPos.x) * (candLast.x - nestPos.x) + (candLast.z - nestPos.z) * (candLast.z - nestPos.z);
+                            float candClosestToNestSqr = Mathf.Min(candFirstDistSqr, candLastDistSqr);
+
+                            float currentClosestToNestSqr = Mathf.Min(distFirstSqr, distLastSqr);
+
+                            // Accept candidate trail if it extends closer to the nest than our current segment's nest end
+                            if (candClosestToNestSqr < currentClosestToNestSqr - 1.0f)
+                            {
+                                _lastChainedSegment = _trackedSegment;
+                                _trackedSegment = candidateSeg;
+                                _trackedNodeIndex = candidateIdx;
+                                return;
+                            }
+                        }
+                    }
+
+                    // No further trail segment bridging toward nest: clear segment tracking and navigate final stretch directly into depot
+                    _lastChainedSegment = _trackedSegment;
+                    _trackedSegment = null;
+                    _trackedNodeIndex = -1;
                     _ai.destination = nestPos;
                     return;
                 }
