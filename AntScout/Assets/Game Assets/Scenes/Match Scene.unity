@@ -302,6 +302,53 @@ MonoBehaviour:
     _maxTranslation: {x: 0.3, y: 0.3, z: 0.15}
     _maxRotation: {x: 6, y: 6, z: 10}
     _noiseFrequency: 22
+--- !u!1 &372272377
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 372272378}
+  - component: {fileID: 372272379}
+  m_Layer: 0
+  m_Name: Fog of War
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &372272378
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 372272377}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 756546169}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &372272379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 372272377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a06a06a06a06a06a06a06a06a06a06a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.FogOfWar.Core.FogOfWarManager
+  _config: {fileID: 11400000, guid: b11b11b11b11b11b11b11b11b11b11b1, type: 2}
+  _fogMaterial: {fileID: 2100000, guid: 7a8b9c0d1e2f34567890abcdef123456, type: 2}
+  _localColonyTeamId: 0
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -569,6 +616,7 @@ Transform:
   - {fileID: 1927592036}
   - {fileID: 852374378}
   - {fileID: 756546171}
+  - {fileID: 372272378}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &756546170
@@ -582,7 +630,7 @@ GameObject:
   - component: {fileID: 756546171}
   - component: {fileID: 756546172}
   m_Layer: 0
-  m_Name: '[ Resource Spawn Manager ]'
+  m_Name: Resources
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -743,7 +791,7 @@ GameObject:
   - component: {fileID: 852374379}
   - component: {fileID: 852374380}
   m_Layer: 0
-  m_Name: SpawnController and Pool
+  m_Name: Spawning
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1138,7 +1186,7 @@ GameObject:
   - component: {fileID: 1927592036}
   - component: {fileID: 1927592037}
   m_Layer: 0
-  m_Name: MatchDirector
+  m_Name: Match
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

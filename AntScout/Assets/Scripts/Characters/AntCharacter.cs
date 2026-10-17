@@ -1,5 +1,6 @@
 using System;
 using AntScout.Characters;
+using AntScout.FogOfWar.Core;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
 using PGS.Camera.Interfaces;
@@ -116,12 +117,16 @@ namespace AntScout.Characters
         {
             PgsTime.Register((IFixedUpdatable)this, TimeChannel.Player);
             PgsTime.Register((IUpdatable)this, UpdateRate.Continuous, TimeChannel.Player);
+            FogOfWarManager.Register(this);
+            FogOfWarManager.RegisterCullable(this);
         }
 
         private void OnDisable()
         {
             PgsTime.Unregister((IFixedUpdatable)this);
             PgsTime.Unregister((IUpdatable)this);
+            FogOfWarManager.Unregister(this);
+            FogOfWarManager.UnregisterCullable(this);
         }
 
         private void OnDestroy()

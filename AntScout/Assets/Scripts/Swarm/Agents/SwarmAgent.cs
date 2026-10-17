@@ -1,6 +1,7 @@
 using System;
 using AntScout.Characters;
 using AntScout.Config;
+using AntScout.FogOfWar.Core;
 using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Swarm.Interfaces;
@@ -72,6 +73,8 @@ namespace AntScout.Swarm.Agents
         protected virtual void OnEnable()
         {
             PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
+            FogOfWarManager.Register(this);
+            FogOfWarManager.RegisterCullable(this);
             if (_follower != null)
             {
                 _follower.OnReachedTrailTip += HandleReachedTrailTip;
@@ -84,6 +87,8 @@ namespace AntScout.Swarm.Agents
         protected virtual void OnDisable()
         {
             PgsTime.Unregister(this);
+            FogOfWarManager.Unregister(this);
+            FogOfWarManager.UnregisterCullable(this);
             if (_follower != null)
             {
                 _follower.OnReachedTrailTip -= HandleReachedTrailTip;

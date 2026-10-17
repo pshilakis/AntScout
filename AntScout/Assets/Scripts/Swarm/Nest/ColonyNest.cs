@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AntScout.Characters;
 using AntScout.Config;
+using AntScout.FogOfWar.Core;
 using AntScout.Core.Enums;
 using AntScout.Match;
 using AntScout.Pheromone;
@@ -172,6 +173,8 @@ namespace AntScout.Swarm.Nest
         {
             s_nestsByTeam[_colonyTeamId] = this;
             PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
+            FogOfWarManager.Register(this);
+            FogOfWarManager.RegisterCullable(this);
         }
 
         private void OnDisable()
@@ -181,6 +184,8 @@ namespace AntScout.Swarm.Nest
                 s_nestsByTeam.Remove(_colonyTeamId);
             }
             PgsTime.Unregister(this);
+            FogOfWarManager.Unregister(this);
+            FogOfWarManager.UnregisterCullable(this);
         }
 
         private void OnDestroy()
