@@ -16,16 +16,15 @@ namespace AntScout.Characters.Brains
                     $"[{name}] AntAiBrain requires an AntCharacter component on the same GameObject!");
             }
 
+            if (_strategyOverride != null)
+            {
+                _strategyOverride.Validate();
+            }
+
             if (_detectionRadius <= 0f)
             {
                 throw new InvalidOperationException(
                     $"[{name}] AntAiBrain requires _detectionRadius > 0!");
-            }
-
-            if (_leashRadius < _detectionRadius)
-            {
-                throw new InvalidOperationException(
-                    $"[{name}] AntAiBrain requires _leashRadius ({_leashRadius}) >= _detectionRadius ({_detectionRadius}) to prevent thrashing!");
             }
         }
 

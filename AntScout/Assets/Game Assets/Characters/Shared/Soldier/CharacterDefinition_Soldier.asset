@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43b86366a76c4e4a9055d2a553a61241, type: 3}
+  m_Name: CharacterDefinition_Soldier
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterDefinition
+  _characterName: Scout Ant
+  _icon: {fileID: 0}
+  _maxHealth:
+    StatType: {fileID: 0}
+    BaseValue: 0
+  _defense:
+    StatType: {fileID: 0}
+    BaseValue: 0
+  _attack:
+    StatType: {fileID: 0}
+    BaseValue: 0
+  _baseMoveSpeed: 3
+  _visionRadius: 12
+  _aiBehavior:
+    rid: 6105121139543245035
+  _retreatHealthRatio: 0.3
+  _leashRadius: 14
+  _scanInterval: 0.15
+  _arrivalDistance: 1.2
+  _minGlandRatioToEmbark: 0.5
+  _useMobilityToEngage: 1
+  _useMobilityToRetreat: 1
+  _foodDetectionRadius: 12
+  _hostileNestAvoidanceRadius: 8
+  _scoutDistanceRange: {x: 8, y: 22}
+  _scoutDurationRange: {x: 4, y: 10}
+  _scoutAngleJitter: 20
+  _scoutPauseChance: 0.75
+  _scoutPauseDurationRange: {x: 0.6, y: 1.5}
+  _primaryAction: {fileID: 0}
+  _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _secondaryAction: {fileID: 0}
+  _secondaryInput: {fileID: 6645002542129529566, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _utilityAction: {fileID: 0}
+  _utilityInput: {fileID: 6692165032235015795, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _recruitmentTrailAction: {fileID: 0}
+  _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _alarmTrailAction: {fileID: 0}
+  _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 6105121139543245035
+      type: {class: ResourceScoutBehavior, ns: AntScout.Characters.Brains.Behaviors, asm: Assembly-CSharp}
+      data:
+        _paveOnReturn: 1

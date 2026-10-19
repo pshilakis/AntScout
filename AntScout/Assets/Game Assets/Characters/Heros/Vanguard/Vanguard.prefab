@@ -233,15 +233,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38545199ef137904b86f1e624317dcbc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.Brains.AntAiBrain
+  _strategyOverride: {fileID: 0}
   _homeNest: {fileID: 0}
   _targetLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
   _detectionRadius: 8
-  _leashRadius: 14
-  _minGlandRatioToPave: 0.5
-  _arrivalDistance: 1.2
-  _scanInterval: 0.15
 --- !u!114 &5380449462745748624
 MonoBehaviour:
   m_ObjectHideFlags: 0

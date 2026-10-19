@@ -12,19 +12,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43b86366a76c4e4a9055d2a553a61241, type: 3}
   m_Name: CharacterDefinition_VanguardHero
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterDefinition
-  _characterName: Scout Ant
+  _characterName: Vanguard Ant
   _icon: {fileID: 0}
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
-    BaseValue: 150
+    BaseValue: 110
   _defense:
     StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
-    BaseValue: 15
+    BaseValue: 1
   _attack:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
-    BaseValue: 6
-  _baseMoveSpeed: 6
-  _visionRadius: 12
+    BaseValue: 7
+  _baseMoveSpeed: 5
+  _visionRadius: 7
+  _priorities:
+    ForagingPriority: 0.65
+    CombatAggression: 0.9
+    MidfieldBias: 0.8
+    PaveTrailOnFood: 0.8
+    AlarmTrailOnCombat: 0.7
+  _aiBehavior:
+    rid: 2000000000000000001
+  _retreatHealthRatio: 0.15
+  _leashRadius: 18
+  _scanInterval: 0.12
+  _arrivalDistance: 1.2
+  _minGlandRatioToEmbark: 0.4
+  _useMobilityToEngage: 1
+  _useMobilityToRetreat: 0
+  _foodDetectionRadius: 7
+  _hostileNestAvoidanceRadius: 8
+  _scoutDistanceRange: {x: 8, y: 22}
+  _scoutDurationRange: {x: 4, y: 9}
+  _scoutAngleJitter: 25
+  _scoutPauseChance: 0.75
+  _scoutPauseDurationRange: {x: 0.4, y: 1}
   _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}
   _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _secondaryAction: {fileID: 0}
@@ -35,3 +57,11 @@ MonoBehaviour:
   _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _alarmTrailAction: {fileID: 11400000, guid: fc2afc4c7999402183497db4f3f48016, type: 2}
   _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 2000000000000000001
+      type: {class: PerimeterPatrolBehavior, ns: AntScout.Characters.Brains.Behaviors, asm: Assembly-CSharp}
+      data:
+        _paveOnFoodDiscovered: 1
+        _layAlarmTrailOnEmbark: 0

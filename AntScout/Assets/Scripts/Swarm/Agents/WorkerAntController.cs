@@ -1,4 +1,5 @@
 using System;
+using AntScout.Characters;
 using AntScout.Config;
 using AntScout.Match;
 using AntScout.Pheromone;
@@ -36,6 +37,11 @@ namespace AntScout.Swarm.Agents
         private Vector3 _tipAnchorPosition;
         private PheromoneTrailSegment _lastExhaustedSegment;
         private bool _isAtHarvestNode;
+
+        private bool _isPausingAtNest;
+        private float _nestPauseTimer;
+        private float _nestPauseDuration;
+        private float _baseFacingAngle;
 
         private int _carriedAmount;
         private ResourceDefinition _carriedResource;
@@ -128,6 +134,8 @@ namespace AntScout.Swarm.Agents
 
         private void StartWanderingAroundNest()
         {
+            _isPausingAtNest = false;
+            _nestPauseTimer = 0f;
             SetState(SwarmAgentState.WanderingAroundNest);
             _wanderTimer = 0f;
             PickNewWanderTarget();
@@ -135,6 +143,9 @@ namespace AntScout.Swarm.Agents
 
         private void PickNewWanderTarget()
         {
+            _isPausingAtNest = false;
+            _nestPauseTimer = 0f;
+
             if (_homeNest == null) return;
 
             Vector2 randomDisk = UnityEngine.Random.insideUnitCircle * _config.NestWanderRadius;
@@ -160,6 +171,7 @@ namespace AntScout.Swarm.Agents
             // 1. Hostile intruder proximity detection (Self-Defense)
             if (TryDetectHostileIntruder(_config.SwarmAggroRadius, out IAttackable intruder))
             {
+                _isPausingAtNest = false;
                 EngageTarget(intruder);
                 BroadcastAlarmToSisters(intruder);
                 return;
@@ -178,13 +190,32 @@ namespace AntScout.Swarm.Agents
                 if (emitter.TryFindBestRecruitmentNode(transform.position, recruitRadiusSqr, out PheromoneTrailSegment bestSeg, out int bestIdx,
                     priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
+                    _isPausingAtNest = false;
                     _follower.FollowTrailOutbound(bestSeg, bestIdx);
                     SetState(SwarmAgentState.FollowingTrailOutbound);
                     return;
                 }
             }
 
-            // 3. Roam smoothly around the nest yard
+            // 3. Nest yard pause execution with atmospheric antenna sampling
+            if (_isPausingAtNest)
+            {
+                _nestPauseTimer += deltaTime;
+                if (_nestPauseTimer >= _nestPauseDuration)
+                {
+                    _isPausingAtNest = false;
+                    PickNewWanderTarget();
+                }
+                else
+                {
+                    // Subtle organic head/antenna sweeping while halted
+                    float twitchOffset = Mathf.Sin(_nestPauseTimer * 10f) * 12f;
+                    transform.rotation = Quaternion.Euler(0f, _baseFacingAngle + twitchOffset, 0f);
+                }
+                return;
+            }
+
+            // 4. Roam smoothly around the nest yard
             _wanderTimer += deltaTime;
             Vector3 myPos = transform.position;
             float dx = _currentWanderTarget.x - myPos.x;
@@ -194,7 +225,21 @@ namespace AntScout.Swarm.Agents
             if (_wanderTimer >= 3.5f || reachedTarget)
             {
                 _wanderTimer = 0f;
-                PickNewWanderTarget();
+                float pauseChance = _characterDefinition != null ? _characterDefinition.PauseChance : 0.5f;
+                Vector2 durationRange = _characterDefinition != null ? _characterDefinition.PauseDurationRange : new Vector2(0.4f, 1.0f);
+
+                if (UnityEngine.Random.value < pauseChance)
+                {
+                    _isPausingAtNest = true;
+                    _nestPauseTimer = 0f;
+                    _nestPauseDuration = UnityEngine.Random.Range(durationRange.x, durationRange.y);
+                    _baseFacingAngle = transform.eulerAngles.y;
+                    _follower.StopMovement();
+                }
+                else
+                {
+                    PickNewWanderTarget();
+                }
             }
         }
 
@@ -240,7 +285,22 @@ namespace AntScout.Swarm.Agents
                         float anchorDistSqr = dxAnchor * dxAnchor + dzAnchor * dzAnchor;
 
                         // Accept continuation segment if it extends outward at least as far as where we stopped
-                        if (maxSegDistSqr >= anchorDistSqr - 2.0f)
+                        // OR if the candidate trail leads to an active harvestable FoodSource (arterial branch highway)
+                        bool extendsOutward = maxSegDistSqr >= anchorDistSqr - 2.0f;
+                        bool leadsToFood = false;
+
+                        if (!extendsOutward)
+                        {
+                            Vector3 myPos = transform.position;
+                            float dFirst = (segFirst.x - myPos.x) * (segFirst.x - myPos.x) + (segFirst.z - myPos.z) * (segFirst.z - myPos.z);
+                            float dLast = (segLast.x - myPos.x) * (segLast.x - myPos.x) + (segLast.z - myPos.z) * (segLast.z - myPos.z);
+                            Vector3 farTip = dFirst > dLast ? segFirst : segLast;
+
+                            FoodSource candidateFood = FoodSource.FindClosest(farTip, 4.0f);
+                            leadsToFood = candidateFood != null && candidateFood.CanHarvest;
+                        }
+
+                        if (extendsOutward || leadsToFood)
                         {
                             _searchTimer = 0f;
                             _lastExhaustedSegment = null;
@@ -297,7 +357,21 @@ namespace AntScout.Swarm.Agents
                         float myDistSqr = (myPos.x - nestPos.x) * (myPos.x - nestPos.x) + (myPos.z - nestPos.z) * (myPos.z - nestPos.z);
 
                         // Only resume outbound foraging if this candidate trail extends substantially further outward than where we currently are
-                        if (maxSegDistSqr > myDistSqr + 3.0f)
+                        // OR if the candidate trail leads to an active harvestable FoodSource (arterial branch highway)
+                        bool extendsOutward = maxSegDistSqr > myDistSqr + 3.0f;
+                        bool leadsToFood = false;
+
+                        if (!extendsOutward)
+                        {
+                            float dFirst = (segFirst.x - myPos.x) * (segFirst.x - myPos.x) + (segFirst.z - myPos.z) * (segFirst.z - myPos.z);
+                            float dLast = (segLast.x - myPos.x) * (segLast.x - myPos.x) + (segLast.z - myPos.z) * (segLast.z - myPos.z);
+                            Vector3 farTip = dFirst > dLast ? segFirst : segLast;
+
+                            FoodSource candidateFood = FoodSource.FindClosest(farTip, 4.0f);
+                            leadsToFood = candidateFood != null && candidateFood.CanHarvest;
+                        }
+
+                        if (extendsOutward || leadsToFood)
                         {
                             _lastExhaustedSegment = null;
                             _follower.FollowTrailOutbound(newSeg, newIdx);
@@ -559,6 +633,8 @@ namespace AntScout.Swarm.Agents
             _scentCheckCooldown = 0f;
             _lastExhaustedSegment = null;
             _isAtHarvestNode = false;
+            _isPausingAtNest = false;
+            _nestPauseTimer = 0f;
 
             if (_carriedMorselVisual != null)
             {

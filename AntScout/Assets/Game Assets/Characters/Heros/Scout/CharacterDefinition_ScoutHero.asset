@@ -14,20 +14,39 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _characterName: Scout Ant
   _icon: {fileID: 0}
-  _bodyRadius: 0.4
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
-    BaseValue: 125
+    BaseValue: 100
   _defense:
     StatType: {fileID: 11400000, guid: 8fe31fc6aee497d4aa38eb1a9cd32740, type: 2}
     BaseValue: 0
   _attack:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
-    BaseValue: 8
+    BaseValue: 6
   _baseMoveSpeed: 7
-  _visionRadius: 12
-  _motorSettings: {fileID: 11400000, guid: d71a8123ef454c76b91122a0011bb221, type: 2}
-  _traversalDefinition: {fileID: 11400000, guid: 89ab34cd56ef401289abcdef01234567, type: 2}
+  _visionRadius: 8
+  _priorities:
+    ForagingPriority: 0.95
+    CombatAggression: 0.25
+    MidfieldBias: 0.5
+    PaveTrailOnFood: 1
+    AlarmTrailOnCombat: 0.2
+  _aiBehavior:
+    rid: 1000000000000000001
+  _retreatHealthRatio: 0.35
+  _leashRadius: 14
+  _scanInterval: 0.15
+  _arrivalDistance: 1.2
+  _minGlandRatioToEmbark: 0.5
+  _useMobilityToEngage: 1
+  _useMobilityToRetreat: 1
+  _foodDetectionRadius: 8
+  _hostileNestAvoidanceRadius: 8
+  _scoutDistanceRange: {x: 10, y: 25}
+  _scoutDurationRange: {x: 5, y: 12}
+  _scoutAngleJitter: 25
+  _scoutPauseChance: 0.8
+  _scoutPauseDurationRange: {x: 0.5, y: 1.2}
   _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}
   _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _secondaryAction: {fileID: 0}
@@ -38,3 +57,10 @@ MonoBehaviour:
   _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _alarmTrailAction: {fileID: 11400000, guid: fc2afc4c7999402183497db4f3f48016, type: 2}
   _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 1000000000000000001
+      type: {class: ResourceScoutBehavior, ns: AntScout.Characters.Brains.Behaviors, asm: Assembly-CSharp}
+      data:
+        _paveOnReturn: 1

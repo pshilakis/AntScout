@@ -25,6 +25,28 @@ MonoBehaviour:
     BaseValue: 4
   _baseMoveSpeed: 3.75
   _visionRadius: 5
+  _priorities:
+    ForagingPriority: 0.9
+    CombatAggression: 0
+    MidfieldBias: 0.3
+    PaveTrailOnFood: 0
+    AlarmTrailOnCombat: 0
+  _aiBehavior:
+    rid: 3000000000000000001
+  _retreatHealthRatio: 0.2
+  _leashRadius: 10
+  _scanInterval: 0.2
+  _arrivalDistance: 1.2
+  _minGlandRatioToEmbark: 0.5
+  _useMobilityToEngage: 0
+  _useMobilityToRetreat: 1
+  _foodDetectionRadius: 5
+  _hostileNestAvoidanceRadius: 8
+  _scoutDistanceRange: {x: 8, y: 20}
+  _scoutDurationRange: {x: 4, y: 10}
+  _scoutAngleJitter: 25
+  _scoutPauseChance: 0.5
+  _scoutPauseDurationRange: {x: 0.3, y: 0.7}
   _primaryAction: {fileID: 11400000, guid: de8e7ea82cf341f41a4432f226f5514b, type: 2}
   _primaryInput: {fileID: -8825916360831066666, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _secondaryAction: {fileID: 0}
@@ -35,3 +57,10 @@ MonoBehaviour:
   _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _alarmTrailAction: {fileID: 0}
   _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 3000000000000000001
+      type: {class: ResourceScoutBehavior, ns: AntScout.Characters.Brains.Behaviors, asm: Assembly-CSharp}
+      data:
+        _paveOnReturn: 1

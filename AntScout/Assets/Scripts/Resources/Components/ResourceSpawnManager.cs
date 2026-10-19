@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AntScout.Config;
+using AntScout.Maps;
 using AntScout.Swarm.Nest;
 using Pathfinding;
 using PGS.Core;
@@ -24,10 +25,6 @@ namespace AntScout.Resources.Components
         private static ResourceSpawnManager s_instance;
         public static ResourceSpawnManager Instance => s_instance;
 
-        [ColoredHeader("Configuration Reference", HeaderColor.Orange)]
-        [Tooltip("Single Source of Truth for map resource bounds, pacing, and weighted drop pool.")]
-        [SerializeField] private MapResourceDefinition _mapDefinition;
-
         [ColoredHeader("Placement Anchors", HeaderColor.Teal)]
         [Tooltip("Center origin for spawning bounds. Defaults to this transform if unassigned.")]
         [SerializeField] private Transform _centerOrigin;
@@ -43,9 +40,52 @@ namespace AntScout.Resources.Components
         public event Action<Vector3, ResourceDefinition> OnResourceSpawned;
 
         public int ActiveFoodCount => _activeFoodSources.Count;
-        public MapResourceDefinition MapDefinition => _mapDefinition;
         public PityTracker PityTracker => _pityTracker;
         public bool IsInitialized => _isInitialized;
+
+        /// <summary>
+        /// Authoritative resource economy configuration resolved dynamically from the active MapDefinition on MapManager.
+        /// </summary>
+        public MapResourceDefinition ResourceConfig
+        {
+            get
+            {
+                if (MapManager.Instance == null || MapManager.Instance.ActiveMap == null)
+                {
+                    throw new InvalidOperationException(
+                        $"[{name}] ResourceSpawnManager: MapManager or ActiveMap is missing in the scene! " +
+                        "Resource spawning requires an active MapManager with an assigned MapDefinition.");
+                }
+
+                var config = MapManager.Instance.ActiveMap.ResourceDefinition;
+                if (config == null)
+                {
+                    throw new InvalidOperationException(
+                        $"[{name}] ResourceSpawnManager: Active MapDefinition '{MapManager.Instance.ActiveMap.MapName}' " +
+                        "is missing an assigned MapResourceDefinition! Please assign one in the MapDefinition asset.");
+                }
+
+                return config;
+            }
+        }
+
+        public MapResourceDefinition MapDefinition => ResourceConfig;
+
+        /// <summary>
+        /// Computes effective horizontal spawn extents clamped inside the active map bounds with an inward safety margin.
+        /// </summary>
+        public Vector2 GetEffectiveSpawnExtents()
+        {
+            Vector2 baseExtents = ResourceConfig.SpawnAreaHalfExtents;
+            if (MapManager.Instance != null && MapManager.Instance.ActiveMap != null)
+            {
+                Vector2 mapHalf = MapManager.Instance.ActiveMap.PlayableHalfExtents;
+                float maxX = Mathf.Max(2f, mapHalf.x - 2f);
+                float maxZ = Mathf.Max(2f, mapHalf.y - 2f);
+                return new Vector2(Mathf.Min(baseExtents.x, maxX), Mathf.Min(baseExtents.y, maxZ));
+            }
+            return baseExtents;
+        }
 
         private void Awake()
         {
@@ -63,8 +103,8 @@ namespace AntScout.Resources.Components
             }
 
             _randomProvider = new SystemRandomProvider();
-            _pityTracker = new PityTracker(_mapDefinition.PityConfig);
-            _lootTable = _mapDefinition.CreateLootTable(_pityTracker);
+            _pityTracker = new PityTracker(ResourceConfig.PityConfig);
+            _lootTable = ResourceConfig.CreateLootTable(_pityTracker);
             ResetTimer();
         }
 
@@ -100,11 +140,13 @@ namespace AntScout.Resources.Components
 
             CleanupDestroyedSources();
 
+            var config = ResourceConfig;
+
             // Accelerated replenishment if map is starving below minimum threshold
-            bool isStarving = _activeFoodSources.Count < _mapDefinition.MinActiveFoodCount;
+            bool isStarving = _activeFoodSources.Count < config.MinActiveFoodCount;
             float effectiveDelta = isStarving ? (deltaTime * 2.0f) : deltaTime;
 
-            if (_activeFoodSources.Count >= _mapDefinition.MaxActiveFoodCount)
+            if (_activeFoodSources.Count >= config.MaxActiveFoodCount)
             {
                 return;
             }
@@ -119,27 +161,29 @@ namespace AntScout.Resources.Components
 
         private void ResetTimer()
         {
-            if (_mapDefinition != null)
+            var config = ResourceConfig;
+            if (config != null)
             {
                 _spawnTimer = _randomProvider != null
-                    ? _mapDefinition.SpawnInterval.Lerp(_randomProvider.NextFloat())
-                    : UnityEngine.Random.Range(_mapDefinition.SpawnInterval.Min, _mapDefinition.SpawnInterval.Max);
+                    ? config.SpawnInterval.Lerp(_randomProvider.NextFloat())
+                    : UnityEngine.Random.Range(config.SpawnInterval.Min, config.SpawnInterval.Max);
             }
         }
 
         private void ValidateConfiguration()
         {
-            if (_mapDefinition == null)
+            if (MapManager.Instance == null || MapManager.Instance.ActiveMap == null)
             {
                 throw new InvalidOperationException(
-                    $"[{name}] ResourceSpawnManager: Missing required MapResourceDefinition! " +
-                    $"Please assign a valid MapResourceDefinition asset in the Inspector.");
+                    $"[{name}] ResourceSpawnManager: MapManager or ActiveMap is missing in the scene! " +
+                    "Resource spawning requires an active MapManager with an assigned MapDefinition.");
             }
 
-            if (_mapDefinition.SpawnInterval.Max <= 0f)
+            var config = ResourceConfig;
+            if (config.SpawnInterval.Max <= 0f)
             {
                 throw new InvalidOperationException(
-                    $"[{name}] ResourceSpawnManager: MapResourceDefinition '{_mapDefinition.name}' has invalid SpawnInterval Max ({_mapDefinition.SpawnInterval.Max}). Max must be greater than 0.");
+                    $"[{name}] ResourceSpawnManager: MapResourceDefinition '{config.name}' has invalid SpawnInterval Max ({config.SpawnInterval.Max}). Max must be greater than 0.");
             }
         }
 
@@ -189,7 +233,8 @@ namespace AntScout.Resources.Components
         public void SpawnInitialResources()
         {
             CleanupDestroyedSources();
-            int countToSpawn = Mathf.Max(0, _mapDefinition.InitialSpawnCount - _activeFoodSources.Count);
+            var config = ResourceConfig;
+            int countToSpawn = Mathf.Max(0, config.InitialSpawnCount - _activeFoodSources.Count);
             for (int i = 0; i < countToSpawn; i++)
             {
                 TrySpawnFairResource();
@@ -202,8 +247,9 @@ namespace AntScout.Resources.Components
         /// </summary>
         public GameObject TrySpawnFairResource()
         {
-            if (_mapDefinition == null || _mapDefinition.ResourcePool.Count == 0) return null;
-            if (_activeFoodSources.Count >= _mapDefinition.MaxActiveFoodCount) return null;
+            var config = ResourceConfig;
+            if (config == null || config.ResourcePool.Count == 0) return null;
+            if (_activeFoodSources.Count >= config.MaxActiveFoodCount) return null;
 
             if (!TryFindFairSpawnPosition(out Vector3 spawnPosition))
             {
@@ -217,8 +263,8 @@ namespace AntScout.Resources.Components
 
             if (_lootTable == null)
             {
-                _pityTracker = new PityTracker(_mapDefinition.PityConfig);
-                _lootTable = _mapDefinition.CreateLootTable(_pityTracker);
+                _pityTracker = new PityTracker(config.PityConfig);
+                _lootTable = config.CreateLootTable(_pityTracker);
             }
 
             DropResult<ResourceDefinition> dropResult = _lootTable.Roll(_randomProvider);
@@ -251,7 +297,8 @@ namespace AntScout.Resources.Components
         {
             bestPosition = Vector3.zero;
             Vector3 center = _centerOrigin != null ? _centerOrigin.position : transform.position;
-            Vector2 extents = _mapDefinition.SpawnAreaHalfExtents;
+            var config = ResourceConfig;
+            Vector2 extents = GetEffectiveSpawnExtents();
 
             if (_trackedNests.Count == 0)
             {
@@ -294,7 +341,7 @@ namespace AntScout.Resources.Components
                     float dzN = walkablePos.z - nPos.z;
                     float dSqr = dxN * dxN + dzN * dzN;
 
-                    if (dSqr < (_mapDefinition.NestExclusionRadius * _mapDefinition.NestExclusionRadius))
+                    if (dSqr < (config.NestExclusionRadius * config.NestExclusionRadius))
                     {
                         insideNestExclusion = true;
                         break;
@@ -309,7 +356,7 @@ namespace AntScout.Resources.Components
 
                 // 3. Spacing from existing active food sources
                 bool tooCloseToFood = false;
-                float minFoodDistSqr = _mapDefinition.MinDistanceBetweenFood * _mapDefinition.MinDistanceBetweenFood;
+                float minFoodDistSqr = config.MinDistanceBetweenFood * config.MinDistanceBetweenFood;
                 for (int f = 0; f < _activeFoodSources.Count; f++)
                 {
                     if (_activeFoodSources[f] == null) continue;
@@ -333,7 +380,7 @@ namespace AntScout.Resources.Components
                     float totalDist = distNest0 + distNest1;
                     float diff = Mathf.Abs(distNest0 - distNest1);
                     float symmetryRatio = totalDist > 0.1f ? (1.0f - (diff / totalDist)) : 1.0f;
-                    fairnessScore = Mathf.Lerp(1.0f, symmetryRatio, _mapDefinition.MidfieldContestBias);
+                    fairnessScore = Mathf.Lerp(1.0f, symmetryRatio, config.MidfieldContestBias);
                 }
 
                 // Add slight jitter so we don't always pick the exact dead center
@@ -359,7 +406,7 @@ namespace AntScout.Resources.Components
             }
 
             // Immediately accelerate replenishment if active food dropped below minimum
-            if (_activeFoodSources.Count < _mapDefinition.MinActiveFoodCount)
+            if (_activeFoodSources.Count < ResourceConfig.MinActiveFoodCount)
             {
                 _spawnTimer = Mathf.Min(_spawnTimer, 3.0f);
             }
@@ -387,27 +434,32 @@ namespace AntScout.Resources.Components
             }
         }
 
+#if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             Vector3 center = _centerOrigin != null ? _centerOrigin.position : transform.position;
-            Vector2 extents = _mapDefinition != null ? _mapDefinition.SpawnAreaHalfExtents : new Vector2(22f, 18f);
+            Vector2 extents = MapManager.Instance != null && MapManager.Instance.ActiveMap != null
+                ? MapManager.Instance.ActiveMap.PlayableHalfExtents
+                : new Vector2(25f, 25f);
 
             // Playable bounds
             Gizmos.color = new Color(0.2f, 0.9f, 0.3f, 0.25f);
             Gizmos.DrawWireCube(center, new Vector3(extents.x * 2f, 1f, extents.y * 2f));
 
             // Nest exclusion zones
-            if (_mapDefinition != null)
+            if (MapManager.Instance != null && MapManager.Instance.ActiveMap != null && MapManager.Instance.ActiveMap.ResourceDefinition != null)
             {
+                var config = MapManager.Instance.ActiveMap.ResourceDefinition;
                 Gizmos.color = new Color(1.0f, 0.2f, 0.2f, 0.35f);
                 for (int i = 0; i < _trackedNests.Count; i++)
                 {
                     if (_trackedNests[i] != null)
                     {
-                        Gizmos.DrawWireSphere(_trackedNests[i].SpawnPosition, _mapDefinition.NestExclusionRadius);
+                        Gizmos.DrawWireSphere(_trackedNests[i].SpawnPosition, config.NestExclusionRadius);
                     }
                 }
             }
         }
+#endif
     }
 }

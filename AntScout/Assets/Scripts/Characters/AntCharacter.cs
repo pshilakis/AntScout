@@ -1,5 +1,6 @@
 using System;
 using AntScout.Characters;
+using AntScout.Maps;
 using PGS.FogOfWar.Core;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
@@ -53,6 +54,7 @@ namespace AntScout.Characters
         private StatsController _statsController;
         private StatusReceiver _statusReceiver;
         private CharacterGland _gland;
+        private ColonyNest _homeNest;
         private bool _isAlive = true;
 
         #region Public Properties
@@ -65,6 +67,7 @@ namespace AntScout.Characters
         public StatsController Stats => _statsController;
         public StatusReceiver StatusReceiver => _statusReceiver;
         public CharacterGland Gland => _gland;
+        public ColonyNest HomeNest => _homeNest;
         public bool IsAlive => _isAlive;
 
         #endregion
@@ -141,7 +144,7 @@ namespace AntScout.Characters
         /// </summary>
         public void Initialize(ColonyNest homeNest, PheromoneTrailEmitter emitter, CharacterDefinition definitionOverride = null)
         {
-            if (homeNest == null) throw new ArgumentNullException(nameof(homeNest));
+            _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
 
             if (definitionOverride != null)
             {
@@ -226,6 +229,36 @@ namespace AntScout.Characters
         public void OnFixedUpdate(float fixedDeltaTime, ulong currentTick)
         {
             UpdateRvoVelocity();
+            CheckVoidRescue();
+        }
+
+        private void CheckVoidRescue()
+        {
+            if (MapManager.Instance != null && MapManager.Instance.IsBelowKillPlane(transform.position))
+            {
+                ResolveHomeNest();
+                if (_homeNest != null)
+                {
+                    if (_motor != null)
+                    {
+                        _motor.Teleport(_homeNest.SpawnPosition, _homeNest.transform.rotation);
+                    }
+                    else
+                    {
+                        transform.position = _homeNest.SpawnPosition;
+                    }
+                }
+            }
+        }
+
+        private void ResolveHomeNest()
+        {
+            if (_homeNest != null && _homeNest.ColonyTeamId == _colonyTeamId) return;
+
+            if (ColonyNest.TryGetForTeam(_colonyTeamId, out ColonyNest nest) && nest != null)
+            {
+                _homeNest = nest;
+            }
         }
 
         public void OnUpdate(float deltaTime)

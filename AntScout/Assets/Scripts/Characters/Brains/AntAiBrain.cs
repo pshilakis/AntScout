@@ -1,88 +1,102 @@
 using System;
 using AntScout.Characters;
+using AntScout.Characters.Brains.Behaviors;
+using AntScout.Characters.Brains.StateContext;
+using AntScout.Characters.Brains.States;
 using AntScout.Core.Interfaces;
-using AntScout.Pheromone;
 using AntScout.Resources.Components;
 using AntScout.Swarm.Nest;
 using PGS.Combat.Targeting;
 using PGS.Core.Time;
 using PGS.Effects;
+using PGS.States;
 using UnityEngine;
 
 namespace AntScout.Characters.Brains
 {
     /// <summary>
-    /// Operating state of the autonomous AI Hero commander.
-    /// </summary>
-    public enum AiHeroState
-    {
-        [Tooltip("Resting at the home nest depot awaiting chemical gland recharge or food availability.")]
-        IdleAtNest = 0,
-
-        [Tooltip("Actively paving a recruitment scent trail from the nest toward a harvestable food bonanza.")]
-        PavingTrailToFood = 1,
-
-        [Tooltip("Returning to the home nest depot to complete the trail circuit and link to the recruitment zone.")]
-        ReturningToNest = 2,
-
-        [Tooltip("Engaging hostile faction members in combat with offensive and mobility abilities.")]
-        EngagingEnemy = 3
-    }
-
-    /// <summary>
     /// Autonomous AI Hero commander brain driving an AntCharacter chassis.
-    /// Strictly decoupled from player input (zero IPlayerInputProvider inheritance):
-    /// evaluates threats, paves pheromone highways, manages chemical reserves, and produces
-    /// pure spatial movement and aiming vectors for AntBrainController.
+    /// Strictly decoupled from player input (zero IPlayerInputProvider inheritance).
+    /// Bridges Unity component lifecycle, perception layers, and AntBrainController to a high-performance,
+    /// zero-allocation synchronous PGS.States.StateMachine<AntAiContext>.
     /// Grounded in Single Responsibility (SRP), Open/Closed (OCP), and Dependency Inversion (DIP).
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AntCharacter))]
     public partial class AntAiBrain : MonoBehaviour, IUpdatable
     {
+        [Header("AI Strategy Override (Optional)")]
+        [Tooltip("Optional strategy profile override. If unassigned, defaults to the AI behavior and thresholds defined on AntCharacter's CharacterDefinition.")]
+        [SerializeField] private AiStrategyProfile _strategyOverride;
+
         [Header("Colony Affiliation")]
         [Tooltip("Optional direct reference to the home ColonyNest. If unassigned, automatically resolves the ColonyNest in the scene matching AntCharacter's ColonyTeamId.")]
         [SerializeField] private ColonyNest _homeNest;
 
-        [Header("Perception & Leashing")]
+        [Header("Perception Layer")]
         [Tooltip("Physics LayerMask scanned for hostile targets.")]
         [SerializeField] private LayerMask _targetLayerMask = ~0;
 
-        [Tooltip("Sensory detection radius to spot enemy heroes, workers, or structures.")]
+        [Tooltip("Base sensory detection radius to spot enemy heroes, workers, or structures.")]
         [Range(2.0f, 30.0f)]
         [SerializeField] private float _detectionRadius = 8.0f;
 
-        [Tooltip("Maximum distance from home nest or current objective before breaking pursuit.")]
-        [Range(4.0f, 50.0f)]
-        [SerializeField] private float _leashRadius = 14.0f;
-
-        [Header("Macro & Economy")]
-        [Tooltip("Minimum gland capacity ratio before embarking from nest to pave a trail to food.")]
-        [Range(0.1f, 1.0f)]
-        [SerializeField] private float _minGlandRatioToPave = 0.5f;
-
-        [Tooltip("Arrival distance threshold on XZ plane to consider a food source or nest reached.")]
-        [Range(0.2f, 3.0f)]
-        [SerializeField] private float _arrivalDistance = 1.2f;
-
-        [Tooltip("Time in seconds between threat and target evaluation scans.")]
-        [Range(0.05f, 0.5f)]
-        [SerializeField] private float _scanInterval = 0.15f;
-
         private AntCharacter _character;
-        private AiHeroState _currentState = AiHeroState.IdleAtNest;
-        private Vector3 _desiredMovement;
-        private Vector3? _desiredFacing;
-        private IAttackable _targetEnemy;
-        private FoodSource _targetFood;
-        private float _scanTimer;
-        private readonly Collider[] _overlapBuffer = new Collider[16];
+        private AntAiContext _context;
+        private StateMachine<AntAiContext> _stateMachine;
 
-        public Vector3 DesiredMovement => _desiredMovement;
-        public Vector3? DesiredFacing => _desiredFacing;
-        public AiHeroState CurrentState => _currentState;
+        public Vector3 DesiredMovement => _context != null ? _context.DesiredMovement : Vector3.zero;
+        public Vector3? DesiredFacing => _context != null ? _context.DesiredFacing : null;
         public ColonyNest HomeNest => _homeNest;
-        public IAttackable TargetEnemy => _targetEnemy;
+        public LayerMask TargetLayerMask => _targetLayerMask;
+        public float DetectionRadius => _detectionRadius;
+        public AntAiContext Context => _context;
+        public StateMachine<AntAiContext> StateMachine => _stateMachine;
+
+        public AiStrategyProfile StrategyOverride => _strategyOverride;
+        public float PerceptionMultiplier => _strategyOverride != null ? _strategyOverride.PerceptionMultiplier : 1.0f;
+
+        public IAttackable TargetEnemy
+        {
+            get => _context != null ? _context.TargetEnemy : null;
+            set
+            {
+                if (_context != null) _context.TargetEnemy = value;
+            }
+        }
+
+        public FoodSource TargetFood
+        {
+            get => _context != null ? _context.TargetFood : null;
+            set
+            {
+                if (_context != null) _context.TargetFood = value;
+            }
+        }
+
+        public float CurrentHeadingAngle => _context != null ? _context.CurrentHeadingAngle : 0f;
+        public float JitterSeed => _context != null ? _context.JitterSeed : 0f;
+
+        // Backward compatibility properties for any inspector or legacy checks
+        public IAiBehavior ActiveBehavior => _strategyOverride != null ? _strategyOverride.Behavior : (_character != null && _character.Definition != null ? _character.Definition.AiBehavior : null);
+        public float RetreatHealthRatio => _strategyOverride != null ? _strategyOverride.RetreatHealthRatio : (_character != null && _character.Definition != null ? _character.Definition.RetreatHealthRatio : 0.3f);
+        public float LeashRadius => _strategyOverride != null ? _strategyOverride.LeashRadius : (_character != null && _character.Definition != null ? _character.Definition.LeashRadius : 14.0f);
+        public float ScanInterval => _strategyOverride != null ? _strategyOverride.ScanInterval : (_character != null && _character.Definition != null ? _character.Definition.ScanInterval : 0.15f);
+        public float ArrivalDistance => _strategyOverride != null ? _strategyOverride.ArrivalDistance : (_character != null && _character.Definition != null ? _character.Definition.ArrivalDistance : 1.2f);
+        public float MinGlandRatioToEmbark => _strategyOverride != null ? _strategyOverride.MinGlandRatioToEmbark : (_character != null && _character.Definition != null ? _character.Definition.MinGlandRatioToEmbark : 0.5f);
+        public bool UseMobilityToEngage => _strategyOverride != null ? _strategyOverride.UseMobilityToEngage : (_character != null && _character.Definition != null ? _character.Definition.UseMobilityToEngage : true);
+        public bool UseMobilityToRetreat => _strategyOverride != null ? _strategyOverride.UseMobilityToRetreat : (_character != null && _character.Definition != null ? _character.Definition.UseMobilityToRetreat : true);
+
+        #region Backward Compatibility & External Adapters
+
+        public void ResetBehaviorTimer() => _context?.ResetLegTimer();
+        public void IncrementBehaviorTimer(float deltaTime) => _context?.IncrementLegTimer(deltaTime);
+        public void SetDesiredMovement(Vector3 movement, Vector3? facing = null) => _context?.SetMovement(movement, facing);
+        public void RollNewRoamingLeg() => _context?.RollNewRoamingLeg();
+        public bool CheckLegCompletion() => _context != null && _context.CheckLegCompletion();
+        public Vector3 ComputeRoamingMovement() => _context != null ? _context.ComputeRoamingMovement() : Vector3.zero;
+
+        #endregion
 
         #region Lifecycle & Initialization
 
@@ -94,17 +108,13 @@ namespace AntScout.Characters.Brains
 
         private void Start()
         {
-            if (!enabled) return;
-            ResolveHomeNest();
-            ValidateHomeNest();
+            // Initialization deferred to explicit Initialize() or first OnUpdate() tick
         }
 
         private void OnEnable()
         {
             _character ??= GetComponent<AntCharacter>();
             PgsTime.Register(this, UpdateRate.Continuous, TimeChannel.World);
-            ResolveHomeNest();
-            ValidateHomeNest();
 
             if (_character != null)
             {
@@ -124,36 +134,86 @@ namespace AntScout.Characters.Brains
 
         private void HandleDamaged(DamageResult result, HitContext context)
         {
-            if (context.Instigator == null) return;
+            if (context.Instigator == null || _context == null || _stateMachine == null) return;
 
             IAttackable attacker = context.Instigator.GetComponentInParent<IAttackable>();
             if (attacker != null && attacker.IsAttackable)
             {
-                _targetEnemy = attacker;
+                _context.TargetEnemy = attacker;
                 if (_character != null && _character.Gland != null && _character.Gland.IsLayingTrail)
                 {
                     _character.Gland.StopLayingTrail();
                 }
-                _currentState = AiHeroState.EngagingEnemy;
+                _stateMachine.TransitionTo<AntCombatEngagementState>();
             }
         }
 
         /// <summary>
         /// Explicit top-down initialization called deterministically by AntCharacter or SpawnController.
-        /// Grounded in Dependency Inversion Principle (DIP): Injects allied home nest depot directly.
+        /// Grounded in Dependency Inversion Principle (DIP): Injects allied home nest depot and optional strategy override.
         /// </summary>
-        public void Initialize(ColonyNest homeNest)
+        public void Initialize(ColonyNest homeNest, AiStrategyProfile strategyOverride = null)
         {
             _homeNest = homeNest ?? throw new ArgumentNullException(nameof(homeNest));
+            if (strategyOverride != null)
+            {
+                _strategyOverride = strategyOverride;
+            }
+            ValidateConfiguration();
             ValidateHomeNest();
+
+            BuildStateMachine();
+        }
+
+        private void TryInitializeStateMachine()
+        {
+            if (_stateMachine != null) return;
+            if (_character == null) _character = GetComponent<AntCharacter>();
+
+            // Resolve home nest matching this character's current colony team
+            if (_homeNest == null || _homeNest.ColonyTeamId != _character.ColonyTeamId)
+            {
+                if (ColonyNest.TryGetForTeam(_character.ColonyTeamId, out ColonyNest registeredNest) && registeredNest != null)
+                {
+                    _homeNest = registeredNest;
+                }
+            }
+
+            if (_homeNest != null && _homeNest.ColonyTeamId == _character.ColonyTeamId)
+            {
+                BuildStateMachine();
+            }
+        }
+
+        private void BuildStateMachine()
+        {
+            if (_character == null) _character = GetComponent<AntCharacter>();
+            ValidateConfiguration();
+            ValidateHomeNest();
+
+            _context = new AntAiContext(this, _character, _homeNest);
+            _stateMachine = new StateMachine<AntAiContext>(_context);
+            _context.BindStateMachine(_stateMachine);
+
+            _stateMachine.RegisterState(new AntRestingAtNestState());
+            _stateMachine.RegisterState(new AntScoutingFieldState());
+            _stateMachine.RegisterState(new AntMovingToFoodState());
+            _stateMachine.RegisterState(new AntPavingTrailHomeState());
+            _stateMachine.RegisterState(new AntCombatEngagementState());
+            _stateMachine.RegisterState(new AntRallyingSwarmState());
+            _stateMachine.RegisterState(new AntRetreatState());
+
+            _stateMachine.TransitionTo<AntRestingAtNestState>();
         }
 
         public void ResetBrain()
         {
-            _desiredMovement = Vector3.zero;
-            _desiredFacing = null;
-            _targetEnemy = null;
-            _targetFood = null;
+            if (_context != null)
+            {
+                _context.StopMovement();
+                _context.ClearTargetEnemy();
+                _context.ClearTargetFood();
+            }
 
             if (_character != null && _character.Gland != null && _character.Gland.IsLayingTrail)
             {
@@ -183,7 +243,7 @@ namespace AntScout.Characters.Brains
 
         #endregion
 
-        #region Decision & Behavior Loop
+        #region Simulation Loop
 
         public void OnUpdate(float deltaTime)
         {
@@ -193,225 +253,13 @@ namespace AntScout.Characters.Brains
                 return;
             }
 
-            _scanTimer += deltaTime;
-            if (_scanTimer >= _scanInterval)
+            if (_stateMachine == null)
             {
-                _scanTimer = 0f;
-                ScanForThreats();
+                TryInitializeStateMachine();
+                if (_stateMachine == null) return;
             }
 
-            switch (_currentState)
-            {
-                case AiHeroState.EngagingEnemy:
-                    ExecuteCombatState();
-                    break;
-
-                case AiHeroState.IdleAtNest:
-                    ExecuteIdleAtNestState();
-                    break;
-
-                case AiHeroState.PavingTrailToFood:
-                    ExecutePavingTrailState();
-                    break;
-
-                case AiHeroState.ReturningToNest:
-                    ExecuteReturningToNestState();
-                    break;
-            }
-        }
-
-        private void ScanForThreats()
-        {
-            int hitCount = Physics.OverlapSphereNonAlloc(
-                transform.position,
-                _detectionRadius,
-                _overlapBuffer,
-                _targetLayerMask,
-                QueryTriggerInteraction.Ignore);
-
-            for (int i = 0; i < hitCount; i++)
-            {
-                Collider col = _overlapBuffer[i];
-                if (col == null) continue;
-
-                IAttackable attackable = col.GetComponentInParent<IAttackable>();
-                if (attackable == null || !attackable.IsAttackable) continue;
-
-                IColonyFactionMember faction = col.GetComponentInParent<IColonyFactionMember>();
-                if (faction == null) continue;
-
-                if (ColonyAffiliation.Evaluate(_character, faction) == TargetAffiliation.Enemy)
-                {
-                    _targetEnemy = attackable;
-                    if (_character.Gland != null && _character.Gland.IsLayingTrail)
-                    {
-                        _character.Gland.StopLayingTrail();
-                    }
-                    _currentState = AiHeroState.EngagingEnemy;
-                    break;
-                }
-            }
-        }
-
-        private void ExecuteCombatState()
-        {
-            if (_targetEnemy == null || !_targetEnemy.IsAttackable || _targetEnemy.Transform == null)
-            {
-                _targetEnemy = null;
-                _currentState = AiHeroState.ReturningToNest;
-                return;
-            }
-
-            Vector3 selfPos = transform.position;
-            Vector3 enemyPos = _targetEnemy.Transform.position;
-            Vector3 diff = enemyPos - selfPos;
-            diff.y = 0f;
-            float planarDist = diff.magnitude;
-
-            if (planarDist > _leashRadius)
-            {
-                // Disengage if enemy moves too far
-                _targetEnemy = null;
-                _currentState = AiHeroState.ReturningToNest;
-                return;
-            }
-
-            Vector3 aimDir = planarDist > 0.001f ? diff / planarDist : transform.forward;
-            _desiredFacing = aimDir;
-
-            var definition = _character.Definition;
-
-            // Mobility closure: Dash if utility action is equipped and enemy is far
-            if (definition != null && definition.UtilityAction != null && planarDist > 4.5f)
-            {
-                _character.TryExecuteAction(definition.UtilityAction, aimDir);
-            }
-
-            // Offensive cast: Secondary ability
-            if (definition != null && definition.SecondaryAction != null && planarDist <= definition.SecondaryAction.Range)
-            {
-                _character.TryExecuteAction(definition.SecondaryAction, aimDir);
-            }
-
-            // Offensive cast: Primary ability
-            if (definition != null && definition.PrimaryAction != null && planarDist <= definition.PrimaryAction.Range)
-            {
-                _character.TryExecuteAction(definition.PrimaryAction, aimDir);
-            }
-
-            float minStopDistance = (definition != null && definition.PrimaryAction != null)
-                ? definition.PrimaryAction.Range * 0.75f
-                : _arrivalDistance;
-
-            if (planarDist > minStopDistance)
-            {
-                _desiredMovement = aimDir;
-            }
-            else
-            {
-                _desiredMovement = Vector3.zero;
-            }
-        }
-
-        private void ExecuteIdleAtNestState()
-        {
-            if (_homeNest == null) return;
-
-            Vector3 depotPos = _homeNest.SpawnPosition;
-            Vector3 diff = depotPos - transform.position;
-            diff.y = 0f;
-            float distToNest = diff.magnitude;
-
-            if (distToNest > _arrivalDistance)
-            {
-                _desiredMovement = diff.normalized;
-                _desiredFacing = _desiredMovement;
-                return;
-            }
-
-            _desiredMovement = Vector3.zero;
-            _desiredFacing = null;
-
-            bool glandReady = _character.Gland == null ||
-                              _character.Gland.NormalizedCapacity >= _minGlandRatioToPave;
-
-            if (glandReady)
-            {
-                _targetFood = FoodSource.FindClosest(transform.position, float.MaxValue);
-                if (_targetFood != null && _targetFood.CanHarvest)
-                {
-                    if (_character.Definition != null &&
-                        _character.Definition.RecruitmentTrailAction != null &&
-                        _character.Gland != null)
-                    {
-                        _character.Gland.StartLayingTrail(_character.Definition.RecruitmentTrailAction);
-                    }
-
-                    _currentState = AiHeroState.PavingTrailToFood;
-                }
-            }
-        }
-
-        private void ExecutePavingTrailState()
-        {
-            if (_targetFood == null || !_targetFood.CanHarvest)
-            {
-                _targetFood = null;
-                _currentState = AiHeroState.ReturningToNest;
-                return;
-            }
-
-            Vector3 foodPos = _targetFood.WorldPosition;
-            Vector3 diff = foodPos - transform.position;
-            diff.y = 0f;
-            float planarDist = diff.magnitude;
-
-            if (planarDist <= _arrivalDistance)
-            {
-                // Food reached: trail successfully laid!
-                _currentState = AiHeroState.ReturningToNest;
-                return;
-            }
-
-            if (_character.Gland != null && _character.Gland.IsDepleted)
-            {
-                // Gland ran dry, turn back to depot
-                _currentState = AiHeroState.ReturningToNest;
-                return;
-            }
-
-            _desiredMovement = diff.normalized;
-            _desiredFacing = _desiredMovement;
-        }
-
-        private void ExecuteReturningToNestState()
-        {
-            if (_homeNest == null)
-            {
-                _desiredMovement = Vector3.zero;
-                return;
-            }
-
-            Vector3 depotPos = _homeNest.SpawnPosition;
-            Vector3 diff = depotPos - transform.position;
-            diff.y = 0f;
-            float planarDist = diff.magnitude;
-
-            if (planarDist <= _arrivalDistance)
-            {
-                if (_character.Gland != null && _character.Gland.IsLayingTrail)
-                {
-                    _character.Gland.StopLayingTrail();
-                }
-
-                _desiredMovement = Vector3.zero;
-                _desiredFacing = null;
-                _currentState = AiHeroState.IdleAtNest;
-                return;
-            }
-
-            _desiredMovement = diff.normalized;
-            _desiredFacing = _desiredMovement;
+            _stateMachine.OnUpdate(deltaTime);
         }
 
         #endregion

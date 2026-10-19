@@ -1,3 +1,5 @@
+using System;
+using AntScout.Characters.Brains.Behaviors;
 using PGS.Combat.Execution;
 using PGS.Core;
 using PGS.Input.Common;
@@ -40,6 +42,66 @@ namespace AntScout.Characters
         [Tooltip("Sensory sight radius in meters projected into the Fog of War.")]
         [Min(0.5f)]
         [SerializeField] private float _visionRadius = 12.0f;
+
+        [ColoredHeader("AI Decision Priorities (Utility Weights)", HeaderColor.Orange)]
+        [Tooltip("Priority weights driving autonomous decision making between foraging, combat, and exploration.")]
+        [SerializeField] private AiPriorityProfile _priorities = AiPriorityProfile.DefaultScout;
+
+        [ColoredHeader("Hero AI & Autonomous Behavior", HeaderColor.Yellow)]
+        [Tooltip("Polymorphic macro behavior executed when this character is piloted by an AI commander (AntAiBrain).")]
+        [SerializeReference, SubclassSelector]
+        private IAiBehavior _aiBehavior = new ResourceScoutBehavior();
+
+        [Tooltip("Health percentage threshold (0.0 to 0.8) where the AI disengages combat and retreats home to heal.")]
+        [Range(0.0f, 0.8f)]
+        [SerializeField] private float _retreatHealthRatio = 0.3f;
+
+        [Tooltip("Maximum pursuit distance in meters from nest or patrol anchor before breaking combat pursuit.")]
+        [Range(4.0f, 50.0f)]
+        [SerializeField] private float _leashRadius = 14.0f;
+
+        [Tooltip("Reaction time delay in seconds between threat and target evaluation scans (Difficulty tuning).")]
+        [Range(0.02f, 0.5f)]
+        [SerializeField] private float _scanInterval = 0.15f;
+
+        [Tooltip("Horizontal arrival distance threshold in meters to consider an objective, food source, or nest depot reached.")]
+        [Range(0.2f, 3.0f)]
+        [SerializeField] private float _arrivalDistance = 1.2f;
+
+        [Tooltip("Minimum gland capacity ratio before embarking from nest to execute behavior.")]
+        [Range(0.1f, 1.0f)]
+        [SerializeField] private float _minGlandRatioToEmbark = 0.5f;
+
+        [Tooltip("If true, AI uses mobility abilities (Dash/Leap) to close distance on fleeing targets.")]
+        [SerializeField] private bool _useMobilityToEngage = true;
+
+        [Tooltip("If true, AI uses mobility abilities to escape when retreating at low health.")]
+        [SerializeField] private bool _useMobilityToRetreat = true;
+
+        [Tooltip("Sensory sight/smell detection radius in meters for discovering harvestable food sources when piloted by an AI commander (AntAiBrain).")]
+        [Range(2.0f, 25.0f)]
+        [SerializeField] private float _foodDetectionRadius = 8.0f;
+
+        [Tooltip("Minimum distance in meters to keep away from hostile enemy nests during autonomous exploration (Prevents suicide wandering into enemy bases).")]
+        [Range(4.0f, 20.0f)]
+        [SerializeField] private float _hostileNestAvoidanceRadius = 8.0f;
+
+        [Tooltip("Min and Max distance in meters for an autonomous exploration roaming leg.")]
+        [SerializeField] private Vector2 _scoutDistanceRange = new Vector2(8.0f, 22.0f);
+
+        [Tooltip("Min and Max duration in seconds for an autonomous exploration roaming leg.")]
+        [SerializeField] private Vector2 _scoutDurationRange = new Vector2(4.0f, 10.0f);
+
+        [Tooltip("Degrees of random angular wander variation applied during exploration walk steps.")]
+        [Range(0.0f, 45.0f)]
+        [SerializeField] private float _scoutAngleJitter = 25.0f;
+
+        [Tooltip("Chance (0.0 to 1.0) that the ant halts to sample the air with its antennae upon completing an exploration leg.")]
+        [Range(0.0f, 1.0f)]
+        [SerializeField] private float _scoutPauseChance = 0.75f;
+
+        [Tooltip("Min and Max duration in seconds for an antenna sampling pause.")]
+        [SerializeField] private Vector2 _scoutPauseDurationRange = new Vector2(0.4f, 1.0f);
 
         [ColoredHeader("Primary Slot", HeaderColor.Coral)]
         [Tooltip("Primary offensive action (e.g. Mandible Bite).")]
@@ -88,6 +150,26 @@ namespace AntScout.Characters
         public StatsController.InitialStatConfig Attack => _attack;
         public float BaseMoveSpeed => _baseMoveSpeed;
         public float VisionRadius => _visionRadius;
+        public IAiBehavior AiBehavior => _aiBehavior;
+        public AiPriorityProfile Priorities => _priorities;
+        public float RetreatHealthRatio => _retreatHealthRatio;
+        public float LeashRadius => _leashRadius;
+        public float ScanInterval => _scanInterval;
+        public float ArrivalDistance => _arrivalDistance;
+        public float MinGlandRatioToEmbark => _minGlandRatioToEmbark;
+        public bool UseMobilityToEngage => _useMobilityToEngage;
+        public bool UseMobilityToRetreat => _useMobilityToRetreat;
+        public float FoodDetectionRadius => _foodDetectionRadius;
+        public float HostileNestAvoidanceRadius => _hostileNestAvoidanceRadius;
+        public Vector2 ScoutDistanceRange => _scoutDistanceRange;
+        public Vector2 ScoutDurationRange => _scoutDurationRange;
+        public float MaxScoutDistance => _scoutDistanceRange.y;
+        public float MaxScoutDuration => _scoutDurationRange.y;
+        public float ScoutAngleJitter => _scoutAngleJitter;
+        public float ScoutPauseChance => _scoutPauseChance;
+        public Vector2 ScoutPauseDurationRange => _scoutPauseDurationRange;
+        public float PauseChance => _scoutPauseChance;
+        public Vector2 PauseDurationRange => _scoutPauseDurationRange;
         public CombatActionDefinition PrimaryAction => _primaryAction;
         public InputActionReference PrimaryInput => _primaryInput;
         public CombatActionDefinition SecondaryAction => _secondaryAction;
@@ -183,5 +265,51 @@ namespace AntScout.Characters
             if (ReferenceEquals(slotInput, triggeredInput)) return true;
             return slotInput.action != null && triggeredInput.action != null && slotInput.action.id == triggeredInput.action.id;
         }
+    }
+
+    /// <summary>
+    /// Utility weights and decision priorities for autonomous AI commanders.
+    /// Determines the relative drive to forage, brawl, defend midfield, and lay scent trails.
+    /// </summary>
+    [Serializable]
+    public struct AiPriorityProfile
+    {
+        [Tooltip("Drive to search for and secure food resources across the yard (0.0 = ignores food, 1.0 = highly dedicated forager).")]
+        [Range(0f, 1f)]
+        public float ForagingPriority;
+
+        [Tooltip("Drive to aggressively attack, pursue, and defend territory against enemy ants (0.0 = pure pacifist/flee, 1.0 = relentless brawler).")]
+        [Range(0f, 1f)]
+        public float CombatAggression;
+
+        [Tooltip("Tendency to push toward the contested midfield center where food caches spawn vs lateral flanks (0.0 = flanker, 1.0 = center rusher).")]
+        [Range(0f, 1f)]
+        public float MidfieldBias;
+
+        [Tooltip("Drive to pave a recruitment scent trail all the way back to base upon claiming food (0.0 = claims silently, 1.0 = always paves trail).")]
+        [Range(0f, 1f)]
+        public float PaveTrailOnFood;
+
+        [Tooltip("Tendency to lay an alarm scent trail when entering combat to rally defenders (0.0 = fights solo, 1.0 = always calls for help).")]
+        [Range(0f, 1f)]
+        public float AlarmTrailOnCombat;
+
+        public static AiPriorityProfile DefaultScout => new AiPriorityProfile
+        {
+            ForagingPriority = 0.95f,
+            CombatAggression = 0.25f,
+            MidfieldBias = 0.5f,
+            PaveTrailOnFood = 1.0f,
+            AlarmTrailOnCombat = 0.2f
+        };
+
+        public static AiPriorityProfile DefaultSoldier => new AiPriorityProfile
+        {
+            ForagingPriority = 0.65f,
+            CombatAggression = 0.9f,
+            MidfieldBias = 0.8f,
+            PaveTrailOnFood = 0.8f,
+            AlarmTrailOnCombat = 0.7f
+        };
     }
 }

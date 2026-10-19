@@ -112,9 +112,10 @@ namespace AntScout.Resources.Components
         }
 
         /// <summary>
-        /// Finds the closest active food source within the specified sensory radius on the horizontal XZ plane.
+        /// Finds the closest active food source within the specified sensory radius on the horizontal XZ plane,
+        /// optionally filtered by a custom predicate (e.g. ignoring already-reported sources).
         /// </summary>
-        public static FoodSource FindClosest(Vector3 position, float maxRadius)
+        public static FoodSource FindClosest(Vector3 position, float maxRadius, Func<FoodSource, bool> filter = null)
         {
             float maxRadiusSqr = maxRadius * maxRadius;
             FoodSource closest = null;
@@ -124,6 +125,7 @@ namespace AntScout.Resources.Components
             {
                 FoodSource source = s_activeSources[i];
                 if (source == null || !source.CanHarvest) continue;
+                if (filter != null && !filter(source)) continue;
 
                 Vector3 foodPos = source.WorldPosition;
                 float dx = foodPos.x - position.x;

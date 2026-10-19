@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AntScout.Pheromone;
+using AntScout.Resources.Components;
 using PGS.Core.Time;
 using UnityEngine;
 
@@ -219,7 +220,21 @@ namespace AntScout.Swarm.Agents
                         float currentTipDistSqr = dxTipCoord * dxTipCoord + dzTipCoord * dzTipCoord;
 
                         // Accept candidate trail if it extends outward at least as far as the current stroke's tip
-                        if (candTipDistSqr >= currentTipDistSqr - 2.0f)
+                        // OR if the candidate trail connects to an active harvestable FoodSource (arterial branch highway)
+                        bool extendsOutward = candTipDistSqr >= currentTipDistSqr - 2.0f;
+                        bool leadsToHarvestableFood = false;
+
+                        if (!extendsOutward)
+                        {
+                            float dFirstToMe = (candFirst.x - myPos.x) * (candFirst.x - myPos.x) + (candFirst.z - myPos.z) * (candFirst.z - myPos.z);
+                            float dLastToMe = (candLast.x - myPos.x) * (candLast.x - myPos.x) + (candLast.z - myPos.z) * (candLast.z - myPos.z);
+                            Vector3 farTip = dFirstToMe > dLastToMe ? candFirst : candLast;
+
+                            FoodSource candFood = FoodSource.FindClosest(farTip, 4.0f);
+                            leadsToHarvestableFood = candFood != null && candFood.CanHarvest;
+                        }
+
+                        if (extendsOutward || leadsToHarvestableFood)
                         {
                             _lastChainedSegment = segment;
                             _trackedSegment = candidateSeg;

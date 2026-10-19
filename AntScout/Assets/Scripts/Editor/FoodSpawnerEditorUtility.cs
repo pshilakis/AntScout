@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using AntScout.Config;
+using AntScout.Maps;
 using AntScout.Resources.Components;
 using PGS.Core;
 using UnityEditor;
@@ -92,9 +93,25 @@ namespace AntScout.Editor
                 managerObj.transform.SetParent(managersRoot.transform);
             }
 
-            SerializedObject so = new SerializedObject(existingManager);
-            so.FindProperty("_mapDefinition").objectReferenceValue = mapDef;
-            so.ApplyModifiedProperties();
+            // Ensure any MapDefinition in the project is linked with the resolved MapResourceDefinition if unassigned
+            string[] mapDefGuids = AssetDatabase.FindAssets("t:MapDefinition");
+            foreach (string guid in mapDefGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var mapDefinition = AssetDatabase.LoadAssetAtPath<MapDefinition>(path);
+                if (mapDefinition != null && mapDefinition.ResourceDefinition == null)
+                {
+                    SerializedObject mapDefSo = new SerializedObject(mapDefinition);
+                    SerializedProperty resProp = mapDefSo.FindProperty("_resourceDefinition");
+                    if (resProp != null)
+                    {
+                        resProp.objectReferenceValue = mapDef;
+                        mapDefSo.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(mapDefinition);
+                        Debug.Log($"[FoodSpawnerEditorUtility] Assigned MapResourceDefinition to MapDefinition '{mapDefinition.name}'.");
+                    }
+                }
+            }
 
             // Clean up legacy static test cache object if present
             GameObject testCache = GameObject.Find("Food_SugarGranule_TestCache");

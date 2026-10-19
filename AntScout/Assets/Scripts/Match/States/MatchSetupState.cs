@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using AntScout.Maps;
 using AntScout.Resources.Components;
 using AntScout.Swarm.Nest;
 using AntScout.UI;
@@ -18,6 +19,18 @@ namespace AntScout.Match.States
     {
         public override async UniTask EnterAsync(MatchDirector director, CancellationToken ct)
         {
+            // 0. Resolve and validate MapManager
+            if (MapManager.Instance == null)
+            {
+                MapManager sceneManager = UnityEngine.Object.FindFirstObjectByType<MapManager>();
+                if (sceneManager == null)
+                {
+                    throw new InvalidOperationException(
+                        "[MatchSetupState] MapManager is missing from the scene! " +
+                        "Please use 'AntScout > Setup > Setup MapManager in Current Scene' from the Unity menu bar to add it to [ Managers ].");
+                }
+            }
+
             // 1. Resolve and validate colony nests
             int playerTeamId = director.PlayerTeamId;
             if (!ColonyNest.TryGetForTeam(playerTeamId, out ColonyNest playerNest) || playerNest == null)

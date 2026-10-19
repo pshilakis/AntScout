@@ -72,9 +72,79 @@ namespace AntScout.Characters
         {
             ValidateVitals(name);
 
+            if (_priorities.ForagingPriority < 0f || _priorities.ForagingPriority > 1f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition Priorities.ForagingPriority ({_priorities.ForagingPriority}) must be in range [0.0, 1.0]!");
+            }
+
+            if (_priorities.CombatAggression < 0f || _priorities.CombatAggression > 1f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition Priorities.CombatAggression ({_priorities.CombatAggression}) must be in range [0.0, 1.0]!");
+            }
+
             if (_visionRadius <= 0f)
             {
                 throw new InvalidOperationException($"[{name}] CharacterDefinition VisionRadius ({_visionRadius}) must be greater than zero!");
+            }
+
+            if (_aiBehavior == null)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition requires a non-null AiBehavior assigned!");
+            }
+
+            if (_retreatHealthRatio < 0f || _retreatHealthRatio >= 1.0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition RetreatHealthRatio ({_retreatHealthRatio}) must be in range [0.0, 1.0)!");
+            }
+
+            if (_leashRadius <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition LeashRadius ({_leashRadius}) must be greater than zero!");
+            }
+
+            if (_scanInterval <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ScanInterval ({_scanInterval}) must be greater than zero!");
+            }
+
+            if (_arrivalDistance <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ArrivalDistance ({_arrivalDistance}) must be greater than zero!");
+            }
+
+            if (_minGlandRatioToEmbark <= 0f || _minGlandRatioToEmbark > 1.0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition MinGlandRatioToEmbark ({_minGlandRatioToEmbark}) must be in range (0.0, 1.0]!");
+            }
+
+            if (_foodDetectionRadius <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition FoodDetectionRadius ({_foodDetectionRadius}) must be greater than zero!");
+            }
+
+            if (_hostileNestAvoidanceRadius <= 0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition HostileNestAvoidanceRadius ({_hostileNestAvoidanceRadius}) must be greater than zero!");
+            }
+
+            if (_scoutDistanceRange.x <= 0f || _scoutDistanceRange.y < _scoutDistanceRange.x)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ScoutDistanceRange ({_scoutDistanceRange}) is invalid! Min must be > 0 and Max >= Min.");
+            }
+
+            if (_scoutDurationRange.x <= 0f || _scoutDurationRange.y < _scoutDurationRange.x)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ScoutDurationRange ({_scoutDurationRange}) is invalid! Min must be > 0 and Max >= Min.");
+            }
+
+            if (_scoutPauseChance < 0f || _scoutPauseChance > 1.0f)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ScoutPauseChance ({_scoutPauseChance}) must be in range [0.0, 1.0]!");
+            }
+
+            if (_scoutPauseDurationRange.x < 0f || _scoutPauseDurationRange.y < _scoutPauseDurationRange.x)
+            {
+                throw new InvalidOperationException($"[{name}] CharacterDefinition ScoutPauseDurationRange ({_scoutPauseDurationRange}) is invalid! Min must be >= 0 and Max >= Min.");
             }
 
             if (_primaryAction != null || _secondaryAction != null || _utilityAction != null)
