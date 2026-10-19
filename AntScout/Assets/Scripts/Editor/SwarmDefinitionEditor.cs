@@ -19,10 +19,18 @@ namespace AntScout.Editor
         private SerializedProperty _nestRecruitmentRadiusProp;
         private SerializedProperty _workerSpawnIntervalProp;
         private SerializedProperty _maxActiveWorkersProp;
+        private SerializedProperty _soldierSpawnIntervalProp;
+        private SerializedProperty _maxActiveSoldiersProp;
         private SerializedProperty _nestWanderRadiusProp;
         private SerializedProperty _initialBiomassProp;
         private SerializedProperty _initialWorkerCountProp;
         private SerializedProperty _workerBiomassCostProp;
+        private SerializedProperty _initialSoldierCountProp;
+        private SerializedProperty _soldierBiomassCostProp;
+        private SerializedProperty _workersPerSoldierRatioProp;
+        private SerializedProperty _enableWartimeSurgeProp;
+        private SerializedProperty _enableEmergencyBroodProp;
+        private SerializedProperty _emergencyWorkerIncubationTimeProp;
 
         // Tab 1: Navigation & Sensing
         private SerializedProperty _arrivalThresholdProp;
@@ -51,6 +59,12 @@ namespace AntScout.Editor
         private SerializedProperty _swarmAlarmRadiusProp;
         private SerializedProperty _swarmCombatTimeoutProp;
         private SerializedProperty _nestDefenseRadiusProp;
+        private SerializedProperty _soldierTrailEscortRatioProp;
+        private SerializedProperty _soldierHarvestGuardDurationProp;
+        private SerializedProperty _soldierFlankOffsetProp;
+        private SerializedProperty _buildupPhaseDurationProp;
+        private SerializedProperty _buildupForagingRadiusProp;
+        private SerializedProperty _suppressEarlyHeroAggressionProp;
 
         private int _selectedTab = 0;
         private static readonly string[] TabNames = new string[]
@@ -67,10 +81,18 @@ namespace AntScout.Editor
             _nestRecruitmentRadiusProp = serializedObject.FindProperty("_nestRecruitmentRadius");
             _workerSpawnIntervalProp = serializedObject.FindProperty("_workerSpawnInterval");
             _maxActiveWorkersProp = serializedObject.FindProperty("_maxActiveWorkers");
+            _soldierSpawnIntervalProp = serializedObject.FindProperty("_soldierSpawnInterval");
+            _maxActiveSoldiersProp = serializedObject.FindProperty("_maxActiveSoldiers");
             _nestWanderRadiusProp = serializedObject.FindProperty("_nestWanderRadius");
             _initialBiomassProp = serializedObject.FindProperty("_initialBiomass");
             _initialWorkerCountProp = serializedObject.FindProperty("_initialWorkerCount");
             _workerBiomassCostProp = serializedObject.FindProperty("_workerBiomassCost");
+            _initialSoldierCountProp = serializedObject.FindProperty("_initialSoldierCount");
+            _soldierBiomassCostProp = serializedObject.FindProperty("_soldierBiomassCost");
+            _workersPerSoldierRatioProp = serializedObject.FindProperty("_workersPerSoldierRatio");
+            _enableWartimeSurgeProp = serializedObject.FindProperty("_enableWartimeSurge");
+            _enableEmergencyBroodProp = serializedObject.FindProperty("_enableEmergencyBrood");
+            _emergencyWorkerIncubationTimeProp = serializedObject.FindProperty("_emergencyWorkerIncubationTime");
 
             // Tab 1: Navigation & Sensing
             _arrivalThresholdProp = serializedObject.FindProperty("_arrivalThreshold");
@@ -99,6 +121,12 @@ namespace AntScout.Editor
             _swarmAlarmRadiusProp = serializedObject.FindProperty("_swarmAlarmRadius");
             _swarmCombatTimeoutProp = serializedObject.FindProperty("_swarmCombatTimeout");
             _nestDefenseRadiusProp = serializedObject.FindProperty("_nestDefenseRadius");
+            _soldierTrailEscortRatioProp = serializedObject.FindProperty("_soldierTrailEscortRatio");
+            _soldierHarvestGuardDurationProp = serializedObject.FindProperty("_soldierHarvestGuardDuration");
+            _soldierFlankOffsetProp = serializedObject.FindProperty("_soldierFlankOffset");
+            _buildupPhaseDurationProp = serializedObject.FindProperty("_buildupPhaseDuration");
+            _buildupForagingRadiusProp = serializedObject.FindProperty("_buildupForagingRadius");
+            _suppressEarlyHeroAggressionProp = serializedObject.FindProperty("_suppressEarlyHeroAggression");
         }
 
         public override void OnInspectorGUI()
@@ -130,15 +158,31 @@ namespace AntScout.Editor
 
         private void DrawColonyAndEconomyTab()
         {
+            EditorGUILayout.LabelField("Worker Deployment & Dispatch", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(_nestRecruitmentRadiusProp);
             EditorGUILayout.PropertyField(_workerSpawnIntervalProp);
             EditorGUILayout.PropertyField(_maxActiveWorkersProp);
             EditorGUILayout.PropertyField(_nestWanderRadiusProp);
 
             EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Soldier Deployment", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_soldierSpawnIntervalProp);
+            EditorGUILayout.PropertyField(_maxActiveSoldiersProp);
+            EditorGUILayout.PropertyField(_workersPerSoldierRatioProp);
+            EditorGUILayout.PropertyField(_enableWartimeSurgeProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Biomass Economy", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(_initialBiomassProp, true);
             EditorGUILayout.PropertyField(_initialWorkerCountProp);
             EditorGUILayout.PropertyField(_workerBiomassCostProp);
+            EditorGUILayout.PropertyField(_initialSoldierCountProp);
+            EditorGUILayout.PropertyField(_soldierBiomassCostProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Emergency Brood (Anti-Deadlock)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_enableEmergencyBroodProp);
+            EditorGUILayout.PropertyField(_emergencyWorkerIncubationTimeProp);
         }
 
         private void DrawNavigationAndSensingTab()
@@ -176,11 +220,24 @@ namespace AntScout.Editor
 
         private void DrawDefenseAndAggressionTab()
         {
+            EditorGUILayout.LabelField("Swarm Aggro & Leashing", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(_swarmAggroRadiusProp);
             EditorGUILayout.PropertyField(_swarmLeashRadiusProp);
             EditorGUILayout.PropertyField(_swarmAlarmRadiusProp);
             EditorGUILayout.PropertyField(_swarmCombatTimeoutProp);
             EditorGUILayout.PropertyField(_nestDefenseRadiusProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Soldier Trail Escort & Guard", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_soldierTrailEscortRatioProp);
+            EditorGUILayout.PropertyField(_soldierHarvestGuardDurationProp);
+            EditorGUILayout.PropertyField(_soldierFlankOffsetProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Opening Buildup & Pacing", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_buildupPhaseDurationProp);
+            EditorGUILayout.PropertyField(_buildupForagingRadiusProp);
+            EditorGUILayout.PropertyField(_suppressEarlyHeroAggressionProp);
         }
     }
 }

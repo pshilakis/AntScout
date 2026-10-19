@@ -51,6 +51,7 @@ namespace AntScout.Swarm.Nest
         private bool _isTrailConnected;
         private float _spawnTimer;
         private float _soldierSpawnTimer;
+        private float _emergencyIncubationTimer;
 
         [Header("Live Colony Telemetry")]
         [Tooltip("Live current and maximum biomass reserves for the colony nest.")]
@@ -92,6 +93,7 @@ namespace AntScout.Swarm.Nest
         public IReadOnlyList<ISwarmAgent> ActiveSoldiers => _activeSoldiers;
         public BoundedInt Biomass => _biomass;
         public int TotalBiomass => _biomass.Current;
+        public SwarmDefinition Config => _config;
 
         public PheromoneTrailEmitter TrailEmitter
         {
@@ -399,6 +401,22 @@ namespace AntScout.Swarm.Nest
         private void ProcessDeployment(float deltaTime)
         {
             if (_config == null) return;
+
+            // 0. Queen's Emergency Brood (Anti-Softlock Failsafe)
+            if (_activeWorkers.Count == 0 && _biomass.Current < _config.WorkerBiomassCost && _config.EnableEmergencyBrood && _workerPrefab != null)
+            {
+                _emergencyIncubationTimer += deltaTime;
+                if (_emergencyIncubationTimer >= _config.EmergencyWorkerIncubationTime)
+                {
+                    _emergencyIncubationTimer = 0f;
+                    SpawnWorker();
+                    Debug.Log($"[{name}] The Queen has completed emergency incubation of a rescue worker ant!");
+                }
+            }
+            else
+            {
+                _emergencyIncubationTimer = 0f;
+            }
 
             // 1. Evaluate Wartime Surge (Red Alert)
             bool isWartimeSurge = false;

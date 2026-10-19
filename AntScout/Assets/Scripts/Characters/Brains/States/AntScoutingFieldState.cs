@@ -2,7 +2,9 @@ using System;
 using AntScout.Characters;
 using AntScout.Characters.Brains;
 using AntScout.Characters.Brains.StateContext;
+using AntScout.Config;
 using AntScout.Core.Interfaces;
+using AntScout.Match;
 using AntScout.Resources.Components;
 using PGS.Combat.Targeting;
 using PGS.States;
@@ -66,12 +68,29 @@ namespace AntScout.Characters.Brains.States
                     : 0f;
             }
 
+            // Buildup phase evaluation: restricts foraging radius to local territory
+            var swarmConfig = context.HomeNest != null ? context.HomeNest.Config : null;
+            bool isBuildup = swarmConfig != null && MatchDirector.Instance != null &&
+                             MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration;
+            float buildupRadius = swarmConfig != null ? swarmConfig.BuildupForagingRadius : 18.0f;
+
             FoodSource nearbyFood = FoodSource.FindClosest(
                 context.Character.transform.position,
                 effectiveFoodRadius,
                 source =>
                 {
                     if (context.IsFoodReportedOrActive(source)) return false;
+
+                    // Opening buildup constraint: restrict candidate foraging to local territory
+                    if (isBuildup && context.HomeNest != null)
+                    {
+                        Vector3 toNest = source.WorldPosition - context.HomeNest.SpawnPosition;
+                        toNest.y = 0f;
+                        if (toNest.sqrMagnitude > buildupRadius * buildupRadius)
+                        {
+                            return false;
+                        }
+                    }
 
                     // Economic pre-filter: If colony has an active healthy harvest (>= 20% capacity remaining),
                     // do not divert scouting attention to inferior food sources.
@@ -162,6 +181,21 @@ namespace AntScout.Characters.Brains.States
 
         private IAttackable ScanForThreats(AntAiContext context, float perceptionMult)
         {
+            var swarmConfig = context.HomeNest != null ? context.HomeNest.Config : null;
+            bool isBuildup = swarmConfig != null && MatchDirector.Instance != null &&
+                             MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration;
+
+            if (isBuildup && swarmConfig.SuppressEarlyHeroAggression && context.HomeNest != null)
+            {
+                // In opening buildup, suppress early aggressive hunts unless the threat is intruding on allied home nest defense perimeter
+                Vector3 toNest = context.Character.transform.position - context.HomeNest.SpawnPosition;
+                toNest.y = 0f;
+                if (toNest.sqrMagnitude > swarmConfig.NestDefenseRadius * swarmConfig.NestDefenseRadius)
+                {
+                    return null;
+                }
+            }
+
             float radius = context.Brain.DetectionRadius * perceptionMult;
             int count = Physics.OverlapSphereNonAlloc(
                 context.Character.transform.position,

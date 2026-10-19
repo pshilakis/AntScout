@@ -22,7 +22,7 @@ namespace AntScout.Config
 
         [Tooltip("Maximum concurrent worker ants deployed in the field.")]
         [Range(1, 100)]
-        [SerializeField] private int _maxActiveWorkers = 20;
+        [SerializeField] private int _maxActiveWorkers = 40;
 
         [Tooltip("Seconds between successive soldier ant deployments from the nest.")]
         [Range(0.5f, 10.0f)]
@@ -30,7 +30,7 @@ namespace AntScout.Config
 
         [Tooltip("Maximum concurrent soldier ants deployed in the field.")]
         [Range(0, 50)]
-        [SerializeField] private int _maxActiveSoldiers = 6;
+        [SerializeField] private int _maxActiveSoldiers = 12;
 
         [Tooltip("Radius around the nest depot within which idle workers roam and wander.")]
         [Range(1f, 15f)]
@@ -62,6 +62,26 @@ namespace AntScout.Config
 
         [Tooltip("Enables emergency wartime surge mobilization. When true, active alarm trails or nest attacks cause 100% of biomass to be funneled into hatching soldiers.")]
         [SerializeField] private bool _enableWartimeSurge = true;
+
+        [ColoredHeader("Emergency Survival & Anti-Deadlock", HeaderColor.Coral)]
+        [Tooltip("Enables the Queen's Emergency Brood. If all workers die and biomass is insufficient to hatch a replacement, the nest will slowly incubate a free rescue worker to prevent soft-locks.")]
+        [SerializeField] private bool _enableEmergencyBrood = true;
+
+        [Tooltip("Seconds required for the Queen to incubate an emergency worker when the colony is bankrupt and workerless.")]
+        [Range(5f, 30f)]
+        [SerializeField] private float _emergencyWorkerIncubationTime = 12.0f;
+
+        [ColoredHeader("Opening Buildup & Pacing", HeaderColor.Blue)]
+        [Tooltip("Duration in seconds of the opening economic buildup phase at match start.")]
+        [Range(0f, 180f)]
+        [SerializeField] private float _buildupPhaseDuration = 45.0f;
+
+        [Tooltip("Maximum exploration and foraging radius (in meters) from home nest during the opening buildup phase.")]
+        [Range(5f, 50f)]
+        [SerializeField] private float _buildupForagingRadius = 18.0f;
+
+        [Tooltip("If true, AI heroes in buildup phase will not hunt enemy units unless directly attacked first or their nest perimeter is breached.")]
+        [SerializeField] private bool _suppressEarlyHeroAggression = true;
 
         [ColoredHeader("Navigation & Arrival Thresholds", HeaderColor.Coral)]
         [Tooltip("Distance threshold to consider an intermediate waypoint reached.")]
@@ -223,5 +243,11 @@ namespace AntScout.Config
         public float SwarmAlarmRadius => _swarmAlarmRadius;
         public float SwarmCombatTimeout => _swarmCombatTimeout;
         public float NestDefenseRadius => _nestDefenseRadius;
+
+        public bool EnableEmergencyBrood => _enableEmergencyBrood;
+        public float EmergencyWorkerIncubationTime => _emergencyWorkerIncubationTime;
+        public float BuildupPhaseDuration => _buildupPhaseDuration;
+        public float BuildupForagingRadius => _buildupForagingRadius;
+        public bool SuppressEarlyHeroAggression => _suppressEarlyHeroAggression;
     }
 }

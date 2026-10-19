@@ -114,7 +114,7 @@ namespace AntScout.Editor
             headerRt.anchorMax = new Vector2(0.5f, 1f);
             headerRt.pivot = new Vector2(0.5f, 1f);
             headerRt.anchoredPosition = new Vector2(0f, -15f);
-            headerRt.sizeDelta = new Vector2(980f, 115f);
+            headerRt.sizeDelta = new Vector2(1320f, 135f);
 
             var headerBg = headerGo.AddComponent<Image>();
             headerBg.color = new Color(0.04f, 0.05f, 0.08f, 0.85f);
@@ -126,25 +126,25 @@ namespace AntScout.Editor
             clockRt.anchorMax = new Vector2(0.5f, 0.5f);
             clockRt.pivot = new Vector2(0.5f, 0.5f);
             clockRt.anchoredPosition = new Vector2(0f, 0f);
-            clockRt.sizeDelta = new Vector2(160f, 45f);
+            clockRt.sizeDelta = new Vector2(180f, 50f);
 
             var clockText = clockGo.AddComponent<TextMeshProUGUI>();
             clockText.text = "00:00";
-            clockText.fontSize = 32f;
+            clockText.fontSize = 36f;
             clockText.fontStyle = FontStyles.Bold;
             clockText.alignment = TextAlignmentOptions.Center;
             clockText.color = Color.white;
 
             // Player Colony Card (Left side: Nest Health, Biomass Reserves, Worker Population)
-            var (playerBar, playerHpText, playerBiomassBar, playerBiomassText, playerWorkerText) = BuildPlayerColonyCard(
+            var (playerBar, playerHpText, playerBiomassBar, playerBiomassText, playerWorkerText, playerTitleText) = BuildPlayerColonyCard(
                 headerGo.transform,
-                new Vector2(-290f, 0f),
+                new Vector2(-365f, 0f),
                 fillBarShader);
 
             // Enemy Colony Card (Right side: Nest Health)
-            var (enemyBar, enemyHpText) = BuildEnemyColonyCard(
+            var (enemyBar, enemyHpText, enemyTitleText) = BuildEnemyColonyCard(
                 headerGo.transform,
-                new Vector2(290f, 0f),
+                new Vector2(365f, 0f),
                 fillBarShader);
 
             // --- Pre-Match Countdown Overlay ---
@@ -181,10 +181,12 @@ namespace AntScout.Editor
             so.FindProperty("_playerBiomassBar").objectReferenceValue = playerBiomassBar;
             so.FindProperty("_playerBiomassText").objectReferenceValue = playerBiomassText;
             so.FindProperty("_playerWorkerText").objectReferenceValue = playerWorkerText;
+            so.FindProperty("_playerTitleText").objectReferenceValue = playerTitleText;
+            so.FindProperty("_enemyTitleText").objectReferenceValue = enemyTitleText;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText, ResourceBar biomassBar, TextMeshProUGUI biomassText, TextMeshProUGUI workerText)
+        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText, ResourceBar biomassBar, TextMeshProUGUI biomassText, TextMeshProUGUI workerText, TextMeshProUGUI titleText)
             BuildPlayerColonyCard(Transform parent, Vector2 anchoredPos, Shader fillBarShader)
         {
             GameObject container = CreateRectTransform("Player Colony Card", parent);
@@ -193,7 +195,7 @@ namespace AntScout.Editor
             containerRt.anchorMax = new Vector2(0.5f, 0.5f);
             containerRt.pivot = new Vector2(0.5f, 0.5f);
             containerRt.anchoredPosition = anchoredPos;
-            containerRt.sizeDelta = new Vector2(340f, 95f);
+            containerRt.sizeDelta = new Vector2(550f, 110f);
 
             // Row 1: Title and Worker Count
             GameObject titleRow = CreateRectTransform("Header Row", container.transform);
@@ -202,35 +204,38 @@ namespace AntScout.Editor
             titleRt.anchorMax = new Vector2(1f, 1f);
             titleRt.pivot = new Vector2(0.5f, 1f);
             titleRt.anchoredPosition = new Vector2(0f, -4f);
-            titleRt.sizeDelta = new Vector2(0f, 20f);
+            titleRt.sizeDelta = new Vector2(0f, 28f);
 
             // Title
             GameObject titleGo = CreateRectTransform("Title Label", titleRow.transform);
             RectTransform tRt = titleGo.GetComponent<RectTransform>();
             tRt.anchorMin = new Vector2(0f, 0f);
-            tRt.anchorMax = new Vector2(0.55f, 1f);
+            tRt.anchorMax = new Vector2(0.32f, 1f);
             tRt.offsetMin = Vector2.zero;
             tRt.offsetMax = Vector2.zero;
 
             var titleText = titleGo.AddComponent<TextMeshProUGUI>();
-            titleText.text = "COLONY 1 (YOU)";
-            titleText.fontSize = 13f;
+            titleText.text = "Player 1";
+            titleText.fontSize = 16f;
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Left;
+            titleText.textWrappingMode = TextWrappingModes.NoWrap;
             titleText.color = new Color(0.2f, 0.85f, 0.3f, 1f);
 
-            // Worker Count
+            // Colony Population Count (Workers & Soldiers)
             GameObject workerGo = CreateRectTransform("Worker Count Text", titleRow.transform);
             RectTransform wRt = workerGo.GetComponent<RectTransform>();
-            wRt.anchorMin = new Vector2(0.55f, 0f);
+            wRt.anchorMin = new Vector2(0.32f, 0f);
             wRt.anchorMax = new Vector2(1f, 1f);
             wRt.offsetMin = Vector2.zero;
             wRt.offsetMax = Vector2.zero;
 
             var workerText = workerGo.AddComponent<TextMeshProUGUI>();
-            workerText.text = "Workers: 6 / 20";
-            workerText.fontSize = 12f;
+            workerText.text = "<color=#8EE4AF>Workers: 6/40</color>   <color=#FFAA88>Soldiers: 2/12</color>";
+            workerText.fontSize = 16f;
             workerText.fontStyle = FontStyles.Bold;
+            workerText.textWrappingMode = TextWrappingModes.NoWrap;
+            workerText.overflowMode = TextOverflowModes.Overflow;
             workerText.alignment = TextAlignmentOptions.Right;
             workerText.color = new Color(0.85f, 0.9f, 1f, 1f);
 
@@ -238,8 +243,8 @@ namespace AntScout.Editor
             var (nestBar, nestHpText) = BuildResourceBarMeter(
                 container.transform,
                 "Nest Health Gauge",
-                new Vector2(0f, -28f),
-                new Vector2(0f, 22f),
+                new Vector2(0f, -34f),
+                new Vector2(0f, 26f),
                 new Color(0.2f, 0.85f, 0.3f, 1f),
                 1000f,
                 1000f,
@@ -247,13 +252,14 @@ namespace AntScout.Editor
                 fillBarShader,
                 "1,000 / 1,000",
                 new Color(0.95f, 0.6f, 0.15f, 1f));
+            nestHpText.fontSize = 13.5f;
 
             // Row 3: Biomass Bar (Amber/Gold, 100 / 500, segment size 50 so 1 pip = 1 worker)
             var (biomassBar, biomassText) = BuildResourceBarMeter(
                 container.transform,
                 "Biomass Gauge",
-                new Vector2(0f, -56f),
-                new Vector2(0f, 20f),
+                new Vector2(0f, -66f),
+                new Vector2(0f, 22f),
                 new Color(0.95f, 0.72f, 0.15f, 1f),
                 100f,
                 500f,
@@ -261,11 +267,12 @@ namespace AntScout.Editor
                 fillBarShader,
                 "100 / 500",
                 new Color(1f, 0.9f, 0.4f, 1f));
+            biomassText.fontSize = 12.5f;
 
-            return (nestBar, nestHpText, biomassBar, biomassText, workerText);
+            return (nestBar, nestHpText, biomassBar, biomassText, workerText, titleText);
         }
 
-        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText)
+        private static (ResourceBar nestBar, TextMeshProUGUI nestHpText, TextMeshProUGUI titleText)
             BuildEnemyColonyCard(Transform parent, Vector2 anchoredPos, Shader fillBarShader)
         {
             GameObject container = CreateRectTransform("Enemy Colony Card", parent);
@@ -274,7 +281,7 @@ namespace AntScout.Editor
             containerRt.anchorMax = new Vector2(0.5f, 0.5f);
             containerRt.pivot = new Vector2(0.5f, 0.5f);
             containerRt.anchoredPosition = anchoredPos;
-            containerRt.sizeDelta = new Vector2(340f, 95f);
+            containerRt.sizeDelta = new Vector2(550f, 110f);
 
             // Row 1: Title
             GameObject titleGo = CreateRectTransform("Title Label", container.transform);
@@ -283,21 +290,22 @@ namespace AntScout.Editor
             titleRt.anchorMax = new Vector2(1f, 1f);
             titleRt.pivot = new Vector2(0.5f, 1f);
             titleRt.anchoredPosition = new Vector2(0f, -4f);
-            titleRt.sizeDelta = new Vector2(0f, 20f);
+            titleRt.sizeDelta = new Vector2(0f, 28f);
 
             var titleText = titleGo.AddComponent<TextMeshProUGUI>();
-            titleText.text = "COLONY 2 (ENEMY)";
-            titleText.fontSize = 13f;
+            titleText.text = "Player 2 (AI)";
+            titleText.fontSize = 16f;
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Left;
+            titleText.textWrappingMode = TextWrappingModes.NoWrap;
             titleText.color = new Color(0.9f, 0.25f, 0.25f, 1f);
 
             // Row 2: Nest Health Bar (Red, 1,000 / 1,000)
             var (nestBar, nestHpText) = BuildResourceBarMeter(
                 container.transform,
                 "Nest Health Gauge",
-                new Vector2(0f, -28f),
-                new Vector2(0f, 22f),
+                new Vector2(0f, -34f),
+                new Vector2(0f, 26f),
                 new Color(0.9f, 0.25f, 0.25f, 1f),
                 1000f,
                 1000f,
@@ -305,8 +313,9 @@ namespace AntScout.Editor
                 fillBarShader,
                 "1,000 / 1,000",
                 new Color(0.95f, 0.6f, 0.15f, 1f));
+            nestHpText.fontSize = 13.5f;
 
-            return (nestBar, nestHpText);
+            return (nestBar, nestHpText, titleText);
         }
 
         private static (ResourceBar bar, TextMeshProUGUI text) BuildResourceBarMeter(

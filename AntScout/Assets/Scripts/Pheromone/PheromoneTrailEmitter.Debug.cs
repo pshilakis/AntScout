@@ -30,7 +30,7 @@ namespace AntScout.Pheromone
             get
             {
 #if UNITY_EDITOR
-                return EditorPrefs.GetBool(DebugHeatmapPrefKey, true);
+                return EditorPrefs.GetBool(DebugHeatmapPrefKey, false);
 #else
                 return false;
 #endif
@@ -41,7 +41,7 @@ namespace AntScout.Pheromone
         [MenuItem(HeatmapMenuPath, priority = 10)]
         public static void ToggleDebugVisualsFromMenu()
         {
-            bool currentState = EditorPrefs.GetBool(DebugHeatmapPrefKey, true);
+            bool currentState = EditorPrefs.GetBool(DebugHeatmapPrefKey, false);
             bool newState = !currentState;
             EditorPrefs.SetBool(DebugHeatmapPrefKey, newState);
             Menu.SetChecked(HeatmapMenuPath, newState);
@@ -52,7 +52,7 @@ namespace AntScout.Pheromone
         [MenuItem(HeatmapMenuPath, true)]
         private static bool ToggleDebugVisualsValidate()
         {
-            Menu.SetChecked(HeatmapMenuPath, EditorPrefs.GetBool(DebugHeatmapPrefKey, true));
+            Menu.SetChecked(HeatmapMenuPath, EditorPrefs.GetBool(DebugHeatmapPrefKey, false));
             return true;
         }
 #endif
@@ -60,6 +60,12 @@ namespace AntScout.Pheromone
         private void OnGUI()
         {
             if (!Application.isPlaying || !IsGlobalDebugVisualsEnabled) return;
+
+            // Do not render debug percentage badges for enemy trails
+            if (AntScout.Match.MatchDirector.Instance != null && _colonyTeamId != AntScout.Match.MatchDirector.Instance.PlayerTeamId)
+            {
+                return;
+            }
 
             // 1. Watermark status in top-left (rendered once by Colony 0 to prevent multi-colony duplication)
             if (_colonyTeamId == 0)

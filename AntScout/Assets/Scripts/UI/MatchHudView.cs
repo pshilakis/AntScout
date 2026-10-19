@@ -53,8 +53,24 @@ namespace AntScout.UI
         [Tooltip("Text label displaying player colony biomass numbers (e.g. '100 / 500').")]
         [SerializeField] private TextMeshProUGUI _playerBiomassText;
 
-        [Tooltip("Text label displaying active worker population (e.g. 'Workers: 6 / 20').")]
+        [Tooltip("Text label displaying active worker population (or combined colony population if _playerSoldierText is unassigned).")]
         [SerializeField] private TextMeshProUGUI _playerWorkerText;
+
+        [Tooltip("Optional dedicated text label for soldier population. If null, soldier count is formatted into _playerWorkerText.")]
+        [SerializeField] private TextMeshProUGUI _playerSoldierText;
+
+        [Header("Colony Naming & Titles")]
+        [Tooltip("Text label for the player's colony/name header.")]
+        [SerializeField] private TextMeshProUGUI _playerTitleText;
+
+        [Tooltip("Text label for the enemy's colony/name header.")]
+        [SerializeField] private TextMeshProUGUI _enemyTitleText;
+
+        [Tooltip("Display name used for the local player.")]
+        [SerializeField] private string _playerDisplayName = "Player 1";
+
+        [Tooltip("Display name used for the enemy AI.")]
+        [SerializeField] private string _enemyDisplayName = "Player 2 (AI)";
 
         [Header("Nest Scene References (Optional Override)")]
         [Tooltip("Direct reference to Player Nest. Auto-resolved if unassigned.")]
@@ -74,11 +90,13 @@ namespace AntScout.UI
         {
             base.Awake();
             ValidateComponentBindings();
+            EnforceResponsiveHeaderLayout();
         }
 
         private void Start()
         {
             BindToNestsAndMatchDirector();
+            ApplyColonyTitlesAndColors();
         }
 
         protected virtual void OnDestroy()
@@ -91,6 +109,166 @@ namespace AntScout.UI
             UpdateClockDisplay();
             UpdateCountdownDisplay();
             UpdateWorkerDisplay();
+        }
+
+        #endregion
+
+        #region Responsive Header Layout & Presentation
+
+        private void EnforceResponsiveHeaderLayout()
+        {
+            // 1. Resolve & format Player Card and Row
+            if (_playerWorkerText != null && _playerWorkerText.transform.parent != null)
+            {
+                Transform headerRow = _playerWorkerText.transform.parent;
+                Transform playerCard = headerRow.parent;
+
+                if (playerCard is RectTransform cardRt)
+                {
+                    cardRt.sizeDelta = new Vector2(550f, 110f);
+                    cardRt.anchoredPosition = new Vector2(-365f, 0f);
+
+                    // Ensure Top Header Bar background is wide enough
+                    if (cardRt.parent is RectTransform headerBarRt)
+                    {
+                        headerBarRt.sizeDelta = new Vector2(1320f, 135f);
+                    }
+                }
+
+                if (headerRow is RectTransform rowRt)
+                {
+                    rowRt.sizeDelta = new Vector2(0f, 28f);
+                    rowRt.anchoredPosition = new Vector2(0f, -4f);
+                }
+
+                Transform titleTrans = headerRow.Find("Title Label") ?? playerCard?.Find("Title Label");
+                if (titleTrans is RectTransform titleRt)
+                {
+                    titleRt.anchorMin = new Vector2(0f, 0f);
+                    titleRt.anchorMax = new Vector2(0.32f, 1f);
+                    titleRt.offsetMin = Vector2.zero;
+                    titleRt.offsetMax = Vector2.zero;
+
+                    if (_playerTitleText == null)
+                    {
+                        _playerTitleText = titleRt.GetComponent<TextMeshProUGUI>();
+                    }
+                }
+
+                if (_playerWorkerText.transform is RectTransform workerRt)
+                {
+                    workerRt.anchorMin = new Vector2(0.32f, 0f);
+                    workerRt.anchorMax = new Vector2(1f, 1f);
+                    workerRt.offsetMin = Vector2.zero;
+                    workerRt.offsetMax = Vector2.zero;
+
+                    _playerWorkerText.textWrappingMode = TextWrappingModes.NoWrap;
+                    _playerWorkerText.overflowMode = TextOverflowModes.Overflow;
+                    _playerWorkerText.alignment = TextAlignmentOptions.Right;
+                    _playerWorkerText.fontSize = 16f;
+                }
+            }
+
+            if (_playerSoldierText != null)
+            {
+                _playerSoldierText.textWrappingMode = TextWrappingModes.NoWrap;
+                _playerSoldierText.overflowMode = TextOverflowModes.Overflow;
+                _playerSoldierText.fontSize = 16f;
+            }
+
+            // 2. Format Enemy Card
+            if (_enemyNestBar != null && _enemyNestBar.transform.parent != null)
+            {
+                Transform enemyCard = _enemyNestBar.transform.parent;
+                if (enemyCard is RectTransform enemyCardRt)
+                {
+                    enemyCardRt.sizeDelta = new Vector2(550f, 110f);
+                    enemyCardRt.anchoredPosition = new Vector2(365f, 0f);
+                }
+
+                Transform enemyTitleTrans = enemyCard.Find("Title Label") ?? enemyCard.Find("Header Row/Title Label");
+                if (enemyTitleTrans is RectTransform enemyTitleRt)
+                {
+                    enemyTitleRt.sizeDelta = new Vector2(0f, 28f);
+                    enemyTitleRt.anchoredPosition = new Vector2(0f, -4f);
+
+                    if (_enemyTitleText == null)
+                    {
+                        _enemyTitleText = enemyTitleRt.GetComponent<TextMeshProUGUI>();
+                    }
+                }
+            }
+
+            // 3. Format Health and Biomass Meters
+            if (_playerNestBar != null && _playerNestBar.transform is RectTransform pBarRt)
+            {
+                pBarRt.sizeDelta = new Vector2(0f, 26f);
+                pBarRt.anchoredPosition = new Vector2(0f, -34f);
+            }
+            if (_playerNestHealthText != null)
+            {
+                _playerNestHealthText.fontSize = 13.5f;
+            }
+
+            if (_playerBiomassBar != null && _playerBiomassBar.transform is RectTransform pBioRt)
+            {
+                pBioRt.sizeDelta = new Vector2(0f, 22f);
+                pBioRt.anchoredPosition = new Vector2(0f, -66f);
+            }
+            if (_playerBiomassText != null)
+            {
+                _playerBiomassText.fontSize = 12.5f;
+            }
+
+            if (_enemyNestBar != null && _enemyNestBar.transform is RectTransform eBarRt)
+            {
+                eBarRt.sizeDelta = new Vector2(0f, 26f);
+                eBarRt.anchoredPosition = new Vector2(0f, -34f);
+            }
+            if (_enemyNestHealthText != null)
+            {
+                _enemyNestHealthText.fontSize = 13.5f;
+            }
+        }
+
+        private void ApplyColonyTitlesAndColors()
+        {
+            if (_playerTitleText != null)
+            {
+                _playerTitleText.text = _playerDisplayName;
+                _playerTitleText.fontSize = 16f;
+                _playerTitleText.fontStyle = FontStyles.Bold;
+                _playerTitleText.alignment = TextAlignmentOptions.Left;
+                _playerTitleText.textWrappingMode = TextWrappingModes.NoWrap;
+
+                if (MatchDirector.Instance != null)
+                {
+                    _playerTitleText.color = MatchDirector.Instance.GetTeamColor(MatchDirector.Instance.PlayerTeamId);
+                }
+                else
+                {
+                    _playerTitleText.color = new Color(0.2f, 0.85f, 0.3f, 1f);
+                }
+            }
+
+            if (_enemyTitleText != null)
+            {
+                _enemyTitleText.text = _enemyDisplayName;
+                _enemyTitleText.fontSize = 16f;
+                _enemyTitleText.fontStyle = FontStyles.Bold;
+                _enemyTitleText.alignment = TextAlignmentOptions.Left;
+                _enemyTitleText.textWrappingMode = TextWrappingModes.NoWrap;
+
+                if (MatchDirector.Instance != null)
+                {
+                    int enemyTeamId = (MatchDirector.Instance.PlayerTeamId == 0) ? 1 : 0;
+                    _enemyTitleText.color = MatchDirector.Instance.GetTeamColor(enemyTeamId);
+                }
+                else
+                {
+                    _enemyTitleText.color = new Color(0.9f, 0.25f, 0.25f, 1f);
+                }
+            }
         }
 
         #endregion
@@ -108,6 +286,7 @@ namespace AntScout.UI
                 _playerNest.OnHealthChanged += HandlePlayerNestHealthChanged;
                 _playerNest.OnBiomassChanged += HandlePlayerBiomassChanged;
                 _playerNest.OnWorkerSpawned += HandleWorkerSpawned;
+                _playerNest.OnSoldierSpawned += HandleSoldierSpawned;
 
                 _playerNestBar.SetValues(_playerNest.CurrentHealth, _playerNest.MaxHealth);
                 UpdateNestHealthText(_playerNestHealthText, _playerNest.CurrentHealth, _playerNest.MaxHealth);
@@ -127,6 +306,7 @@ namespace AntScout.UI
                 MatchDirector.Instance.OnMatchStateChanged += HandleMatchStateChanged;
             }
 
+            ApplyColonyTitlesAndColors();
             _isBound = true;
         }
 
@@ -139,6 +319,7 @@ namespace AntScout.UI
                 _playerNest.OnHealthChanged -= HandlePlayerNestHealthChanged;
                 _playerNest.OnBiomassChanged -= HandlePlayerBiomassChanged;
                 _playerNest.OnWorkerSpawned -= HandleWorkerSpawned;
+                _playerNest.OnSoldierSpawned -= HandleSoldierSpawned;
             }
 
             if (_enemyNest != null)
@@ -216,6 +397,11 @@ namespace AntScout.UI
             UpdateWorkerDisplay();
         }
 
+        private void HandleSoldierSpawned(ISwarmAgent agent)
+        {
+            UpdateWorkerDisplay();
+        }
+
         private void HandleEnemyNestHealthChanged(float current, float max)
         {
             _enemyNestBar.SetValues(current, max);
@@ -228,6 +414,7 @@ namespace AntScout.UI
             {
                 SetCountdownVisible(false);
             }
+            ApplyColonyTitlesAndColors();
         }
 
         #endregion
@@ -299,15 +486,29 @@ namespace AntScout.UI
         }
 
         private int _lastWorkerCount = -1;
+        private int _lastSoldierCount = -1;
+
         private void UpdateWorkerDisplay()
         {
             if (_playerWorkerText == null || _playerNest == null) return;
 
-            int count = _playerNest.ActiveWorkerCount;
-            if (count != _lastWorkerCount)
+            int workerCount = _playerNest.ActiveWorkerCount;
+            int soldierCount = _playerNest.ActiveSoldierCount;
+
+            if (workerCount != _lastWorkerCount || soldierCount != _lastSoldierCount)
             {
-                _lastWorkerCount = count;
-                _playerWorkerText.text = $"Workers: {count} / {_playerNest.MaxWorkers}";
+                _lastWorkerCount = workerCount;
+                _lastSoldierCount = soldierCount;
+
+                if (_playerSoldierText != null)
+                {
+                    _playerWorkerText.text = $"<color=#8EE4AF>Workers: {workerCount} / {_playerNest.MaxWorkers}</color>";
+                    _playerSoldierText.text = $"<color=#FFAA88>Soldiers: {soldierCount} / {_playerNest.MaxSoldiers}</color>";
+                }
+                else
+                {
+                    _playerWorkerText.text = $"<color=#8EE4AF>Workers: {workerCount}/{_playerNest.MaxWorkers}</color>   <color=#FFAA88>Soldiers: {soldierCount}/{_playerNest.MaxSoldiers}</color>";
+                }
             }
         }
 

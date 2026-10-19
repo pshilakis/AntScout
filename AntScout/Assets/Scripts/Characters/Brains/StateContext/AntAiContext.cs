@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using AntScout.Characters;
 using AntScout.Characters.Brains.Foraging;
 using AntScout.Characters.Brains.Tactics;
+using AntScout.Config;
 using AntScout.Core.Interfaces;
 using AntScout.Maps;
+using AntScout.Match;
 using AntScout.Resources.Components;
 using AntScout.Swarm.Nest;
 using PGS.Combat.Targeting;
@@ -326,6 +328,21 @@ namespace AntScout.Characters.Brains.StateContext
                 float centerAngle = Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg;
                 _currentHeadingAngle = (centerAngle + UnityEngine.Random.Range(-45f, 45f) + 360f) % 360f;
                 return;
+            }
+
+            // Opening buildup check: if ant roams beyond buildup foraging radius from home nest, steer back home
+            var swarmConfig = _homeNest != null ? _homeNest.Config : null;
+            if (swarmConfig != null && MatchDirector.Instance != null &&
+                MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration)
+            {
+                Vector3 toHome = _homeNest.SpawnPosition - selfPos;
+                toHome.y = 0f;
+                if (toHome.sqrMagnitude >= swarmConfig.BuildupForagingRadius * swarmConfig.BuildupForagingRadius)
+                {
+                    float homeAngle = Mathf.Atan2(toHome.x, toHome.z) * Mathf.Rad2Deg;
+                    _currentHeadingAngle = (homeAngle + UnityEngine.Random.Range(-35f, 35f) + 360f) % 360f;
+                    return;
+                }
             }
 
             // Hostile nest proximity check: If already near an enemy base, angle directly away from it

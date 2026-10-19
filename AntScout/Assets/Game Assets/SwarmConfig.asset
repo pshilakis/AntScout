@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Config.SwarmDefinition
   _nestRecruitmentRadius: 8
   _workerSpawnInterval: 1
-  _maxActiveWorkers: 20
+  _maxActiveWorkers: 40
   _nestWanderRadius: 5
   _initialWorkerCount: 6
   _workerBiomassCost: 50
@@ -35,3 +35,22 @@ MonoBehaviour:
   _newTrailPriorityDuration: 20
   _newTrailPriorityMultiplier: 5
   _trailSwitchEfficiencyAdvantage: 0.15
+  _soldierSpawnInterval: 4
+  _maxActiveSoldiers: 12
+  _initialSoldierCount: 2
+  _soldierBiomassCost: 75
+  _workersPerSoldierRatio: 3
+  _enableWartimeSurge: 1
+  _enableEmergencyBrood: 1
+  _emergencyWorkerIncubationTime: 12
+  _buildupPhaseDuration: 45
+  _buildupForagingRadius: 18
+  _suppressEarlyHeroAggression: 1
+  _swarmAggroRadius: 6
+  _swarmLeashRadius: 12
+  _swarmAlarmRadius: 15
+  _swarmCombatTimeout: 4
+  _nestDefenseRadius: 8
+  _soldierTrailEscortRatio: 0.5
+  _soldierHarvestGuardDuration: 6
+  _soldierFlankOffset: 1.2
