@@ -21,6 +21,7 @@ namespace AntScout.Characters
     public sealed partial class AntCharacter :
         IMovementReceiver,
         IAttackable,
+        IHealthEntity,
         IColonyFactionMember,
         IDamageReceiver,
         IHealReceiver,

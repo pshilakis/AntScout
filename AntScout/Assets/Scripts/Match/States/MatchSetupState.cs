@@ -73,6 +73,9 @@ namespace AntScout.Match.States
                 hudView.BindNests(playerNest, enemyNest);
             }
 
+            // Bind nest visuals (styles initial workers/soldiers and hooks ongoing spawns)
+            director.RefreshAllNestVisualBindings();
+
             // 4. Explicit deterministic spawning of all participants
             if (director.SpawnController != null)
             {

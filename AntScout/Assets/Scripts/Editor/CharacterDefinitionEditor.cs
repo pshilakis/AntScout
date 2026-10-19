@@ -16,6 +16,7 @@ namespace AntScout.Editor
     {
         private SerializedProperty _characterNameProp;
         private SerializedProperty _iconProp;
+        private SerializedProperty _materialProp;
 
         private SerializedProperty _maxHealthProp;
         private SerializedProperty _defenseProp;
@@ -59,16 +60,37 @@ namespace AntScout.Editor
             "Hero AI & Behavior"
         };
 
+        private SerializedProperty _enableHealthBarProp;
+        private SerializedProperty _healthBarHeightOffsetProp;
+        private SerializedProperty _healthBarWidthProp;
+        private SerializedProperty _healthBarHeightProp;
+        private SerializedProperty _healthBarBorderThicknessProp;
+        private SerializedProperty _healthBarSegmentSizeProp;
+        private SerializedProperty _healthBarSegmentGapProp;
+        private SerializedProperty _healthBarNotchWidthProp;
+        private SerializedProperty _healthBarVisibilityProp;
+
         private void OnEnable()
         {
             _characterNameProp = serializedObject.FindProperty("_characterName");
             _iconProp = serializedObject.FindProperty("_icon");
+            _materialProp = serializedObject.FindProperty("_material");
 
             _maxHealthProp = serializedObject.FindProperty("_maxHealth");
             _defenseProp = serializedObject.FindProperty("_defense");
             _attackProp = serializedObject.FindProperty("_attack");
             _baseMoveSpeedProp = serializedObject.FindProperty("_baseMoveSpeed");
             _visionRadiusProp = serializedObject.FindProperty("_visionRadius");
+
+            _enableHealthBarProp = serializedObject.FindProperty("_enableHealthBar");
+            _healthBarHeightOffsetProp = serializedObject.FindProperty("_healthBarHeightOffset");
+            _healthBarWidthProp = serializedObject.FindProperty("_healthBarWidth");
+            _healthBarHeightProp = serializedObject.FindProperty("_healthBarHeight");
+            _healthBarBorderThicknessProp = serializedObject.FindProperty("_healthBarBorderThickness");
+            _healthBarSegmentSizeProp = serializedObject.FindProperty("_healthBarSegmentSize");
+            _healthBarSegmentGapProp = serializedObject.FindProperty("_healthBarSegmentGap");
+            _healthBarNotchWidthProp = serializedObject.FindProperty("_healthBarNotchWidth");
+            _healthBarVisibilityProp = serializedObject.FindProperty("_healthBarVisibility");
 
             _prioritiesProp = serializedObject.FindProperty("_priorities");
             _aiBehaviorProp = serializedObject.FindProperty("_aiBehavior");
@@ -129,11 +151,28 @@ namespace AntScout.Editor
         {
             EditorGUILayout.PropertyField(_characterNameProp);
             EditorGUILayout.PropertyField(_iconProp);
+            EditorGUILayout.PropertyField(_materialProp);
 
             EditorGUILayout.Space(6);
             EditorGUILayout.PropertyField(_maxHealthProp);
             EditorGUILayout.PropertyField(_defenseProp);
             EditorGUILayout.PropertyField(_attackProp);
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.PropertyField(_enableHealthBarProp);
+            if (_enableHealthBarProp != null && _enableHealthBarProp.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_healthBarHeightOffsetProp, new GUIContent("Height Offset (Above Unit)"));
+                EditorGUILayout.PropertyField(_healthBarWidthProp, new GUIContent("Health Bar Width (Meters)"));
+                EditorGUILayout.PropertyField(_healthBarHeightProp, new GUIContent("Bar Thickness / Height (Meters)"));
+                EditorGUILayout.PropertyField(_healthBarBorderThicknessProp, new GUIContent("Border Thickness (Meters)"));
+                EditorGUILayout.PropertyField(_healthBarSegmentSizeProp, new GUIContent("Segment Pip Size (HP Per Pip)"));
+                EditorGUILayout.PropertyField(_healthBarSegmentGapProp, new GUIContent("Segment Gap (0 = Solid SC2)", "Transparent cutout gap width. Set to 0 for solid StarCraft 2 style."));
+                EditorGUILayout.PropertyField(_healthBarNotchWidthProp, new GUIContent("Divider Line Width (SC2 Notches)", "Thickness of the solid dark divider lines separating pips."));
+                EditorGUILayout.PropertyField(_healthBarVisibilityProp, new GUIContent("Visibility Policy"));
+                EditorGUI.indentLevel--;
+            }
 
             EditorGUILayout.Space(6);
             EditorGUILayout.PropertyField(_baseMoveSpeedProp);

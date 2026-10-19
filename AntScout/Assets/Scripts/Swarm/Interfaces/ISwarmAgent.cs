@@ -1,3 +1,4 @@
+using AntScout.Characters;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
 using UnityEngine;
@@ -28,6 +29,9 @@ namespace AntScout.Swarm.Interfaces
         SwarmAgentState CurrentState { get; }
         Transform AgentTransform { get; }
         ColonyNest HomeNest { get; }
+        CharacterDefinition CharacterDefinition { get; }
+        Renderer BodyRenderer { get; }
+        int ColonyTeamId { get; }
 
         void Initialize(ColonyNest homeNest, PheromoneTrailEmitter trailEmitter);
         void OrderReturnHome();

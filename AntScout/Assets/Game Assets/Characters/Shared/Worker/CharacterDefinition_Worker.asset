@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Characters.CharacterDefinition
   _characterName: Worker
   _icon: {fileID: 0}
+  _material: {fileID: 2100000, guid: c50def3f8c8622d48b9505cb880ea2f3, type: 2}
   _maxHealth:
     StatType: {fileID: 11400000, guid: ae769a80a7bc5864283e738c731e9a8a, type: 2}
     BaseValue: 35
@@ -23,6 +24,15 @@ MonoBehaviour:
   _attack:
     StatType: {fileID: 11400000, guid: d20833791706520488e0968e006c4c30, type: 2}
     BaseValue: 4
+  _enableHealthBar: 1
+  _healthBarHeightOffset: 0.85
+  _healthBarWidth: 0.8
+  _healthBarHeight: 0.1
+  _healthBarBorderThickness: 0.012
+  _healthBarSegmentSize: 10
+  _healthBarSegmentGap: 0
+  _healthBarNotchWidth: 0.025
+  _healthBarVisibility: 0
   _baseMoveSpeed: 3.75
   _visionRadius: 5
   _priorities:

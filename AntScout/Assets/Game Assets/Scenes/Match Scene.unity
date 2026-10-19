@@ -1055,6 +1055,8 @@ MonoBehaviour:
   _autoLockParticipantsOnConclusion: 1
   _spawnController: {fileID: 852374379}
   _matchUiPrefab: {fileID: 623780395895670789, guid: 317bd27554426b1449a9fc86b7fb7363, type: 3}
+  _defaultPlayerColor: {r: 0, g: 0.8002429, b: 1, a: 1}
+  _defaultEnemyColor: {r: 1, g: 0.15, b: 0, a: 1}
 --- !u!1001 &562298555112415107
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System;
+using AntScout.Config;
 using UnityEngine;
 
 namespace AntScout.Match

@@ -24,6 +24,14 @@ namespace AntScout.Config
         [Range(1, 100)]
         [SerializeField] private int _maxActiveWorkers = 20;
 
+        [Tooltip("Seconds between successive soldier ant deployments from the nest.")]
+        [Range(0.5f, 10.0f)]
+        [SerializeField] private float _soldierSpawnInterval = 4.0f;
+
+        [Tooltip("Maximum concurrent soldier ants deployed in the field.")]
+        [Range(0, 50)]
+        [SerializeField] private int _maxActiveSoldiers = 6;
+
         [Tooltip("Radius around the nest depot within which idle workers roam and wander.")]
         [Range(1f, 15f)]
         [SerializeField] private float _nestWanderRadius = 5.0f;
@@ -39,6 +47,21 @@ namespace AntScout.Config
         [Tooltip("Biomass cost deducted from the nest to incubate and hatch a new worker ant.")]
         [Range(10, 200)]
         [SerializeField] private int _workerBiomassCost = 50;
+
+        [Tooltip("Number of persistent soldier ants deployed at the start of the simulation.")]
+        [Range(0, 20)]
+        [SerializeField] private int _initialSoldierCount = 2;
+
+        [Tooltip("Biomass cost deducted from the nest to incubate and hatch a new soldier ant.")]
+        [Range(10, 300)]
+        [SerializeField] private int _soldierBiomassCost = 75;
+
+        [Tooltip("Number of active workers required to justify supporting one soldier ant in peacetime (e.g. 3 = 1 soldier for every 3 workers).")]
+        [Range(1, 10)]
+        [SerializeField] private int _workersPerSoldierRatio = 3;
+
+        [Tooltip("Enables emergency wartime surge mobilization. When true, active alarm trails or nest attacks cause 100% of biomass to be funneled into hatching soldiers.")]
+        [SerializeField] private bool _enableWartimeSurge = true;
 
         [ColoredHeader("Navigation & Arrival Thresholds", HeaderColor.Coral)]
         [Tooltip("Distance threshold to consider an intermediate waypoint reached.")]
@@ -136,16 +159,39 @@ namespace AntScout.Config
         [Range(3.0f, 25.0f)]
         [SerializeField] private float _nestDefenseRadius = 8.0f;
 
+        [Tooltip("Portion (0% to 100%) of active soldiers assigned to patrol and defend active recruitment trails. The remainder stay anchored at the home nest.")]
+        [Range(0.0f, 1.0f)]
+        [SerializeField] private float _soldierTrailEscortRatio = 0.5f;
+
+        [Tooltip("Duration in seconds that an escorting soldier ant stands defensive guard at the food harvest perimeter before rotating back down the trail.")]
+        [Range(1.0f, 30.0f)]
+        [SerializeField] private float _soldierHarvestGuardDuration = 6.0f;
+
+        [Tooltip("Lateral distance in meters that escort soldiers maintain from the centerline of the trail to avoid impeding worker lines.")]
+        [Range(0.2f, 3.0f)]
+        [SerializeField] private float _soldierFlankOffset = 1.2f;
+
         // Public read-only accessors
         public float NestRecruitmentRadius => _nestRecruitmentRadius;
         public float WorkerSpawnInterval => _workerSpawnInterval;
         public int MaxActiveWorkers => _maxActiveWorkers;
+        public float SoldierSpawnInterval => _soldierSpawnInterval;
+        public int MaxActiveSoldiers => _maxActiveSoldiers;
         public int InitialWorkerCount => _initialWorkerCount;
+        public int InitialSoldierCount => _initialSoldierCount;
         public BoundedInt InitialBiomass => _initialBiomass;
         public int WorkerBiomassCost => _workerBiomassCost;
+        public int SoldierBiomassCost => _soldierBiomassCost;
+        public int WorkersPerSoldierRatio => _workersPerSoldierRatio;
+        public bool EnableWartimeSurge => _enableWartimeSurge;
         public float NestWanderRadius => _nestWanderRadius;
 
+        public float SoldierTrailEscortRatio => _soldierTrailEscortRatio;
+        public float SoldierHarvestGuardDuration => _soldierHarvestGuardDuration;
+        public float SoldierFlankOffset => _soldierFlankOffset;
+
         public float WorkerMoveSpeed => 5.5f;
+        public float SoldierMoveSpeed => 4.0f;
         public float TrailSamplingRadius => _trailSamplingRadius;
         public float FoodDetectionRadius => _foodDetectionRadius;
         public float WaypointLookAheadDistance => _waypointLookAheadDistance;

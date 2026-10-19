@@ -275,12 +275,39 @@ namespace AntScout.Pheromone
         }
 
         /// <summary>
-        /// Finds the best recruitment node based on chemical scent freshness (intensity) and spatial proximity.
+        /// Checks if any active alarm trail segment has a node within the specified radius of a point.
+        /// </summary>
+        public bool HasAlarmNear(Vector3 position, float radiusSqr)
+        {
+            for (int s = 0; s < _segments.Count; s++)
+            {
+                PheromoneTrailSegment seg = _segments[s];
+                if (seg.Type != PheromoneType.Alarm) continue;
+
+                IReadOnlyList<PheromoneNode> nodes = seg.Nodes;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    Vector3 p = nodes[i].Position;
+                    float dx = p.x - position.x;
+                    float dz = p.z - position.z;
+                    if ((dx * dx + dz * dz) <= radiusSqr)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Finds the best trail node of the specified PheromoneType based on chemical scent freshness (intensity) and spatial proximity.
         /// Favors newly laid, potent trails over decaying or old strokes.
         /// </summary>
-        public bool TryFindBestRecruitmentNode(
+        public bool TryFindBestTrailNode(
             Vector3 position,
             float maxRadiusSqr,
+            PheromoneType trailType,
             out PheromoneTrailSegment bestSegment,
             out int bestNodeIndex,
             PheromoneTrailSegment excludeSegment = null,
@@ -296,7 +323,7 @@ namespace AntScout.Pheromone
             for (int s = 0; s < _segments.Count; s++)
             {
                 PheromoneTrailSegment seg = _segments[s];
-                if (seg.Type != PheromoneType.Recruitment) continue;
+                if (seg.Type != trailType) continue;
                 if (excludeSegment != null && seg == excludeSegment) continue;
 
                 float freshnessMultiplier = 1.0f;
@@ -326,8 +353,6 @@ namespace AntScout.Pheromone
                         if (intensity <= 0.01f) continue;
 
                         // Potency Score: (Intensity * FreshnessMultiplier * Efficiency) / (1.0 + distance * 2.0)
-                        // Uses realistic chemical attenuation (2.0f) so nearby nodes (e.g. food tip) are not
-                        // bypassed in favor of distant bright highway nodes.
                         float dist = Mathf.Sqrt(distSqr);
                         float score = (intensity * freshnessMultiplier * effFactor) / (1.0f + dist * 2.0f);
 
@@ -342,6 +367,36 @@ namespace AntScout.Pheromone
             }
 
             return bestSegment != null;
+        }
+
+        /// <summary>
+        /// Finds the best recruitment node based on chemical scent freshness (intensity) and spatial proximity.
+        /// </summary>
+        public bool TryFindBestRecruitmentNode(
+            Vector3 position,
+            float maxRadiusSqr,
+            out PheromoneTrailSegment bestSegment,
+            out int bestNodeIndex,
+            PheromoneTrailSegment excludeSegment = null,
+            float priorityDuration = 0f,
+            float priorityMultiplier = 1f)
+        {
+            return TryFindBestTrailNode(position, maxRadiusSqr, PheromoneType.Recruitment, out bestSegment, out bestNodeIndex, excludeSegment, priorityDuration, priorityMultiplier);
+        }
+
+        /// <summary>
+        /// Finds the best alarm node based on chemical scent freshness (intensity) and spatial proximity.
+        /// </summary>
+        public bool TryFindBestAlarmNode(
+            Vector3 position,
+            float maxRadiusSqr,
+            out PheromoneTrailSegment bestSegment,
+            out int bestNodeIndex,
+            PheromoneTrailSegment excludeSegment = null,
+            float priorityDuration = 0f,
+            float priorityMultiplier = 1f)
+        {
+            return TryFindBestTrailNode(position, maxRadiusSqr, PheromoneType.Alarm, out bestSegment, out bestNodeIndex, excludeSegment, priorityDuration, priorityMultiplier);
         }
 
         /// <summary>

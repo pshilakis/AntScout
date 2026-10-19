@@ -1,6 +1,7 @@
 using System;
 using AntScout.Characters;
 using AntScout.Maps;
+using AntScout.UI.Overhead;
 using PGS.FogOfWar.Core;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
@@ -47,6 +48,9 @@ namespace AntScout.Characters
         [Tooltip("Transform of the child visual model to rotate and interpolate at 144Hz+.")]
         [SerializeField] private Transform _modelTransform;
 
+        [Tooltip("Renderer for the ant character's body mesh. Auto-cached if unassigned.")]
+        [SerializeField] private Renderer _bodyRenderer;
+
         private KinematicMotor3D _motor;
         private CharacterCollider3D _characterCollider;
         private PlayerController _playerController;
@@ -69,6 +73,34 @@ namespace AntScout.Characters
         public CharacterGland Gland => _gland;
         public ColonyNest HomeNest => _homeNest;
         public bool IsAlive => _isAlive;
+
+        public Renderer BodyRenderer
+        {
+            get
+            {
+                if (_bodyRenderer == null)
+                {
+                    _bodyRenderer = ResolveBodyRenderer();
+                }
+                return _bodyRenderer;
+            }
+        }
+
+        private Renderer ResolveBodyRenderer()
+        {
+            if (_modelTransform != null)
+            {
+                var rend = _modelTransform.GetComponentInChildren<Renderer>();
+                if (rend != null) return rend;
+            }
+            Transform visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                var rend = visual.GetComponentInChildren<Renderer>();
+                if (rend != null) return rend;
+            }
+            return GetComponentInChildren<Renderer>();
+        }
 
         #endregion
 
@@ -114,6 +146,7 @@ namespace AntScout.Characters
         {
             ValidateLocomotionModules();
             ApplyLocomotionOverrides();
+            SetupHealthBar();
         }
 
         private void OnEnable()
@@ -170,6 +203,25 @@ namespace AntScout.Characters
             if (aiBrain != null)
             {
                 aiBrain.Initialize(homeNest);
+            }
+
+            SetupHealthBar();
+        }
+
+        private void SetupHealthBar()
+        {
+            if (_definition != null && _definition.EnableHealthBar)
+            {
+                OverheadHealthBar.Attach(
+                    gameObject,
+                    _definition.HealthBarHeightOffset,
+                    _definition.HealthBarWidth,
+                    _definition.HealthBarHeight,
+                    _definition.HealthBarBorderThickness,
+                    _definition.HealthBarSegmentSize,
+                    _definition.HealthBarSegmentGap,
+                    _definition.HealthBarNotchWidth,
+                    _definition.HealthBarVisibility);
             }
         }
 

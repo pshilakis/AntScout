@@ -40,12 +40,17 @@ namespace AntScout.Swarm.Nest
         [Tooltip("Prefab instantiated when deploying worker ants (must contain an ISwarmAgent component).")]
         [SerializeField] private GameObject _workerPrefab;
 
+        [Tooltip("Optional prefab instantiated when deploying soldier ants (must contain an ISwarmAgent component).")]
+        [SerializeField] private GameObject _soldierPrefab;
+
         [Tooltip("Spawn origin point for deployed ants. Defaults to Nest transform if unassigned.")]
         [SerializeField] private Transform _spawnPoint;
 
         private readonly List<ISwarmAgent> _activeWorkers = new List<ISwarmAgent>();
+        private readonly List<ISwarmAgent> _activeSoldiers = new List<ISwarmAgent>();
         private bool _isTrailConnected;
         private float _spawnTimer;
+        private float _soldierSpawnTimer;
 
         [Header("Live Colony Telemetry")]
         [Tooltip("Live current and maximum biomass reserves for the colony nest.")]
@@ -53,6 +58,7 @@ namespace AntScout.Swarm.Nest
 
         public event Action<bool> OnTrailConnectionChanged;
         public event Action<ISwarmAgent> OnWorkerSpawned;
+        public event Action<ISwarmAgent> OnSoldierSpawned;
         public event Action<BoundedInt> OnBiomassChanged;
 
         public Vector3 SpawnPosition
@@ -80,6 +86,10 @@ namespace AntScout.Swarm.Nest
         public bool IsTrailConnected => _isTrailConnected;
         public int ActiveWorkerCount => _activeWorkers.Count;
         public int MaxWorkers => _config != null ? _config.MaxActiveWorkers : 0;
+        public int ActiveSoldierCount => _activeSoldiers.Count;
+        public int MaxSoldiers => _config != null ? _config.MaxActiveSoldiers : 0;
+        public IReadOnlyList<ISwarmAgent> ActiveWorkers => _activeWorkers;
+        public IReadOnlyList<ISwarmAgent> ActiveSoldiers => _activeSoldiers;
         public BoundedInt Biomass => _biomass;
         public int TotalBiomass => _biomass.Current;
 
@@ -130,6 +140,16 @@ namespace AntScout.Swarm.Nest
             for (int i = 0; i < initialCount; i++)
             {
                 SpawnWorker();
+            }
+
+            // Spawn initial soldier defense squad
+            if (_soldierPrefab != null && _config != null)
+            {
+                int initialSoldiers = Mathf.Min(_config.InitialSoldierCount, _config.MaxActiveSoldiers);
+                for (int i = 0; i < initialSoldiers; i++)
+                {
+                    SpawnSoldier();
+                }
             }
         }
 
@@ -232,10 +252,20 @@ namespace AntScout.Swarm.Nest
 
         /// <summary>
         /// Rallies all active defenders in this colony to converge on and attack a hostile intruder (Red Alert).
+        /// Prioritizes armored soldier caste, followed by worker militia.
         /// </summary>
         public void RallyNestDefenders(IAttackable hostileTarget)
         {
             if (hostileTarget == null || !hostileTarget.IsAttackable) return;
+
+            for (int i = 0; i < _activeSoldiers.Count; i++)
+            {
+                ISwarmAgent agent = _activeSoldiers[i];
+                if (agent is SwarmAgent swarmAgent)
+                {
+                    swarmAgent.EngageTarget(hostileTarget);
+                }
+            }
 
             for (int i = 0; i < _activeWorkers.Count; i++)
             {
@@ -258,6 +288,16 @@ namespace AntScout.Swarm.Nest
                     _activeWorkers.RemoveAt(i);
                 }
             }
+
+            for (int i = _activeSoldiers.Count - 1; i >= 0; i--)
+            {
+                if (_activeSoldiers[i] == null || 
+                    _activeSoldiers[i].AgentTransform == null || 
+                    !_activeSoldiers[i].AgentTransform.gameObject.activeInHierarchy)
+                {
+                    _activeSoldiers.RemoveAt(i);
+                }
+            }
         }
 
         /// <summary>
@@ -268,12 +308,24 @@ namespace AntScout.Swarm.Nest
             if (agent != null)
             {
                 _activeWorkers.Remove(agent);
+                _activeSoldiers.Remove(agent);
+            }
+        }
+
+        /// <summary>
+        /// Explicitly unregisters an agent from active soldier tracking.
+        /// </summary>
+        public void UnregisterSoldier(ISwarmAgent agent)
+        {
+            if (agent != null)
+            {
+                _activeSoldiers.Remove(agent);
             }
         }
 
         /// <summary>
         /// Broadcasts an alarm signal to all active swarm agents within the specified radius of the origin.
-        /// Zero heap allocation (iterates internal active worker list).
+        /// Zero heap allocation (iterates internal active agent lists).
         /// </summary>
         public void BroadcastSwarmAlarm(ISwarmAgent instigatorAgent, IAttackable hostileTarget, float radius)
         {
@@ -295,6 +347,27 @@ namespace AntScout.Swarm.Nest
                 Vector3 diff = t.position - origin;
                 float dSqr = diff.x * diff.x + diff.z * diff.z;
                 if (dSqr <= radiusSqr)
+                {
+                    if (agent is SwarmAgent swarmAgent)
+                    {
+                        swarmAgent.OnAlarmReceived(hostileTarget);
+                    }
+                }
+            }
+
+            // Soldiers have dedicated combat duty: alert soldiers across an expanded radius
+            float soldierRadiusSqr = (radius * 1.5f) * (radius * 1.5f);
+            for (int i = 0; i < _activeSoldiers.Count; i++)
+            {
+                ISwarmAgent agent = _activeSoldiers[i];
+                if (agent == null || agent == instigatorAgent) continue;
+
+                Transform t = agent.AgentTransform;
+                if (t == null) continue;
+
+                Vector3 diff = t.position - origin;
+                float dSqr = diff.x * diff.x + diff.z * diff.z;
+                if (dSqr <= soldierRadiusSqr)
                 {
                     if (agent is SwarmAgent swarmAgent)
                     {
@@ -325,20 +398,104 @@ namespace AntScout.Swarm.Nest
 
         private void ProcessDeployment(float deltaTime)
         {
-            // StarCraft-style economy: Nest incubates and hatches new workers by spending harvested biomass
-            if (_activeWorkers.Count >= _config.MaxActiveWorkers || _biomass.Current < _config.WorkerBiomassCost)
+            if (_config == null) return;
+
+            // 1. Evaluate Wartime Surge (Red Alert)
+            bool isWartimeSurge = false;
+            if (_config.EnableWartimeSurge)
             {
-                _spawnTimer = 0f;
-                return;
+                PheromoneTrailEmitter emitter = TrailEmitter;
+                float alertRadiusSqr = (_config.NestDefenseRadius + 4f) * (_config.NestDefenseRadius + 4f);
+                if (emitter != null && emitter.HasAlarmNear(transform.position, alertRadiusSqr))
+                {
+                    isWartimeSurge = true;
+                }
+
+                if (!isWartimeSurge)
+                {
+                    int intruderCount = Physics.OverlapSphereNonAlloc(transform.position, _config.NestDefenseRadius, s_defensePerimeterBuffer, ~0, QueryTriggerInteraction.Collide);
+                    for (int i = 0; i < intruderCount; i++)
+                    {
+                        Collider col = s_defensePerimeterBuffer[i];
+                        if (col == null) continue;
+                        IAttackable atk = col.GetComponent<IAttackable>() ?? col.GetComponentInParent<IAttackable>();
+                        if (atk != null && atk.IsAttackable && atk != (this as IAttackable))
+                        {
+                            IFactionMember faction = (atk as IFactionMember) ?? col.GetComponentInParent<IFactionMember>();
+                            if (faction != null && GetAffiliationTowards(faction) == TargetAffiliation.Enemy)
+                            {
+                                isWartimeSurge = true;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
-            _spawnTimer += deltaTime;
-            if (_spawnTimer >= _config.WorkerSpawnInterval)
+            // 2. Proportional Ratio Calculation (Golden Ratio: e.g. 1 soldier per 3 workers)
+            int ratio = Mathf.Max(1, _config.WorkersPerSoldierRatio);
+            int targetSoldiers = Mathf.Min(Mathf.Max(1, _activeWorkers.Count / ratio), _config.MaxActiveSoldiers);
+            bool isSoldierDeficit = _activeSoldiers.Count < targetSoldiers;
+
+            bool canHatchSoldier = _soldierPrefab != null && _activeSoldiers.Count < _config.MaxActiveSoldiers;
+            bool canHatchWorker = _workerPrefab != null && _activeWorkers.Count < _config.MaxActiveWorkers;
+
+            // 3. Strategic Caste Prioritization:
+            // - Priority 1: Wartime Surge (Emergency military mobilization)
+            // - Priority 2: Soldier Deficit (Maintain defense ratio)
+            // - Priority 3: Worker Expansion (Grow foraging economy)
+            // - Priority 4: Max Worker Cap Overflow (Channel surplus into remaining soldiers)
+            bool prioritizeSoldier = false;
+
+            if (canHatchSoldier && (isWartimeSurge || isSoldierDeficit || !canHatchWorker))
+            {
+                prioritizeSoldier = true;
+            }
+
+            if (prioritizeSoldier)
             {
                 _spawnTimer = 0f;
-                _biomass -= _config.WorkerBiomassCost;
-                OnBiomassChanged?.Invoke(_biomass);
-                SpawnWorker();
+
+                if (_biomass.Current >= _config.SoldierBiomassCost)
+                {
+                    _soldierSpawnTimer += deltaTime;
+                    if (_soldierSpawnTimer >= _config.SoldierSpawnInterval)
+                    {
+                        _soldierSpawnTimer = 0f;
+                        _biomass -= _config.SoldierBiomassCost;
+                        OnBiomassChanged?.Invoke(_biomass);
+                        SpawnSoldier();
+                    }
+                }
+                else
+                {
+                    _soldierSpawnTimer = 0f;
+                }
+            }
+            else if (canHatchWorker)
+            {
+                _soldierSpawnTimer = 0f;
+
+                if (_biomass.Current >= _config.WorkerBiomassCost)
+                {
+                    _spawnTimer += deltaTime;
+                    if (_spawnTimer >= _config.WorkerSpawnInterval)
+                    {
+                        _spawnTimer = 0f;
+                        _biomass -= _config.WorkerBiomassCost;
+                        OnBiomassChanged?.Invoke(_biomass);
+                        SpawnWorker();
+                    }
+                }
+                else
+                {
+                    _spawnTimer = 0f;
+                }
+            }
+            else
+            {
+                _spawnTimer = 0f;
+                _soldierSpawnTimer = 0f;
             }
         }
 
@@ -357,6 +514,25 @@ namespace AntScout.Swarm.Nest
             agent.Initialize(this, TrailEmitter);
             _activeWorkers.Add(agent);
             OnWorkerSpawned?.Invoke(agent);
+        }
+
+        private void SpawnSoldier()
+        {
+            if (_soldierPrefab == null) return;
+
+            GameObject soldierObj = SpawnPool.Spawn(_soldierPrefab, _spawnPoint.position, _spawnPoint.rotation);
+            ISwarmAgent agent = soldierObj.GetComponent<ISwarmAgent>();
+
+            if (agent == null)
+            {
+                SpawnPool.Despawn(soldierObj);
+                throw new InvalidOperationException(
+                    $"[ColonyNest] Assigned SoldierPrefab '{_soldierPrefab.name}' is missing an ISwarmAgent component.");
+            }
+
+            agent.Initialize(this, TrailEmitter);
+            _activeSoldiers.Add(agent);
+            OnSoldierSpawned?.Invoke(agent);
         }
 
         /// <summary>

@@ -21,7 +21,7 @@ namespace AntScout.Swarm.Agents
     /// </summary>
     [RequireComponent(typeof(StatsController))]
     [RequireComponent(typeof(StatusReceiver))]
-    public abstract partial class SwarmAgent : IAttackable, IColonyFactionMember, IDamageReceiver, IHealReceiver
+    public abstract partial class SwarmAgent : IAttackable, IHealthEntity, IColonyFactionMember, IDamageReceiver, IHealReceiver
     {
         protected StatsController _statsController;
         protected StatusReceiver _statusReceiver;

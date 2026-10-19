@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using AntScout.Config;
 using AntScout.Match.States;
 using AntScout.Swarm.Nest;
 using Cysharp.Threading.Tasks;
@@ -40,6 +41,15 @@ namespace AntScout.Match
         [Tooltip("Optional Match UI root prefab (containing Canvas, HUD, and Modals). If assigned and not already present in the scene, it will be instantiated during match setup.")]
         [SerializeField] private GameObject _matchUiPrefab;
 
+        [ColoredHeader("Team Visuals (Standalone Defaults)", HeaderColor.Lavender)]
+        [Tooltip("Default color applied to Player (Team 0) units in standalone/in-editor matches.")]
+        [SerializeField] private Color _defaultPlayerColor = new Color(0.0f, 0.8f, 1.0f, 1.0f);
+
+        [Tooltip("Default color applied to Enemy (Team 1) units in standalone/in-editor matches.")]
+        [SerializeField] private Color _defaultEnemyColor = new Color(1.0f, 0.15f, 0.0f, 1.0f);
+
+        private readonly System.Collections.Generic.Dictionary<int, Color> _teamColors = new System.Collections.Generic.Dictionary<int, Color>();
+
         private AsyncStateMachine<MatchDirector> _stateMachine;
         private float _preMatchTimer;
         private DateTimeOffset _startTimeUtc;
@@ -74,6 +84,26 @@ namespace AntScout.Match
         public int PlayerTeamId => _playerTeamId;
         public bool AutoLockParticipantsOnConclusion => _autoLockParticipantsOnConclusion;
 
+        public void SetTeamColor(int teamId, Color color)
+        {
+            _teamColors[teamId] = color;
+        }
+
+        public Color GetTeamColor(int teamId)
+        {
+            if (_teamColors.TryGetValue(teamId, out Color color))
+            {
+                return color;
+            }
+
+            return teamId switch
+            {
+                0 => _defaultPlayerColor,
+                1 => _defaultEnemyColor,
+                _ => Color.white
+            };
+        }
+
         public float ElapsedSimulationTime => _stateMachine?.CurrentState is MatchInProgressState
             ? PgsTime.ElapsedTime - _startSimulationTime
             : (_finalResult.HasValue ? _finalResult.Value.ActivePlayDuration : 0f);
@@ -98,6 +128,7 @@ namespace AntScout.Match
             }
             s_instance = this;
             ValidateConfiguration();
+            InitializeVisuals();
         }
 
         private async void Start()
@@ -118,6 +149,7 @@ namespace AntScout.Match
 
         private void OnDestroy()
         {
+            CleanupVisuals();
             _stateMachine?.UnregisterFromTime();
 
             if (s_instance == this)

@@ -116,7 +116,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.05, z: 0}
-  m_LocalScale: {x: 0.6, y: 2, z: 0.6}
+  m_LocalScale: {x: 0.75, y: 2, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4512786292356078554}
@@ -139,6 +139,7 @@ GameObject:
   - component: {fileID: 6506247184042379439}
   - component: {fileID: 218508178701343779}
   - component: {fileID: 8721345601289473214}
+  - component: {fileID: 1822005945838512773}
   m_Layer: 0
   m_Name: Soldier
   m_TagString: Untagged
@@ -236,7 +237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.AIPath
   version: 1073741824
-  radius: 0.5
+  radius: 0.75
   height: 2
   simulateMovement: 1
   maxSpeed: 1
@@ -319,12 +320,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 8079377051405443581}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d8fe615c17d72cb4eb7e31291004c19f, type: 3}
+  m_Script: {fileID: 11500000, guid: ec719934b35a4e15931af6685b58197f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Agents.WorkerAntController
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Swarm.Agents.SoldierAntController
   _config: {fileID: 11400000, guid: 174659f8cad8ace4096b02766f4d468f, type: 2}
-  _characterDefinition: {fileID: 11400000, guid: 674586a56639a8a45bb7a36fd153e0b5, type: 2}
-  _carriedMorselVisual: {fileID: 0}
+  _characterDefinition: {fileID: 11400000, guid: 5895c2aba5b836d47aa1a95b8fb4c8ea, type: 2}
+  _bodyRenderer: {fileID: 0}
 --- !u!114 &6506247184042379439
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -369,3 +370,26 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _timeChannel: 1
+--- !u!136 &1822005945838512773
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8079377051405443581}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.75
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}

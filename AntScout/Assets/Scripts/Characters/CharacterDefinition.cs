@@ -1,5 +1,6 @@
 using System;
 using AntScout.Characters.Brains.Behaviors;
+using AntScout.UI.Overhead;
 using PGS.Combat.Execution;
 using PGS.Core;
 using PGS.Input.Common;
@@ -23,6 +24,9 @@ namespace AntScout.Characters
         [SerializeField] private string _characterName = "Scout Ant";
         [SerializeField] private Sprite _icon;
 
+        [Tooltip("Material authored for this unit (contains artist textures, emission masks, etc.).")]
+        [SerializeField] private Material _material;
+
         [ColoredHeader("Base Stats & Vitals (com.pgs.stats)", HeaderColor.Green)]
         [Tooltip("Maximum Health StatTypeSO and starting base value seeded into StatsController.")]
         [SerializeField] private StatsController.InitialStatConfig _maxHealth;
@@ -32,6 +36,36 @@ namespace AntScout.Characters
 
         [Tooltip("Base Attack Damage StatTypeSO and starting base value seeded into StatsController (scales CombatAction potency).")]
         [SerializeField] private StatsController.InitialStatConfig _attack;
+
+        [ColoredHeader("Overhead Health Bar", HeaderColor.Green)]
+        [Tooltip("Whether to display a floating diegetic overhead health bar above this unit.")]
+        [SerializeField] private bool _enableHealthBar = true;
+
+        [Tooltip("Height offset in meters above unit root.")]
+        [SerializeField] private float _healthBarHeightOffset = 1.2f;
+
+        [Tooltip("Width of the health bar in world meters.")]
+        [SerializeField] private float _healthBarWidth = 1.0f;
+
+        [Tooltip("Height of the health bar in world meters (Bar Thickness).")]
+        [SerializeField] private float _healthBarHeight = 0.12f;
+
+        [Tooltip("Thickness of the outer border frame in world meters.")]
+        [SerializeField] private float _healthBarBorderThickness = 0.015f;
+
+        [Tooltip("HP per segment pip. Set to 0 for a smooth unsegmented bar.")]
+        [SerializeField] private float _healthBarSegmentSize = 20.0f;
+
+        [Tooltip("Normalized transparent gap between segment pips (0 = solid filled SC2 style, >0 = transparent cutouts).")]
+        [Range(0f, 0.1f)]
+        [SerializeField] private float _healthBarSegmentGap = 0.0f;
+
+        [Tooltip("Divider notch line width (solid StarCraft 2 dark divider lines).")]
+        [Range(0f, 0.1f)]
+        [SerializeField] private float _healthBarNotchWidth = 0.025f;
+
+        [Tooltip("Visibility policy (AlwaysVisible, InjuredOnly, CombatLinger, CombatOrInjured).")]
+        [SerializeField] private HealthBarVisibilityPolicy _healthBarVisibility = HealthBarVisibilityPolicy.AlwaysVisible;
 
         [ColoredHeader("Locomotion", HeaderColor.LightBlue)]
         [Tooltip("Base movement speed in meters per second. Drives player ground locomotion and AI navigation.")]
@@ -145,9 +179,19 @@ namespace AntScout.Characters
 
         public string CharacterName => _characterName;
         public Sprite Icon => _icon;
+        public Material Material => _material;
         public StatsController.InitialStatConfig MaxHealth => _maxHealth;
         public StatsController.InitialStatConfig Defense => _defense;
         public StatsController.InitialStatConfig Attack => _attack;
+        public bool EnableHealthBar => _enableHealthBar;
+        public float HealthBarHeightOffset => _healthBarHeightOffset;
+        public float HealthBarWidth => _healthBarWidth;
+        public float HealthBarHeight => _healthBarHeight;
+        public float HealthBarBorderThickness => _healthBarBorderThickness;
+        public float HealthBarSegmentSize => _healthBarSegmentSize;
+        public float HealthBarSegmentGap => _healthBarSegmentGap;
+        public float HealthBarNotchWidth => _healthBarNotchWidth;
+        public HealthBarVisibilityPolicy HealthBarVisibility => _healthBarVisibility;
         public float BaseMoveSpeed => _baseMoveSpeed;
         public float VisionRadius => _visionRadius;
         public IAiBehavior AiBehavior => _aiBehavior;

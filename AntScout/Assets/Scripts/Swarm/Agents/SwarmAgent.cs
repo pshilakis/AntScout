@@ -1,12 +1,13 @@
 using System;
 using AntScout.Characters;
 using AntScout.Config;
-using PGS.FogOfWar.Core;
 using AntScout.Match;
 using AntScout.Pheromone;
 using AntScout.Swarm.Interfaces;
 using AntScout.Swarm.Nest;
+using AntScout.UI.Overhead;
 using PGS.Core.Time;
+using PGS.FogOfWar.Core;
 using UnityEngine;
 
 namespace AntScout.Swarm.Agents
@@ -30,6 +31,10 @@ namespace AntScout.Swarm.Agents
         [Tooltip("CharacterDefinition asset providing BodyRadius, MaxHealth, Defense, Attack, and PrimaryAction.")]
         [SerializeField] protected CharacterDefinition _characterDefinition;
 
+        [Header("Visual Model & Body Renderer")]
+        [Tooltip("MeshRenderer or SkinnedMeshRenderer for the ant's body mesh. Auto-cached if unassigned.")]
+        [SerializeField] protected Renderer _bodyRenderer;
+
         protected AntTrailFollower _follower;
         protected ColonyNest _homeNest;
         protected PheromoneTrailEmitter _trailEmitter;
@@ -41,6 +46,29 @@ namespace AntScout.Swarm.Agents
         public CharacterDefinition CharacterDefinition => _characterDefinition;
         public AntTrailFollower Follower => _follower;
         public SwarmDefinition Config => _config;
+
+        public Renderer BodyRenderer
+        {
+            get
+            {
+                if (_bodyRenderer == null)
+                {
+                    _bodyRenderer = ResolveBodyRenderer();
+                }
+                return _bodyRenderer;
+            }
+        }
+
+        private Renderer ResolveBodyRenderer()
+        {
+            Transform visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                var rend = visual.GetComponentInChildren<Renderer>();
+                if (rend != null) return rend;
+            }
+            return GetComponentInChildren<Renderer>();
+        }
 
         public PheromoneTrailEmitter TrailEmitter
         {
@@ -112,6 +140,25 @@ namespace AntScout.Swarm.Agents
             _follower.Initialize(homeNest, trailEmitter, _config, _characterDefinition);
             _combatTarget = null;
             _combatInactivityTimer = 0f;
+            SetupHealthBar();
+        }
+
+        private void SetupHealthBar()
+        {
+            if (_characterDefinition != null && _characterDefinition.EnableHealthBar)
+            {
+                var bar = OverheadHealthBar.Attach(
+                    gameObject,
+                    _characterDefinition.HealthBarHeightOffset,
+                    _characterDefinition.HealthBarWidth,
+                    _characterDefinition.HealthBarHeight,
+                    _characterDefinition.HealthBarBorderThickness,
+                    _characterDefinition.HealthBarSegmentSize,
+                    _characterDefinition.HealthBarSegmentGap,
+                    _characterDefinition.HealthBarNotchWidth,
+                    _characterDefinition.HealthBarVisibility);
+                bar.BindHealth(this);
+            }
         }
 
         public void SetState(SwarmAgentState newState)
@@ -161,6 +208,11 @@ namespace AntScout.Swarm.Agents
             if (_vitals != null)
             {
                 _vitals.Reset();
+            }
+            var bar = GetComponentInChildren<OverheadHealthBar>();
+            if (bar != null)
+            {
+                bar.BindHealth(this);
             }
         }
 
