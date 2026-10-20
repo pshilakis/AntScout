@@ -66,6 +66,12 @@ namespace AntScout.UI
             if (_quitDesktopButton != null)
             {
                 _quitDesktopButton.onClick.AddListener(QuitToDesktop);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // In WebGL, browser security prevents closing the tab from canvas.
+                // Hide the quit to desktop button cleanly to avoid confusing players.
+                _quitDesktopButton.gameObject.SetActive(false);
+#endif
             }
         }
 
@@ -196,6 +202,11 @@ namespace AntScout.UI
 
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+            // In WebGL, Application.Quit() terminates the WASM runtime and permanently freezes the canvas.
+            // Gracefully reload the active match scene instead of locking up.
+            int activeSceneIndex = SceneManager.GetActiveScene().buildIndex;
+            SceneManager.LoadScene(activeSceneIndex);
 #else
             Application.Quit();
 #endif

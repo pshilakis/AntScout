@@ -70,6 +70,12 @@ namespace AntScout.UI
             if (_quitButton != null)
             {
                 _quitButton.onClick.AddListener(HandleQuitClicked);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // In WebGL, browser security prevents closing the tab from canvas.
+                // Hide the quit button cleanly so Play Again is the sole clean action.
+                _quitButton.gameObject.SetActive(false);
+#endif
             }
         }
 
@@ -161,6 +167,10 @@ namespace AntScout.UI
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+            // In WebGL, Application.Quit() terminates the WASM runtime and permanently freezes the canvas.
+            // Gracefully reload the match scene instead of locking up.
+            HandlePlayAgainClicked();
 #else
             Application.Quit();
 #endif
