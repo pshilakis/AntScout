@@ -41,6 +41,10 @@
 **/sysinfo.txt
 *.stackdump
 
+# Unity Performance Testing artifacts
+**/Assets/Resources/PerformanceTestRun*
+**/Assets/Resources.meta
+
 # OS specific files
 .DS_Store
 Thumbs.db
