@@ -33,9 +33,11 @@ namespace AntScout.Rendering
         [Range(0.75f, 1.0f)]
         [SerializeField] private float _maxRenderScale = 1.0f;
 
+#if UNITY_EDITOR
         [Header("Editor & Testing")]
         [Tooltip("If true, simulates resolution clamping in the Unity Editor Game View. Defaults to false in Editor to avoid asset dirtying.")]
         [SerializeField] private bool _enableInEditor = false;
+#endif
 
         private int _lastScreenWidth;
         private int _lastScreenHeight;
