@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 457293765706431837}
+  - component: {fileID: 2001000000000000001}
   m_Layer: 0
   m_Name: Map_Backyard
   m_TagString: Untagged
@@ -29,10 +30,25 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6151342705397120570}
   - {fileID: 6018999954483559478}
+  - {fileID: 3001000000000000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2001000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1546377695521776023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e4995eb41f34b84a25b99e703b7577e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Maps.MapEnvironment
+  _spawnPoints:
+  - {fileID: 3001000000000000012}
+  - {fileID: 3001000000000000022}
 --- !u!1 &3995064065090765303
 GameObject:
   m_ObjectHideFlags: 0
@@ -60,13 +76,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3995064065090765303}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 1, z: 5}
+  m_LocalScale: {x: 50, y: 50, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 457293765706431837}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!33 &3735113517050298368
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -74,7 +90,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3995064065090765303}
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!23 &2784784366636787278
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -145,8 +161,8 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &8435846372125837240
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &3001000000000000001
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -154,103 +170,118 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6151342705397120570}
-  - component: {fileID: 772377194065799135}
-  - component: {fileID: 444850204697694582}
+  - component: {fileID: 3001000000000000002}
   m_Layer: 0
-  m_Name: NavMesh
+  m_Name: BaseSpawns
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6151342705397120570
+--- !u!4 &3001000000000000002
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8435846372125837240}
+  m_GameObject: {fileID: 3001000000000000001}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 3001000000000000011}
+  - {fileID: 3001000000000000021}
   m_Father: {fileID: 457293765706431837}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &772377194065799135
+--- !u!1 &3001000000000000010
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3001000000000000011}
+  - component: {fileID: 3001000000000000012}
+  m_Layer: 0
+  m_Name: Spawn1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3001000000000000011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3001000000000000010}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -16, y: 0, z: -8.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3001000000000000002}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3001000000000000012
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8435846372125837240}
+  m_GameObject: {fileID: 3001000000000000010}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 78396926cbbfc4ac3b48fc5fc34a87d1, type: 3}
+  m_Script: {fileID: 11500000, guid: 7f70944245314658a5d095ca9bae081d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: AstarPathfindingProject::AstarPath
-  version: 1073741824
-  data:
-    dataString: UEsDBBQAAAgIAACQn+s1wEuoqwIAAOoFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQGFVE1v2kAQ/Stoz02Fk9CE3logpIckKKTKoc5h4x3jFcuutR8BEvHfM7NesCGHSkg2b97MvPnyB5Pa1VB4Y6dWijsjgP3sMXpn33qt8RY2fGH0XL7DnvMsha+IxCPnkXtpEM/IzZkVeCuLX3qhiNxHMGhZGruaiAWMjPMO4ZIrB2iyxpO3RuijxzbJYZue7/Ts7fCtAO3B/o8VdKH4qgZBalvyYM8eNDSNdSQGaS6MUtIlEcxv61jkiNcuYAlIEJJjUTE98SuQi8rjn/Ou80NZOvBJkuXbsbTYmyYq+22ahq24Wza63rgKcBDehLz7Yj3Lorm0ZnW7z5r1KYOvZLF85NuCO9/pZxceH8sOes3Vkr8qeK5A35upNUELNHobyDU4OB93Qh0qG1VQLFteo/UEDPXX2WTtbHax9s3cQ32oo//9skX/OnBzZWLrU0iyJGRIIcHi2P5gPXFhXEqEKGlE/ye+6G5WMtxI6zyakp6EEneG8wEBuoDU9zMiaJL3aoKlWGwStVIzgh8ZqyHCSWANmiu/nWFEf7oAJ7aOrhPLDacjS+qSbX87Jy4Rbvn9/olpZtaHYVtcXRf3ef/274WG4CqzvgNXPQSvpO50mwz32OCR0brZ224z927zYEtedNw8bHywMOaex2woBxdMdF2xl9FDB6Vol2MBUREWQL8X6m/FMa+KMLs3Ot7d0TPKXwQpji+ECS5eB1lWiuEgg6uLy7Pry+uLYZEVw+xHNry46rN4QlJju7maNf1KU8Lt0m0tGs9l/wnsTS2v48kKy9dT+b4ynclLXZp5YQH0QxPhUCxYTIKfFjEREsucg/dSx71kHzlTpliCyA+B8tjYycZbnrdRclbLN+MJydkofvhyRvDhInF13ySsKflRMFA4OhBPUsGK12Tq79juE1BLAwQUAAAICAAAkJ/rAWq5kmwAAAB3AAAACQAkAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAatWKkstKs7Mz1OyUjDVM9Ez11FQSi9KLMgoBgoYgjilmSkgdrRSSmJKkqmhYVqKpalhqrmxia6FiYWxZbJhsqWhmaGlsbmBUixQfUllQapfYm4qRE9AYklGWmZeSmZeup57UWaKO8hopdhaAFBLAQItABQAAAgIAACQn+s1wEuoqwIAAOoFAAALACQAAAAAAAAAAAAAAAAAAABncmFwaDAuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLAQItABQAAAgIAACQn+sBarmSbAAAAHcAAAAJACQAAAAAAAAAAAAAAPgCAABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQFQSwUGAAAAAAIAAgC4AAAArwMAAAAA
-    file_cachedStartup: {fileID: 0}
-    cacheStartup: 0
-  showNavGraphs: 0
-  showUnwalkableNodes: 1
-  debugMode: 0
-  graphUpdateDebugMode: 0
-  debugFloor: 0
-  debugRoof: 1
-  manualDebugFloorRoof: 0
-  showSearchTree: 0
-  unwalkableNodeDebugSize: 0.3
-  logPathResults: 4
-  maxNearestNodeDistance: 100
-  scanOnStartup: 1
-  fullGetNearestSearch: 0
-  prioritizeGraphs: 0
-  prioritizeGraphsLimit: 1
-  colorSettings:
-    _SolidColor: {r: 0.11764706, g: 0.4, b: 0.7882353, a: 0.9}
-    _UnwalkableNode: {r: 1, g: 0, b: 0, a: 0.5}
-    _BoundsHandles: {r: 0.29, g: 0.454, b: 0.741, a: 0.9}
-    _ConnectionLowLerp: {r: 0, g: 1, b: 0, a: 0.5}
-    _ConnectionHighLerp: {r: 1, g: 0, b: 0, a: 0.5}
-    _AreaColors: []
-  tagNames: []
-  heuristic: 2
-  heuristicScale: 1
-  threadCount: 1
-  maxFrameTime: 1
-  batchGraphUpdates: 0
-  graphUpdateBatchingInterval: 0.2
-  navmeshUpdates:
-    updateInterval: 0
-  euclideanEmbedding:
-    mode: 0
-    seed: 0
-    pivotPointRoot: {fileID: 0}
-    spreadOutCount: 10
-  showGraphs: 1
-  showGraphsInStandalonePlayer: 0
---- !u!114 &444850204697694582
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Maps.MapBaseSpawnPoint
+  _spawnLabel: Spawn1
+--- !u!1 &3001000000000000020
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3001000000000000021}
+  - component: {fileID: 3001000000000000022}
+  m_Layer: 0
+  m_Name: Spawn2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3001000000000000021
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3001000000000000020}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 16, y: 0, z: 8.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3001000000000000002}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3001000000000000022
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8435846372125837240}
+  m_GameObject: {fileID: 3001000000000000020}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1764de1de43cc4d19af52679d3eaae06, type: 3}
+  m_Script: {fileID: 11500000, guid: 7f70944245314658a5d095ca9bae081d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: AstarPathfindingProject::Pathfinding.RVO.RVOSimulator
-  version: 1073741824
-  workerThreads: 2
-  doubleBuffering: 0
-  hardCollisions: 0
-  symmetryBreakingBias: 0.1
-  movementPlane: 0
-  useNavmeshAsObstacle: 0
-  drawQuadtree: 0
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Maps.MapBaseSpawnPoint
+  _spawnLabel: Spawn2

@@ -24,6 +24,7 @@ Shader "PGS/UI/OverheadHealthBar"
         _GhostColor ("Ghost Color", Color) = (0.95, 0.6, 0.15, 1.0)
         _BackgroundColor ("Background Color", Color) = (0.12, 0.12, 0.12, 0.85)
         _BorderColor ("Border Color", Color) = (0.02, 0.02, 0.02, 1.0)
+        _BarOffset ("Bar Offset in Billboard Space (X, Y, Z nudge)", Vector) = (0.0, 0.0, 0.0, 0.0)
 
         [Header(Rendering)]
         [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest ("ZTest", Float) = 8
@@ -88,6 +89,7 @@ Shader "PGS/UI/OverheadHealthBar"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _GhostColor)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _BackgroundColor)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _BorderColor)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _BarOffset)
             UNITY_INSTANCING_BUFFER_END(Props)
 
             Varyings vert(Attributes input)
@@ -98,6 +100,7 @@ Shader "PGS/UI/OverheadHealthBar"
 
                 float4 barDim = UNITY_ACCESS_INSTANCED_PROP(Props, _BarDimensions);
                 float4 distParams = UNITY_ACCESS_INSTANCED_PROP(Props, _DistanceScaleParams);
+                float4 barOffset = UNITY_ACCESS_INSTANCED_PROP(Props, _BarOffset);
 
                 // 1. Transform object anchor (0,0,0 local space) to world space
                 float3 worldPivot = TransformObjectToWorld(float3(0.0, 0.0, 0.0));
@@ -111,13 +114,16 @@ Shader "PGS/UI/OverheadHealthBar"
                 }
 
                 // 3. Camera basis vectors in world space from the inverse view matrix
-                // Transforming view-space Right (1,0,0) and Up (0,1,0) directly to world space
-                float3 camRight = mul((float3x3)UNITY_MATRIX_I_V, float3(1.0, 0.0, 0.0));
-                float3 camUp    = mul((float3x3)UNITY_MATRIX_I_V, float3(0.0, 1.0, 0.0));
+                // Transforming view-space Right (1,0,0), Up (0,1,0), and Forward (0,0,1) directly to world space
+                float3 camRight   = mul((float3x3)UNITY_MATRIX_I_V, float3(1.0, 0.0, 0.0));
+                float3 camUp      = mul((float3x3)UNITY_MATRIX_I_V, float3(0.0, 1.0, 0.0));
+                float3 camForward = mul((float3x3)UNITY_MATRIX_I_V, float3(0.0, 0.0, 1.0));
 
                 // 4. Expand quad vertices along camera right and up in world space (GPU Camera Billboarding - 0 CPU overhead)
-                float2 quadOffset = input.positionOS.xy * (barDim.xy * scaleMultiplier);
-                float3 worldPos = worldPivot + camRight * quadOffset.x + camUp * quadOffset.y;
+                // barOffset.xy stacks secondary bars (e.g. pheromones) directly beneath in billboard space
+                // barOffset.z provides a subtle sub-millimeter forward nudge for flawless depth layering
+                float2 quadOffset = (input.positionOS.xy * barDim.xy + barOffset.xy) * scaleMultiplier;
+                float3 worldPos = worldPivot + camRight * quadOffset.x + camUp * quadOffset.y - camForward * (barOffset.z * 0.001);
 
                 // 5. Project world position to clip space using standard URP pipeline (Reverse-Z & stereo safe)
                 output.positionCS = TransformWorldToHClip(worldPos);

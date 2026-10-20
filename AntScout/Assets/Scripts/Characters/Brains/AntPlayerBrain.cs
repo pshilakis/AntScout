@@ -81,6 +81,13 @@ namespace AntScout.Characters.Brains
 
         private void Start()
         {
+            _character ??= GetComponent<AntCharacter>();
+            if (_character != null && _character.Gland != null)
+            {
+                _character.Gland.OnGlandDepleted -= HandleGlandDepleted;
+                _character.Gland.OnGlandDepleted += HandleGlandDepleted;
+            }
+
             if (enabled && InputReader != null && _character != null && _character.Definition != null)
             {
                 _character.Definition.RegisterInputActions(InputReader);
@@ -92,12 +99,22 @@ namespace AntScout.Characters.Brains
         protected override void OnEnable()
         {
             base.OnEnable();
+            _character ??= GetComponent<AntCharacter>();
+            if (_character != null && _character.Gland != null)
+            {
+                _character.Gland.OnGlandDepleted -= HandleGlandDepleted;
+                _character.Gland.OnGlandDepleted += HandleGlandDepleted;
+            }
             AttachCameraIfActive();
         }
 
         protected override void OnDisable()
         {
             base.OnDisable();
+            if (_character != null && _character.Gland != null)
+            {
+                _character.Gland.OnGlandDepleted -= HandleGlandDepleted;
+            }
             ResetInput();
             DetachCameraIfTargeted();
         }
@@ -171,23 +188,57 @@ namespace AntScout.Characters.Brains
 
             if (_character.Gland != null && _character.Definition.TryGetTrailAction(triggeredInput, out var trailAction))
             {
-                _activeTrailInput = triggeredInput;
-                _character.Gland.StartLayingTrail(trailAction);
+                if (_character.Definition.TrailActivationMode == TrailActivationMode.Toggle)
+                {
+                    if (_character.Gland.IsLayingTrail && _activeTrailInput != null &&
+                        _activeTrailInput.action != null && triggeredInput.action != null &&
+                        _activeTrailInput.action.id == triggeredInput.action.id)
+                    {
+                        // Tapping the currently active trail toggles it off
+                        _activeTrailInput = null;
+                        _character.Gland.StopLayingTrail();
+                    }
+                    else
+                    {
+                        // Tapping a new trail (or starting from idle) turns it on
+                        _activeTrailInput = triggeredInput;
+                        _character.Gland.StartLayingTrail(trailAction);
+                    }
+                }
+                else
+                {
+                    // Classic Hold mode
+                    _activeTrailInput = triggeredInput;
+                    _character.Gland.StartLayingTrail(trailAction);
+                }
             }
         }
 
         private void HandleActionReleased(InputActionReference releasedInput)
         {
+            if (_character == null || _character.Definition == null) return;
+
+            // In Toggle mode, key release does not interrupt the trail
+            if (_character.Definition.TrailActivationMode == TrailActivationMode.Toggle)
+            {
+                return;
+            }
+
             if (_activeTrailInput != null && releasedInput != null &&
                 _activeTrailInput.action != null && releasedInput.action != null &&
                 _activeTrailInput.action.id == releasedInput.action.id)
             {
                 _activeTrailInput = null;
-                if (_character != null && _character.Gland != null)
+                if (_character.Gland != null)
                 {
                     _character.Gland.StopLayingTrail();
                 }
             }
+        }
+
+        private void HandleGlandDepleted()
+        {
+            _activeTrailInput = null;
         }
 
         private void HandleCameraZoom(float delta)

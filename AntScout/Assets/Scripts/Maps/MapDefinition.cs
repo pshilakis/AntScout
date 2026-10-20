@@ -1,5 +1,6 @@
 using System;
 using AntScout.Config;
+using AntScout.Swarm.Nest;
 using PGS.Core;
 using UnityEngine;
 
@@ -7,8 +8,8 @@ namespace AntScout.Maps
 {
     /// <summary>
     /// Configuration asset defining a complete playable map environment.
-    /// Encapsulates environment geometry prefab, physical playable extents, perimeter boundary wall sizing,
-    /// void kill-plane threshold, and linked resource economy drop tables.
+    /// Encapsulates strongly-typed environment geometry prefab, colony nest template, playable extents,
+    /// perimeter boundary wall sizing, void kill-plane threshold, and linked resource economy drop tables.
     /// Strictly adheres to Single Responsibility (SRP) and Open/Closed (OCP).
     /// </summary>
     [CreateAssetMenu(fileName = "MapDefinition_Default", menuName = "AntScout/Maps/Map Definition", order = 1)]
@@ -18,8 +19,12 @@ namespace AntScout.Maps
         [Tooltip("Human-readable name of this arena environment.")]
         [SerializeField] private string _mapName = "Backyard Lawn";
 
-        [Tooltip("Optional environment prefab containing terrain meshes, static visual props, and ambient lighting. If unassigned, uses pre-existing scene geometry.")]
-        [SerializeField] private GameObject _environmentPrefab;
+        [Tooltip("Strongly-typed environment prefab root containing terrain geometry and base spawn anchors.")]
+        [SerializeField] private MapEnvironment _environmentPrefab;
+
+        [ColoredHeader("Colony Nest Template", HeaderColor.Teal)]
+        [Tooltip("Strongly-typed ColonyNest prefab template instantiated at each base spawn location.")]
+        [SerializeField] private ColonyNest _nestPrefab;
 
         [ColoredHeader("Playable Space & Boundaries", HeaderColor.Orange)]
         [Tooltip("Full horizontal X (width) and Z (length) size of the playable arena in meters (e.g. (50, 50) for a 50x50m map).")]
@@ -43,7 +48,8 @@ namespace AntScout.Maps
         #region Public Properties
 
         public string MapName => _mapName;
-        public GameObject EnvironmentPrefab => _environmentPrefab;
+        public MapEnvironment EnvironmentPrefab => _environmentPrefab;
+        public ColonyNest NestPrefab => _nestPrefab;
         public Vector2 MapSize => _mapSize;
         public Vector2 PlayableHalfExtents => _mapSize * 0.5f;
         public float BoundaryWallHeight => _boundaryWallHeight;

@@ -29,6 +29,12 @@ namespace AntScout.Maps
                 throw new InvalidOperationException(
                     $"[{name}] MapDefinition: _boundaryWallThickness ({_boundaryWallThickness}) must be strictly positive!");
             }
+
+            if (_nestPrefab == null)
+            {
+                throw new InvalidOperationException(
+                    $"[{name}] MapDefinition: _nestPrefab is not assigned! Please assign a ColonyNest prefab in the Inspector.");
+            }
         }
 
 #if UNITY_EDITOR

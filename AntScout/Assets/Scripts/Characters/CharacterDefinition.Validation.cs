@@ -18,6 +18,7 @@ namespace AntScout.Characters
         private void AutoAssignDefaultInputs()
         {
             if (_primaryInput != null && _secondaryInput != null && _utilityInput != null &&
+                _tertiaryInput != null && _ultimateInput != null &&
                 _recruitmentTrailInput != null && _alarmTrailInput != null)
             {
                 return;
@@ -37,9 +38,11 @@ namespace AntScout.Characters
                     string actionName = actionRef.action.name;
                     if (_primaryInput == null && actionName == "Action1") _primaryInput = actionRef;
                     else if (_secondaryInput == null && actionName == "Action2") _secondaryInput = actionRef;
-                    else if (_utilityInput == null && actionName == "Action3") _utilityInput = actionRef;
+                    else if (_alarmTrailInput == null && actionName == "Action3") _alarmTrailInput = actionRef;
                     else if (_recruitmentTrailInput == null && actionName == "Action4") _recruitmentTrailInput = actionRef;
-                    else if (_alarmTrailInput == null && actionName == "Action6") _alarmTrailInput = actionRef;
+                    else if (_ultimateInput == null && actionName == "Action5") _ultimateInput = actionRef;
+                    else if (_utilityInput == null && actionName == "Action6") _utilityInput = actionRef;
+                    else if (_tertiaryInput == null && actionName == "Action7") _tertiaryInput = actionRef;
                 }
             }
         }
@@ -65,6 +68,18 @@ namespace AntScout.Characters
             if (_defense.BaseValue < 0f)
             {
                 throw new InvalidOperationException($"[{contextName}] CharacterDefinition '{name}' Defense BaseValue ({_defense.BaseValue}) cannot be negative!");
+            }
+
+            if (_enablePheromoneBar)
+            {
+                if (_pheromoneBarHeight <= 0f)
+                {
+                    throw new InvalidOperationException($"[{contextName}] CharacterDefinition '{name}' _pheromoneBarHeight ({_pheromoneBarHeight}) must be greater than zero!");
+                }
+                if (_pheromoneBarBorderThickness < 0f)
+                {
+                    throw new InvalidOperationException($"[{contextName}] CharacterDefinition '{name}' _pheromoneBarBorderThickness ({_pheromoneBarBorderThickness}) cannot be negative!");
+                }
             }
         }
 
@@ -147,7 +162,8 @@ namespace AntScout.Characters
                 throw new InvalidOperationException($"[{name}] CharacterDefinition ScoutPauseDurationRange ({_scoutPauseDurationRange}) is invalid! Min must be >= 0 and Max >= Min.");
             }
 
-            if (_primaryAction != null || _secondaryAction != null || _utilityAction != null)
+            if (_primaryAction != null || _secondaryAction != null || _utilityAction != null ||
+                _tertiaryAction != null || _ultimateAction != null)
             {
                 if (_attack.StatType == null)
                 {
@@ -163,6 +179,8 @@ namespace AntScout.Characters
             if (_primaryAction != null) _primaryAction.Validate();
             if (_secondaryAction != null) _secondaryAction.Validate();
             if (_utilityAction != null) _utilityAction.Validate();
+            if (_tertiaryAction != null) _tertiaryAction.Validate();
+            if (_ultimateAction != null) _ultimateAction.Validate();
         }
     }
 }

@@ -210,18 +210,11 @@ namespace AntScout.Characters
 
         private void SetupHealthBar()
         {
-            if (_definition != null && _definition.EnableHealthBar)
+            if (_definition == null) return;
+
+            if (_definition.EnableHealthBar || (_definition.EnablePheromoneBar && _definition.HasTrailActions))
             {
-                OverheadHealthBar.Attach(
-                    gameObject,
-                    _definition.HealthBarHeightOffset,
-                    _definition.HealthBarWidth,
-                    _definition.HealthBarHeight,
-                    _definition.HealthBarBorderThickness,
-                    _definition.HealthBarSegmentSize,
-                    _definition.HealthBarSegmentGap,
-                    _definition.HealthBarNotchWidth,
-                    _definition.HealthBarVisibility);
+                OverheadVitals.Attach(gameObject, _definition);
             }
         }
 

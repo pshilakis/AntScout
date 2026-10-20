@@ -143,7 +143,6 @@ namespace AntScout.Swarm.Agents
             {
                 _isPausingAtNest = false;
                 EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
                 return;
             }
 
@@ -240,15 +239,12 @@ namespace AntScout.Swarm.Agents
 
         private void EvaluateOutboundPatrol(float deltaTime)
         {
-            // Continuous combat threat awareness while marching
-            float aggroDist = _characterDefinition != null && _characterDefinition.VisionRadius > 0.1f
-                ? _characterDefinition.VisionRadius
-                : _config.SwarmAggroRadius * 1.5f;
+            // Continuous combat threat awareness while marching along the escort corridor
+            float aggroDist = _config.SwarmAggroRadius;
 
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
             }
         }
 
@@ -269,14 +265,11 @@ namespace AntScout.Swarm.Agents
         private void EvaluateTrailTipVigil(float deltaTime)
         {
             // 1. Immediate threat response at the destination
-            float aggroDist = _characterDefinition != null && _characterDefinition.VisionRadius > 0.1f
-                ? _characterDefinition.VisionRadius
-                : _config.SwarmAggroRadius * 1.5f;
+            float aggroDist = _config.SwarmAggroRadius;
 
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
                 return;
             }
 
@@ -324,14 +317,11 @@ namespace AntScout.Swarm.Agents
         private void EvaluateReturningHome(float deltaTime)
         {
             // Scan for hostiles while retracing steps
-            float aggroDist = _characterDefinition != null && _characterDefinition.VisionRadius > 0.1f
-                ? _characterDefinition.VisionRadius
-                : _config.SwarmAggroRadius;
+            float aggroDist = _config.SwarmAggroRadius;
 
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
             }
         }
 
@@ -345,6 +335,22 @@ namespace AntScout.Swarm.Agents
         {
             base.DisengageCombat();
 
+            // 1. If guarding an active food node at the trail tip, resume perimeter guard vigil
+            if (_guardedFoodSource != null && _guardedFoodSource.CanHarvest)
+            {
+                SetState(SwarmAgentState.AtTrailEnd);
+                return;
+            }
+
+            // 2. If escorting an active outbound recruitment trail, resume escort patrol
+            if (_isEscortPatrol && _follower != null && _follower.TrackedSegment != null && _follower.TrackedSegment.NodeCount > 0)
+            {
+                _follower.FollowTrailOutbound();
+                SetState(SwarmAgentState.FollowingTrailOutbound);
+                return;
+            }
+
+            // 3. If within nest perimeter, resume nest yard guard
             if (_homeNest != null)
             {
                 Vector3 toNest = _homeNest.SpawnPosition - transform.position;
@@ -359,6 +365,7 @@ namespace AntScout.Swarm.Agents
                 }
             }
 
+            // 4. Otherwise retrace steps home
             OrderReturnHome();
         }
 

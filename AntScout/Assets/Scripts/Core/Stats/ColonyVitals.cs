@@ -1,4 +1,5 @@
 using System;
+using PGS.Core.Time;
 using PGS.Effects;
 using PGS.Stats;
 using UnityEngine;
@@ -18,8 +19,13 @@ namespace AntScout.Core.Stats
         private StatTypeSO _defenseStat;
         private StatTypeSO _attackStat;
         private float _currentHealth;
+        private float _lastDamageTakenTimestamp = -1000f;
         private bool _isInitialized;
         private bool _isAlive;
+
+        public float LastDamageTakenTimestamp => _lastDamageTakenTimestamp;
+        public float TimeSinceLastDamaged => PgsTime.ElapsedTime - _lastDamageTakenTimestamp;
+        public bool IsInCombat(float combatDuration) => TimeSinceLastDamaged < combatDuration;
 
         public event Action<float, float> OnHealthChanged;
         public event Action<DamageResult, HitContext> OnDamaged;
@@ -182,6 +188,7 @@ namespace AntScout.Core.Stats
             float mitigated = Mathf.Max(1f, amount - Defense);
             float actualApplied = Mathf.Min(_currentHealth, mitigated);
             _currentHealth -= actualApplied;
+            _lastDamageTakenTimestamp = PgsTime.ElapsedTime;
 
             bool isLethal = _currentHealth <= 0.0001f;
             if (isLethal)

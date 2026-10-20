@@ -30,10 +30,15 @@ namespace AntScout.Editor
         private SerializedProperty _secondaryInputProp;
         private SerializedProperty _utilityActionProp;
         private SerializedProperty _utilityInputProp;
+        private SerializedProperty _tertiaryActionProp;
+        private SerializedProperty _tertiaryInputProp;
+        private SerializedProperty _ultimateActionProp;
+        private SerializedProperty _ultimateInputProp;
         private SerializedProperty _recruitmentTrailActionProp;
         private SerializedProperty _recruitmentTrailInputProp;
         private SerializedProperty _alarmTrailActionProp;
         private SerializedProperty _alarmTrailInputProp;
+        private SerializedProperty _trailActivationModeProp;
 
         private SerializedProperty _prioritiesProp;
         private SerializedProperty _aiBehaviorProp;
@@ -69,6 +74,16 @@ namespace AntScout.Editor
         private SerializedProperty _healthBarSegmentGapProp;
         private SerializedProperty _healthBarNotchWidthProp;
         private SerializedProperty _healthBarVisibilityProp;
+        private SerializedProperty _healthBarColorProp;
+        private SerializedProperty _healthGhostColorProp;
+
+        private SerializedProperty _enablePheromoneBarProp;
+        private SerializedProperty _pheromoneBarSpacingProp;
+        private SerializedProperty _pheromoneBarHeightProp;
+        private SerializedProperty _pheromoneBarBorderThicknessProp;
+        private SerializedProperty _pheromoneBarColorProp;
+        private SerializedProperty _pheromoneGhostColorProp;
+        private SerializedProperty _pheromoneBarVisibilityProp;
 
         private void OnEnable()
         {
@@ -91,6 +106,16 @@ namespace AntScout.Editor
             _healthBarSegmentGapProp = serializedObject.FindProperty("_healthBarSegmentGap");
             _healthBarNotchWidthProp = serializedObject.FindProperty("_healthBarNotchWidth");
             _healthBarVisibilityProp = serializedObject.FindProperty("_healthBarVisibility");
+            _healthBarColorProp = serializedObject.FindProperty("_healthBarColor");
+            _healthGhostColorProp = serializedObject.FindProperty("_healthGhostColor");
+
+            _enablePheromoneBarProp = serializedObject.FindProperty("_enablePheromoneBar");
+            _pheromoneBarSpacingProp = serializedObject.FindProperty("_pheromoneBarSpacing");
+            _pheromoneBarHeightProp = serializedObject.FindProperty("_pheromoneBarHeight");
+            _pheromoneBarBorderThicknessProp = serializedObject.FindProperty("_pheromoneBarBorderThickness");
+            _pheromoneBarColorProp = serializedObject.FindProperty("_pheromoneBarColor");
+            _pheromoneGhostColorProp = serializedObject.FindProperty("_pheromoneGhostColor");
+            _pheromoneBarVisibilityProp = serializedObject.FindProperty("_pheromoneBarVisibility");
 
             _prioritiesProp = serializedObject.FindProperty("_priorities");
             _aiBehaviorProp = serializedObject.FindProperty("_aiBehavior");
@@ -115,10 +140,15 @@ namespace AntScout.Editor
             _secondaryInputProp = serializedObject.FindProperty("_secondaryInput");
             _utilityActionProp = serializedObject.FindProperty("_utilityAction");
             _utilityInputProp = serializedObject.FindProperty("_utilityInput");
+            _tertiaryActionProp = serializedObject.FindProperty("_tertiaryAction");
+            _tertiaryInputProp = serializedObject.FindProperty("_tertiaryInput");
+            _ultimateActionProp = serializedObject.FindProperty("_ultimateAction");
+            _ultimateInputProp = serializedObject.FindProperty("_ultimateInput");
             _recruitmentTrailActionProp = serializedObject.FindProperty("_recruitmentTrailAction");
             _recruitmentTrailInputProp = serializedObject.FindProperty("_recruitmentTrailInput");
             _alarmTrailActionProp = serializedObject.FindProperty("_alarmTrailAction");
             _alarmTrailInputProp = serializedObject.FindProperty("_alarmTrailInput");
+            _trailActivationModeProp = serializedObject.FindProperty("_trailActivationMode");
         }
 
         public override void OnInspectorGUI()
@@ -171,6 +201,22 @@ namespace AntScout.Editor
                 EditorGUILayout.PropertyField(_healthBarSegmentGapProp, new GUIContent("Segment Gap (0 = Solid SC2)", "Transparent cutout gap width. Set to 0 for solid StarCraft 2 style."));
                 EditorGUILayout.PropertyField(_healthBarNotchWidthProp, new GUIContent("Divider Line Width (SC2 Notches)", "Thickness of the solid dark divider lines separating pips."));
                 EditorGUILayout.PropertyField(_healthBarVisibilityProp, new GUIContent("Visibility Policy"));
+                EditorGUILayout.PropertyField(_healthBarColorProp, new GUIContent("Health Fill Color"));
+                EditorGUILayout.PropertyField(_healthGhostColorProp, new GUIContent("Damage Ghost Color"));
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(6);
+            EditorGUILayout.PropertyField(_enablePheromoneBarProp, new GUIContent("Enable Pheromone Bar", "Attaches a secondary resource bar directly under the health bar displaying remaining chemical capacity."));
+            if (_enablePheromoneBarProp != null && _enablePheromoneBarProp.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_pheromoneBarSpacingProp, new GUIContent("Vertical Gap Below HP Bar (m)"));
+                EditorGUILayout.PropertyField(_pheromoneBarHeightProp, new GUIContent("Bar Thickness / Height (m)"));
+                EditorGUILayout.PropertyField(_pheromoneBarBorderThicknessProp, new GUIContent("Border Thickness (m)"));
+                EditorGUILayout.PropertyField(_pheromoneBarColorProp, new GUIContent("Pheromone Fill Color"));
+                EditorGUILayout.PropertyField(_pheromoneGhostColorProp, new GUIContent("Drain Ghost Lag Color"));
+                EditorGUILayout.PropertyField(_pheromoneBarVisibilityProp, new GUIContent("Visibility Policy"));
                 EditorGUI.indentLevel--;
             }
 
@@ -194,10 +240,19 @@ namespace AntScout.Editor
             DrawSlotGroup(_utilityActionProp, _utilityInputProp);
             EditorGUILayout.Space(6);
 
+            DrawSlotGroup(_tertiaryActionProp, _tertiaryInputProp);
+            EditorGUILayout.Space(6);
+
+            DrawSlotGroup(_ultimateActionProp, _ultimateInputProp);
+            EditorGUILayout.Space(6);
+
             DrawSlotGroup(_recruitmentTrailActionProp, _recruitmentTrailInputProp);
             EditorGUILayout.Space(6);
 
             DrawSlotGroup(_alarmTrailActionProp, _alarmTrailInputProp);
+            EditorGUILayout.Space(8);
+
+            EditorGUILayout.PropertyField(_trailActivationModeProp);
         }
 
         private static void DrawSlotGroup(SerializedProperty actionProp, SerializedProperty inputProp)

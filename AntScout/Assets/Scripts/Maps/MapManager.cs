@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using AntScout.Swarm.Nest;
+using Pathfinding;
+using Pathfinding.Graphs.Grid;
 using PGS.Core;
 using UnityEngine;
 
@@ -33,22 +37,28 @@ namespace AntScout.Maps
         [SerializeField] private LayerMask _boundaryLayer = 1; // Default layer (bit 0)
 
         [ColoredHeader("Scene Instance Binding (Optional)", HeaderColor.Coral)]
-        [Tooltip("Direct reference to a pre-placed map environment GameObject in the scene. Auto-wired at editor time or assigned via prefab instantiation.")]
+        [Tooltip("Direct reference to a pre-placed map environment in the scene. Auto-wired at editor time or assigned via prefab instantiation.")]
         [ReadOnly]
-        [SerializeField] private GameObject _environmentInstance;
+        [SerializeField] private MapEnvironment _environmentInstance;
+
+        [ColoredHeader("Start Location Mode", HeaderColor.Mint)]
+        [Tooltip("If true, randomly assigns available map spawn points (Spawn1, Spawn2...) to factions. If false, assigns in order (Spawn1 = Player, Spawn2 = Enemy).")]
+        [SerializeField] private bool _randomizeSpawnLocations = false;
 
         private GameObject _boundaryContainer;
         private Bounds _playableBounds;
         private bool _isInitialized;
+        private readonly List<ColonyNest> _spawnedNests = new List<ColonyNest>();
 
         #region Public Properties
 
         public MapDefinition ActiveMap => _activeMapDefinition;
-        public GameObject EnvironmentInstance => _environmentInstance;
+        public MapEnvironment EnvironmentInstance => _environmentInstance;
         public Bounds PlayableBounds => _playableBounds;
         public float KillPlaneY => _activeMapDefinition != null ? _activeMapDefinition.KillPlaneY : -4.0f;
         public bool HasActiveMap => _activeMapDefinition != null;
         public bool IsInitialized => _isInitialized;
+        public IReadOnlyList<ColonyNest> SpawnedNests => _spawnedNests;
 
         #endregion
 
@@ -82,7 +92,7 @@ namespace AntScout.Maps
 
         /// <summary>
         /// Explicit top-down initialization. Sets the active map definition, instantiates environment geometry,
-        /// and establishes physical boundaries.
+        /// establishes physical boundaries, and spawns colony nests at designated start locations.
         /// </summary>
         public void InitializeMap(MapDefinition overrideDefinition = null)
         {
@@ -108,13 +118,37 @@ namespace AntScout.Maps
                 GeneratePerimeterBoundaries(origin, halfExtents, wallHeight, _activeMapDefinition.BoundaryWallThickness);
             }
 
+            ConfigureAndScanNavMesh(origin, halfExtents);
+
+            SpawnNests();
+
             _isInitialized = true;
         }
 
         private void InstantiateEnvironmentPrefab()
         {
-            // If an environment instance is already bound in the scene (serialized in Inspector), use it directly with 0 search overhead
-            if (_environmentInstance != null) return;
+            if (_environmentInstance != null)
+            {
+                // If the scene instance belongs to a different environment prefab, clean it up so the active one instantiates
+                if (_activeMapDefinition.EnvironmentPrefab != null &&
+                    !_environmentInstance.name.StartsWith(_activeMapDefinition.EnvironmentPrefab.name, StringComparison.OrdinalIgnoreCase) &&
+                    !_environmentInstance.name.StartsWith(_activeMapDefinition.MapName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(_environmentInstance.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(_environmentInstance.gameObject);
+                    }
+                    _environmentInstance = null;
+                }
+                else
+                {
+                    return;
+                }
+            }
 
             if (_activeMapDefinition.EnvironmentPrefab == null) return;
 
@@ -195,6 +229,52 @@ namespace AntScout.Maps
 
         #endregion
 
+        #region Navigation Mesh Auto-Configuration
+
+        /// <summary>
+        /// Dynamically resizes the scene A* GridGraph to match the active map's playable extents,
+        /// positions it at the map origin, applies flat RTS collision settings, and executes a scan.
+        /// </summary>
+        private void ConfigureAndScanNavMesh(Vector3 origin, Vector2 halfExtents)
+        {
+            if (AstarPath.active == null)
+            {
+                Debug.LogWarning($"[{name}] MapManager: AstarPath.active is null; skipping navigation scan.");
+                return;
+            }
+
+            var gridGraph = AstarPath.active.data.gridGraph;
+            if (gridGraph == null)
+            {
+                gridGraph = AstarPath.active.data.AddGraph<GridGraph>();
+            }
+
+            float nodeSize = gridGraph.nodeSize > 0.001f ? gridGraph.nodeSize : 1.0f;
+            int width = Mathf.RoundToInt((halfExtents.x * 2.0f) / nodeSize);
+            int depth = Mathf.RoundToInt((halfExtents.y * 2.0f) / nodeSize);
+
+            gridGraph.center = new Vector3(origin.x, origin.y, origin.z);
+            gridGraph.SetDimensions(width, depth, nodeSize);
+
+            // Flat RTS plane configuration: zero terrain raycasting overhead
+            gridGraph.collision.heightCheck = false;
+            gridGraph.collision.collisionCheck = true;
+            gridGraph.collision.type = ColliderType.Capsule;
+            gridGraph.collision.diameter = 1.0f;
+            gridGraph.collision.height = 2.0f;
+
+            int obstacleMask = LayerMask.GetMask("Obstacle");
+            if (obstacleMask == 0)
+            {
+                obstacleMask = 1 << 6;
+            }
+            gridGraph.collision.mask = obstacleMask;
+
+            AstarPath.active.Scan();
+        }
+
+        #endregion
+
         #region Spatial Query API
 
         /// <summary>
@@ -247,6 +327,76 @@ namespace AntScout.Maps
 
         #endregion
 
+        #region Nest Spawning
+
+        /// <summary>
+        /// Instantiates ColonyNest structures dynamically at the designated start locations defined on the MapEnvironment.
+        /// Adheres strictly to the StarCraft melee start location model, supporting deterministic or randomized base assignments.
+        /// </summary>
+        public void SpawnNests()
+        {
+            // Clean up previously spawned nests if re-initializing or switching maps
+            for (int i = _spawnedNests.Count - 1; i >= 0; i--)
+            {
+                if (_spawnedNests[i] != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(_spawnedNests[i].gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(_spawnedNests[i].gameObject);
+                    }
+                }
+            }
+            _spawnedNests.Clear();
+
+            if (_environmentInstance == null)
+            {
+                throw new InvalidOperationException($"[{name}] MapManager: Cannot spawn nests because _environmentInstance is null!");
+            }
+
+            _environmentInstance.ValidateConfiguration();
+            var spawnPoints = new List<MapBaseSpawnPoint>(_environmentInstance.SpawnPoints);
+
+            if (_randomizeSpawnLocations)
+            {
+                // Fisher-Yates shuffle
+                for (int i = spawnPoints.Count - 1; i > 0; i--)
+                {
+                    int rnd = UnityEngine.Random.Range(0, i + 1);
+                    var temp = spawnPoints[i];
+                    spawnPoints[i] = spawnPoints[rnd];
+                    spawnPoints[rnd] = temp;
+                }
+            }
+
+            ColonyNest nestTemplate = _activeMapDefinition.NestPrefab;
+            if (nestTemplate == null)
+            {
+                throw new InvalidOperationException(
+                    $"[{name}] MapManager: Active MapDefinition '{_activeMapDefinition.MapName}' is missing an assigned NestPrefab!");
+            }
+
+            // Spawn Player Nest (Team 0)
+            ColonyNest playerNest = Instantiate(nestTemplate, spawnPoints[0].transform.position, spawnPoints[0].transform.rotation, _mapRoot);
+            playerNest.name = "Nest_Player";
+
+            // Spawn Enemy AI Nest (Team 1)
+            ColonyNest enemyNest = Instantiate(nestTemplate, spawnPoints[1].transform.position, spawnPoints[1].transform.rotation, _mapRoot);
+            enemyNest.name = "Nest_Enemy";
+
+            // Explicitly assign colony teams
+            playerNest.SetColonyTeam(0);
+            enemyNest.SetColonyTeam(1);
+
+            _spawnedNests.Add(playerNest);
+            _spawnedNests.Add(enemyNest);
+        }
+
+        #endregion
+
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
@@ -265,6 +415,19 @@ namespace AntScout.Maps
             Gizmos.DrawLine(
                 new Vector3(origin.x - half.x, _activeMapDefinition.KillPlaneY, origin.z - half.y),
                 new Vector3(origin.x + half.x, _activeMapDefinition.KillPlaneY, origin.z + half.y));
+
+            if (_environmentInstance != null && _environmentInstance.SpawnPoints != null)
+            {
+                for (int i = 0; i < _environmentInstance.SpawnPoints.Count; i++)
+                {
+                    var sp = _environmentInstance.SpawnPoints[i];
+                    if (sp != null)
+                    {
+                        Gizmos.color = i == 0 ? new Color(0.2f, 0.6f, 1f, 0.8f) : new Color(1f, 0.3f, 0.3f, 0.8f);
+                        Gizmos.DrawWireSphere(sp.transform.position, 2.5f);
+                    }
+                }
+            }
         }
 #endif
     }

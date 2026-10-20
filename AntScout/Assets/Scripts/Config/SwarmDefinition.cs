@@ -179,6 +179,18 @@ namespace AntScout.Config
         [Range(3.0f, 25.0f)]
         [SerializeField] private float _nestDefenseRadius = 8.0f;
 
+        [Tooltip("Multiplier applied to nest healing auras while the base is under attack or recipient hero is in combat (0 = completely halted, 0.2 = 80% reduction).")]
+        [Range(0.0f, 1.0f)]
+        [SerializeField] private float _nestUnderAttackHealMultiplier = 0.2f;
+
+        [Tooltip("Seconds the nest remains in the 'Under Attack' state after an intruder leaves the defense perimeter or damage stops.")]
+        [Range(1.0f, 15.0f)]
+        [SerializeField] private float _nestUnderAttackLingerDuration = 5.0f;
+
+        [Tooltip("Seconds an ant remains considered 'In Combat' after taking hostile damage (throttles passive triage and fountain healing).")]
+        [Range(1.0f, 10.0f)]
+        [SerializeField] private float _combatCooldownDuration = 4.0f;
+
         [Tooltip("Portion (0% to 100%) of active soldiers assigned to patrol and defend active recruitment trails. The remainder stay anchored at the home nest.")]
         [Range(0.0f, 1.0f)]
         [SerializeField] private float _soldierTrailEscortRatio = 0.5f;
@@ -243,6 +255,9 @@ namespace AntScout.Config
         public float SwarmAlarmRadius => _swarmAlarmRadius;
         public float SwarmCombatTimeout => _swarmCombatTimeout;
         public float NestDefenseRadius => _nestDefenseRadius;
+        public float NestUnderAttackHealMultiplier => _nestUnderAttackHealMultiplier;
+        public float NestUnderAttackLingerDuration => _nestUnderAttackLingerDuration;
+        public float CombatCooldownDuration => _combatCooldownDuration;
 
         public bool EnableEmergencyBrood => _enableEmergencyBrood;
         public float EmergencyWorkerIncubationTime => _emergencyWorkerIncubationTime;

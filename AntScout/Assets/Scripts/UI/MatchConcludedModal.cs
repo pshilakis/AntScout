@@ -45,6 +45,9 @@ namespace AntScout.UI
         [Tooltip("Button allowing the player to reload the scene and play again.")]
         [SerializeField] private Button _playAgainButton;
 
+        [Tooltip("Button allowing the player to exit to desktop.")]
+        [SerializeField] private Button _quitButton;
+
         [Header("Scene Navigation")]
         [Tooltip("Type-safe SceneReference asset to reload the match or launch the next map. If unassigned, reloads the current active scene.")]
         [SerializeField] private SceneReference _rematchScene;
@@ -63,6 +66,11 @@ namespace AntScout.UI
             {
                 _playAgainButton.onClick.AddListener(HandlePlayAgainClicked);
             }
+
+            if (_quitButton != null)
+            {
+                _quitButton.onClick.AddListener(HandleQuitClicked);
+            }
         }
 
         private void Start()
@@ -78,6 +86,11 @@ namespace AntScout.UI
             if (_playAgainButton != null)
             {
                 _playAgainButton.onClick.RemoveListener(HandlePlayAgainClicked);
+            }
+
+            if (_quitButton != null)
+            {
+                _quitButton.onClick.RemoveListener(HandleQuitClicked);
             }
 
             if (MatchDirector.Instance != null)
@@ -144,6 +157,15 @@ namespace AntScout.UI
             }
         }
 
+        private void HandleQuitClicked()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
         #endregion
 
         #region Validation
@@ -158,6 +180,11 @@ namespace AntScout.UI
             if (_playAgainButton == null)
             {
                 throw new InvalidOperationException($"[{name}] Play Again Button is unassigned!");
+            }
+
+            if (_quitButton == null)
+            {
+                throw new InvalidOperationException($"[{name}] Quit Button is unassigned!");
             }
         }
 

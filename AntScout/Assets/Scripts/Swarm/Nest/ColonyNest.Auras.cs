@@ -1,4 +1,5 @@
 using System;
+using AntScout.Characters;
 using PGS.Combat.Queries;
 using PGS.Combat.Targeting;
 using PGS.Effects;
@@ -77,12 +78,35 @@ namespace AntScout.Swarm.Nest
                     GameObject targetObj = target.Transform.gameObject;
                     Collider targetCol = targetObj.GetComponent<Collider>();
 
+                    // Evaluate combat throttle: if the nest is under attack OR the target is in combat
+                    float potencyMultiplier = 1.0f;
+                    bool isTargetInCombat = false;
+
+                    var character = targetObj.GetComponentInParent<AntCharacter>();
+                    float combatDuration = _config != null ? _config.CombatCooldownDuration : 4.0f;
+                    if (character != null && character.IsInCombat(combatDuration))
+                    {
+                        isTargetInCombat = true;
+                    }
+
+                    if (IsUnderAttack || isTargetInCombat)
+                    {
+                        potencyMultiplier = _config != null ? _config.NestUnderAttackHealMultiplier : 0.2f;
+                    }
+
+                    // If throttled to zero, suppress aura delivery entirely
+                    if (potencyMultiplier <= 0.0001f)
+                    {
+                        continue;
+                    }
+
                     var hitContext = new HitContext(
                         hitPoint: target.Transform.position,
                         hitNormal: Vector3.up,
                         hitCollider: targetCol,
                         target: targetObj,
-                        instigator: nestObj
+                        instigator: nestObj,
+                        baseMultiplier: potencyMultiplier
                     );
 
                     for (int e = 0; e < effectCount; e++)

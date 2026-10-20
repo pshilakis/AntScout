@@ -32,7 +32,9 @@ MonoBehaviour:
   _healthBarSegmentSize: 10
   _healthBarSegmentGap: 0
   _healthBarNotchWidth: 0.025
-  _healthBarVisibility: 0
+  _healthBarVisibility: 1
+  _healthBarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  _healthGhostColor: {r: 0.95, g: 0.6, b: 0.15, a: 1}
   _baseMoveSpeed: 3.75
   _visionRadius: 5
   _priorities:
@@ -63,10 +65,15 @@ MonoBehaviour:
   _secondaryInput: {fileID: 6645002542129529566, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _utilityAction: {fileID: 0}
   _utilityInput: {fileID: 6692165032235015795, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _tertiaryAction: {fileID: 0}
+  _tertiaryInput: {fileID: -5230789109125497931, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _ultimateAction: {fileID: 0}
+  _ultimateInput: {fileID: 395128866553577161, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _recruitmentTrailAction: {fileID: 0}
   _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _alarmTrailAction: {fileID: 0}
   _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _trailActivationMode: 0
   references:
     version: 2
     RefIds:

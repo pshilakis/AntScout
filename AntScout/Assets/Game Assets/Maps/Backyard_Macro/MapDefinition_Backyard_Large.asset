@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5b1a2c3d4e5f60718293a4b5c6d7e81, type: 3}
+  m_Name: MapDefinition_Backyard_Large
+  m_EditorClassIdentifier: Assembly-CSharp::AntScout.Maps.MapDefinition
+  _mapName: Backyard Lawn (Macro)
+  _environmentPrefab: {fileID: 2001000000000000001, guid: 97f0a00ce46f4cd38f4059fa759ab5c3, type: 3}
+  _nestPrefab: {fileID: 8919748608766039444, guid: 39203c0c1e4a90640a6ff80b64fa4822, type: 3}
+  _mapSize: {x: 80, y: 80}
+  _boundaryWallHeight: 6
+  _boundaryWallThickness: 1
+  _killPlaneY: -4
+  _resourceDefinition: {fileID: 11400000, guid: 45211eeb81b946498124c8fe7c46d43a, type: 2}

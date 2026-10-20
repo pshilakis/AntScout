@@ -25,12 +25,14 @@ namespace AntScout.Maps
                 _mapRoot = transform;
             }
 
-            if (_environmentInstance == null && _activeMapDefinition != null && _activeMapDefinition.EnvironmentPrefab != null)
+            if (_activeMapDefinition != null && _activeMapDefinition.EnvironmentPrefab != null)
             {
-                GameObject existing = GameObject.Find(_activeMapDefinition.EnvironmentPrefab.name);
-                if (existing != null)
+                if (_environmentInstance == null ||
+                    (!_environmentInstance.name.StartsWith(_activeMapDefinition.EnvironmentPrefab.name, StringComparison.OrdinalIgnoreCase) &&
+                     !_environmentInstance.name.StartsWith(_activeMapDefinition.MapName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    _environmentInstance = existing;
+                    GameObject existing = GameObject.Find(_activeMapDefinition.EnvironmentPrefab.name);
+                    _environmentInstance = existing != null ? existing.GetComponent<MapEnvironment>() : null;
                 }
             }
         }

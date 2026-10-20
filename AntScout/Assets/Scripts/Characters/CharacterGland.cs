@@ -1,5 +1,6 @@
 using System;
 using AntScout.Core.Enums;
+using AntScout.Core.Interfaces;
 using AntScout.Pheromone;
 using AntScout.Swarm.Nest;
 using PGS.Core.Time;
@@ -13,7 +14,7 @@ namespace AntScout.Characters
     /// Driven by PheromoneTrailAction (com.pgs.combat).
     /// </summary>
     [DisallowMultipleComponent]
-    public partial class CharacterGland : MonoBehaviour, IUpdatable
+    public partial class CharacterGland : MonoBehaviour, IUpdatable, IResourceEntity
     {
         [Header("Pheromone Visual Prefab")]
         [Tooltip("Prefab containing LineRenderer and PheromoneTrailEmitter. Spawned dynamically in world space if absent.")]
@@ -49,6 +50,22 @@ namespace AntScout.Characters
         public bool IsDepleted => _isDepleted;
         public bool IsInitialized => _definition != null;
         public PheromoneTrailEmitter Emitter => _emitter;
+
+        #region IResourceEntity Implementation
+
+        float IResourceEntity.CurrentResource => _currentCapacity;
+        float IResourceEntity.MaxResource => MaxCapacity;
+        float IResourceEntity.NormalizedResource => NormalizedCapacity;
+        bool IResourceEntity.IsDepleted => _isDepleted;
+        bool IResourceEntity.IsDraining => _isLayingTrail;
+
+        event Action<float, float> IResourceEntity.OnResourceChanged
+        {
+            add => OnCapacityChanged += value;
+            remove => OnCapacityChanged -= value;
+        }
+
+        #endregion
 
         public void Initialize(CharacterDefinition definition, int colonyTeamId, PheromoneTrailEmitter emitter = null)
         {

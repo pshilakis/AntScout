@@ -8,9 +8,17 @@ using PGS.Input.Readers;
 using PGS.Stats;
 using UnityEngine;
 using UnityEngine.InputSystem;
-
 namespace AntScout.Characters
 {
+    public enum TrailActivationMode
+    {
+        [Tooltip("Hold the key down to lay pheromones; release to stop.")]
+        Hold = 0,
+
+        [Tooltip("Tap once to toggle trail on/off. Automatically turns off when gland capacity is depleted.")]
+        Toggle = 1
+    }
+
     /// <summary>
     /// Universal character definition ScriptableObject.
     /// Single Source of Truth for character identity, physical target radius, base stats/vitals (com.pgs.stats),
@@ -66,6 +74,36 @@ namespace AntScout.Characters
 
         [Tooltip("Visibility policy (AlwaysVisible, InjuredOnly, CombatLinger, CombatOrInjured).")]
         [SerializeField] private HealthBarVisibilityPolicy _healthBarVisibility = HealthBarVisibilityPolicy.AlwaysVisible;
+
+        [Tooltip("Primary fill color for remaining health (default: Healthy Green).")]
+        [SerializeField] private Color _healthBarColor = new Color(0.20f, 0.85f, 0.30f, 1.0f);
+
+        [Tooltip("Lagging ghost bar catch-up color during damage drain (default: Amber Orange).")]
+        [SerializeField] private Color _healthGhostColor = new Color(0.95f, 0.60f, 0.15f, 1.0f);
+
+        [ColoredHeader("Diegetic Overhead Pheromone Bar (Secondary Resource)", HeaderColor.Teal)]
+        [Tooltip("If true and this unit has trail actions, attaches a floating resource bar directly under the health bar.")]
+        [SerializeField] private bool _enablePheromoneBar = true;
+
+        [Tooltip("Vertical gap in meters between the bottom of the health bar and top of the pheromone bar.")]
+        [SerializeField] private float _pheromoneBarSpacing = 0.015f;
+
+        [Tooltip("Height / Thickness of the pheromone bar in meters (default: 0.05m).")]
+        [Min(0.02f)]
+        [SerializeField] private float _pheromoneBarHeight = 0.05f;
+
+        [Tooltip("Border frame thickness in meters for the pheromone bar.")]
+        [Min(0.002f)]
+        [SerializeField] private float _pheromoneBarBorderThickness = 0.010f;
+
+        [Tooltip("Primary fill color for remaining chemical capacity (Electric Cyan).")]
+        [SerializeField] private Color _pheromoneBarColor = new Color(0.0f, 0.85f, 1.0f, 0.95f);
+
+        [Tooltip("Ghost drain color showing recent chemical depletion / decay lag.")]
+        [SerializeField] private Color _pheromoneGhostColor = new Color(0.10f, 0.45f, 0.85f, 0.85f);
+
+        [Tooltip("Visibility policy for the pheromone bar.")]
+        [SerializeField] private HealthBarVisibilityPolicy _pheromoneBarVisibility = HealthBarVisibilityPolicy.AlwaysVisible;
 
         [ColoredHeader("Locomotion", HeaderColor.LightBlue)]
         [Tooltip("Base movement speed in meters per second. Drives player ground locomotion and AI navigation.")]
@@ -146,26 +184,42 @@ namespace AntScout.Characters
         [SerializeField] private InputActionReference _primaryInput;
 
         [ColoredHeader("Secondary Slot", HeaderColor.Orange)]
-        [Tooltip("Secondary ability action (e.g. Acid Spit or Cleave).")]
+        [Tooltip("Secondary combat / mobility action (e.g. Scurry Dash or Acid Spit).")]
         [SerializeField] private CombatActionDefinition _secondaryAction;
 
         [Tooltip("Input action triggering the secondary action (default: PgsControls Player/Action2 - RMB).")]
         [PgsInputAction]
         [SerializeField] private InputActionReference _secondaryInput;
 
-        [ColoredHeader("Utility / Mobility Slot", HeaderColor.Mint)]
-        [Tooltip("Utility / Mobility action (e.g. Scurry Dash or Bull Rush).")]
+        [ColoredHeader("Utility Slot", HeaderColor.Mint)]
+        [Tooltip("Utility ability action (e.g. Pheromone Burst or Trap).")]
         [SerializeField] private CombatActionDefinition _utilityAction;
 
-        [Tooltip("Input action triggering the utility action (default: PgsControls Player/Action3 - Space).")]
+        [Tooltip("Input action triggering the utility action (default: PgsControls Player/Action6 - E).")]
         [PgsInputAction]
         [SerializeField] private InputActionReference _utilityInput;
+
+        [ColoredHeader("Tertiary Slot", HeaderColor.Yellow)]
+        [Tooltip("Tertiary active combat ability (e.g. Cleave or Stun Pincer).")]
+        [SerializeField] private CombatActionDefinition _tertiaryAction;
+
+        [Tooltip("Input action triggering the tertiary action (default: PgsControls Player/Action7 - R).")]
+        [PgsInputAction]
+        [SerializeField] private InputActionReference _tertiaryInput;
+
+        [ColoredHeader("Ultimate Slot", HeaderColor.Purple)]
+        [Tooltip("Ultimate / Super ability (e.g. Royal Swarm Frenzy).")]
+        [SerializeField] private CombatActionDefinition _ultimateAction;
+
+        [Tooltip("Input action triggering the ultimate action (default: PgsControls Player/Action5 - Q).")]
+        [PgsInputAction]
+        [SerializeField] private InputActionReference _ultimateInput;
 
         [ColoredHeader("Recruitment Trail Slot", HeaderColor.Teal)]
         [Tooltip("Channeled recruitment scent trail action.")]
         [SerializeField] private PheromoneTrailAction _recruitmentTrailAction;
 
-        [Tooltip("Input action held to lay recruitment trail (default: PgsControls Player/Action4 - Left Shift).")]
+        [Tooltip("Input action held or toggled to lay recruitment trail (default: PgsControls Player/Action4 - Left Shift).")]
         [PgsInputAction]
         [SerializeField] private InputActionReference _recruitmentTrailInput;
 
@@ -173,9 +227,13 @@ namespace AntScout.Characters
         [Tooltip("Channeled alarm scent trail action.")]
         [SerializeField] private PheromoneTrailAction _alarmTrailAction;
 
-        [Tooltip("Input action held to lay alarm trail (default: PgsControls Player/Action6 - E).")]
+        [Tooltip("Input action held or toggled to lay alarm trail (default: PgsControls Player/Action3 - Space).")]
         [PgsInputAction]
         [SerializeField] private InputActionReference _alarmTrailInput;
+
+        [ColoredHeader("Pheromone Controls & Ergonomics", HeaderColor.Teal)]
+        [Tooltip("Activation behavior for laying pheromone trails.")]
+        [SerializeField] private TrailActivationMode _trailActivationMode = TrailActivationMode.Hold;
 
         public string CharacterName => _characterName;
         public Sprite Icon => _icon;
@@ -192,6 +250,15 @@ namespace AntScout.Characters
         public float HealthBarSegmentGap => _healthBarSegmentGap;
         public float HealthBarNotchWidth => _healthBarNotchWidth;
         public HealthBarVisibilityPolicy HealthBarVisibility => _healthBarVisibility;
+        public Color HealthBarColor => _healthBarColor;
+        public Color HealthGhostColor => _healthGhostColor;
+        public bool EnablePheromoneBar => _enablePheromoneBar;
+        public float PheromoneBarSpacing => _pheromoneBarSpacing;
+        public float PheromoneBarHeight => _pheromoneBarHeight;
+        public float PheromoneBarBorderThickness => _pheromoneBarBorderThickness;
+        public Color PheromoneBarColor => _pheromoneBarColor;
+        public Color PheromoneGhostColor => _pheromoneGhostColor;
+        public HealthBarVisibilityPolicy PheromoneBarVisibility => _pheromoneBarVisibility;
         public float BaseMoveSpeed => _baseMoveSpeed;
         public float VisionRadius => _visionRadius;
         public IAiBehavior AiBehavior => _aiBehavior;
@@ -220,10 +287,15 @@ namespace AntScout.Characters
         public InputActionReference SecondaryInput => _secondaryInput;
         public CombatActionDefinition UtilityAction => _utilityAction;
         public InputActionReference UtilityInput => _utilityInput;
+        public CombatActionDefinition TertiaryAction => _tertiaryAction;
+        public InputActionReference TertiaryInput => _tertiaryInput;
+        public CombatActionDefinition UltimateAction => _ultimateAction;
+        public InputActionReference UltimateInput => _ultimateInput;
         public PheromoneTrailAction RecruitmentTrailAction => _recruitmentTrailAction;
         public InputActionReference RecruitmentTrailInput => _recruitmentTrailInput;
         public PheromoneTrailAction AlarmTrailAction => _alarmTrailAction;
         public InputActionReference AlarmTrailInput => _alarmTrailInput;
+        public TrailActivationMode TrailActivationMode => _trailActivationMode;
 
         /// <summary>
         /// True if at least one pheromone trail action is equipped in this character's Action Kit.
@@ -244,6 +316,8 @@ namespace AntScout.Characters
             if (_primaryAction != null && _primaryInput != null) reader.RegisterAction(_primaryInput);
             if (_secondaryAction != null && _secondaryInput != null) reader.RegisterAction(_secondaryInput);
             if (_utilityAction != null && _utilityInput != null) reader.RegisterAction(_utilityInput);
+            if (_tertiaryAction != null && _tertiaryInput != null) reader.RegisterAction(_tertiaryInput);
+            if (_ultimateAction != null && _ultimateInput != null) reader.RegisterAction(_ultimateInput);
             if (_recruitmentTrailAction != null && _recruitmentTrailInput != null) reader.RegisterAction(_recruitmentTrailInput);
             if (_alarmTrailAction != null && _alarmTrailInput != null) reader.RegisterAction(_alarmTrailInput);
         }
@@ -271,6 +345,18 @@ namespace AntScout.Characters
                 if (_utilityAction != null && MatchesAction(_utilityInput, triggeredInput))
                 {
                     action = _utilityAction;
+                    return true;
+                }
+
+                if (_tertiaryAction != null && MatchesAction(_tertiaryInput, triggeredInput))
+                {
+                    action = _tertiaryAction;
+                    return true;
+                }
+
+                if (_ultimateAction != null && MatchesAction(_ultimateInput, triggeredInput))
+                {
+                    action = _ultimateAction;
                     return true;
                 }
             }

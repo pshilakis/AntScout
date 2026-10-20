@@ -3,6 +3,7 @@ using AntScout.Core.Interfaces;
 using AntScout.Core.Stats;
 using PGS.Combat.Targeting;
 using PGS.Core;
+using PGS.Core.Time;
 using PGS.Effects;
 using PGS.Stats;
 using UnityEngine;
@@ -76,7 +77,19 @@ namespace AntScout.Swarm.Nest
 
         public void SetColonyTeam(int teamId)
         {
+            if (_colonyTeamId == teamId && s_nestsByTeam.TryGetValue(teamId, out ColonyNest existing) && existing == this)
+            {
+                return;
+            }
+
+            if (s_nestsByTeam.TryGetValue(_colonyTeamId, out ColonyNest current) && current == this)
+            {
+                s_nestsByTeam.Remove(_colonyTeamId);
+            }
+
             _colonyTeamId = teamId;
+            s_nestsByTeam[_colonyTeamId] = this;
+            ResolveTrailEmitter();
         }
 
         public TargetAffiliation GetAffiliationTowards(IFactionMember other)
@@ -90,6 +103,10 @@ namespace AntScout.Swarm.Nest
 
         public DamageResult ReceiveDamage(float amount, in HitContext context)
         {
+            if (_config != null)
+            {
+                _underAttackExpiryTimestamp = PgsTime.ElapsedTime + _config.NestUnderAttackLingerDuration;
+            }
             return _vitals.ReceiveDamage(amount, in context);
         }
 

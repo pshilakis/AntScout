@@ -22,6 +22,7 @@ namespace AntScout.Editor
     {
         private const string CanvasName = "[ Match UI Canvas - Screen Space ]";
         private const string ShaderName = "PGS/UI/FillBar";
+        private const string PrefabPath = "Assets/Game Assets/Scenes/UI/[ Match UI Canvas - Screen Space ].prefab";
 
         [MenuItem("AntScout/Setup Match Scene UI", false, 100)]
         public static void BuildMatchUi()
@@ -79,10 +80,56 @@ namespace AntScout.Editor
             // 4. Create Match Concluded Modal
             BuildMatchConcludedModal(canvasGo.transform);
 
+            // 5. Create Match Escape Menu Modal
+            BuildMatchEscapeMenuModal(canvasGo.transform);
+
+            // 6. Save/update Prefab Asset
+            PrefabUtility.SaveAsPrefabAsset(canvasGo, PrefabPath);
+
             EditorSceneManager.MarkSceneDirty(activeScene);
             Selection.activeGameObject = canvasGo;
 
-            Debug.Log("[MatchUiBuilder] Successfully created and wired Match UI hierarchy in the active scene!");
+            Debug.Log($"[MatchUiBuilder] Successfully created Match UI hierarchy and updated '{PrefabPath}'!");
+        }
+
+        [MenuItem("AntScout/Update Match UI Prefab", false, 101)]
+        public static void UpdateMatchUiPrefab()
+        {
+            Shader fillBarShader = Shader.Find(ShaderName);
+            if (fillBarShader == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Missing Shader",
+                    $"Could not locate shader '{ShaderName}'. Please ensure it is compiled in com.pgs.ui.",
+                    "OK");
+                return;
+            }
+
+            GameObject canvasGo = new GameObject(CanvasName, typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            try
+            {
+                Canvas canvas = canvasGo.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 10;
+
+                CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+
+                BuildMatchHudView(canvasGo.transform, fillBarShader);
+                BuildMatchConcludedModal(canvasGo.transform);
+                BuildMatchEscapeMenuModal(canvasGo.transform);
+
+                PrefabUtility.SaveAsPrefabAsset(canvasGo, PrefabPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log($"[MatchUiBuilder] Successfully regenerated and saved '{PrefabPath}'!");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(canvasGo);
+            }
         }
 
         private static void EnsureEventSystem()
@@ -479,14 +526,17 @@ namespace AntScout.Editor
             winText.alignment = TextAlignmentOptions.Center;
             winText.color = new Color(0.85f, 0.85f, 0.9f, 1f);
 
-            // Play Again Button
+            // Action Buttons: Play Again & Quit (Side-by-side)
+            Vector2 actionBtnSize = new Vector2(210f, 48f);
+
+            // Play Again Button (Left)
             GameObject buttonGo = CreateRectTransform("Play Again Button", windowGo.transform);
             RectTransform buttonRt = buttonGo.GetComponent<RectTransform>();
             buttonRt.anchorMin = new Vector2(0.5f, 0f);
             buttonRt.anchorMax = new Vector2(0.5f, 0f);
             buttonRt.pivot = new Vector2(0.5f, 0f);
-            buttonRt.anchoredPosition = new Vector2(0f, 35f);
-            buttonRt.sizeDelta = new Vector2(240f, 50f);
+            buttonRt.anchoredPosition = new Vector2(-115f, 35f);
+            buttonRt.sizeDelta = actionBtnSize;
 
             var buttonImg = buttonGo.AddComponent<Image>();
             buttonImg.color = new Color(0.18f, 0.65f, 0.35f, 1f);
@@ -502,10 +552,38 @@ namespace AntScout.Editor
 
             var btnText = btnTextGo.AddComponent<TextMeshProUGUI>();
             btnText.text = "PLAY AGAIN";
-            btnText.fontSize = 18f;
+            btnText.fontSize = 17f;
             btnText.fontStyle = FontStyles.Bold;
             btnText.alignment = TextAlignmentOptions.Center;
             btnText.color = Color.white;
+
+            // Quit Button (Right)
+            GameObject quitGo = CreateRectTransform("Quit Button", windowGo.transform);
+            RectTransform quitRt = quitGo.GetComponent<RectTransform>();
+            quitRt.anchorMin = new Vector2(0.5f, 0f);
+            quitRt.anchorMax = new Vector2(0.5f, 0f);
+            quitRt.pivot = new Vector2(0.5f, 0f);
+            quitRt.anchoredPosition = new Vector2(115f, 35f);
+            quitRt.sizeDelta = actionBtnSize;
+
+            var quitImg = quitGo.AddComponent<Image>();
+            quitImg.color = new Color(0.25f, 0.26f, 0.32f, 1f);
+
+            var quitBtn = quitGo.AddComponent<Button>();
+            var quitColors = quitBtn.colors;
+            quitColors.highlightedColor = new Color(0.35f, 0.36f, 0.44f, 1f);
+            quitColors.pressedColor = new Color(0.18f, 0.19f, 0.24f, 1f);
+            quitBtn.colors = quitColors;
+
+            GameObject quitTextGo = CreateRectTransform("Button Text", quitGo.transform);
+            StretchFull(quitTextGo.GetComponent<RectTransform>());
+
+            var quitText = quitTextGo.AddComponent<TextMeshProUGUI>();
+            quitText.text = "QUIT";
+            quitText.fontSize = 17f;
+            quitText.fontStyle = FontStyles.Bold;
+            quitText.alignment = TextAlignmentOptions.Center;
+            quitText.color = Color.white;
 
             // Wire Serialized Properties on MatchConcludedModal
             SerializedObject modalSo = new SerializedObject(modal);
@@ -514,6 +592,7 @@ namespace AntScout.Editor
             modalSo.FindProperty("_durationValueText").objectReferenceValue = durText;
             modalSo.FindProperty("_winnerValueText").objectReferenceValue = winText;
             modalSo.FindProperty("_playAgainButton").objectReferenceValue = button;
+            modalSo.FindProperty("_quitButton").objectReferenceValue = quitBtn;
             modalSo.FindProperty("_victoryColor").colorValue = new Color(0.2f, 0.85f, 0.3f, 1f);
             modalSo.FindProperty("_defeatColor").colorValue = new Color(0.9f, 0.25f, 0.25f, 1f);
             modalSo.FindProperty("_blocksUnderlyingViews").boolValue = true;
@@ -532,6 +611,170 @@ namespace AntScout.Editor
             modalCg.alpha = 0f;
             modalCg.interactable = false;
             modalCg.blocksRaycasts = false;
+        }
+
+        private static void BuildMatchEscapeMenuModal(Transform canvasTransform)
+        {
+            // Root Modal Dialog (Sub-Canvas with isolated batching and highest sorting order)
+            GameObject modalGo = CreateRectTransform("Match Escape Menu Modal", canvasTransform);
+            StretchFull(modalGo.GetComponent<RectTransform>());
+
+            var modalCanvas = modalGo.AddComponent<Canvas>();
+            modalCanvas.overrideSorting = true;
+            modalCanvas.sortingOrder = 110;
+            modalGo.AddComponent<GraphicRaycaster>();
+
+            var modalCg = modalGo.AddComponent<CanvasGroup>();
+            var modal = modalGo.AddComponent<MatchEscapeMenuModal>();
+
+            // Dark Dimmer Backdrop
+            GameObject backdropGo = CreateRectTransform("Backdrop Dimmer", modalGo.transform);
+            StretchFull(backdropGo.GetComponent<RectTransform>());
+            var backdropImg = backdropGo.AddComponent<Image>();
+            backdropImg.color = new Color(0.02f, 0.02f, 0.04f, 0.75f);
+
+            // Centered Modal Window
+            GameObject windowGo = CreateRectTransform("Window Panel", modalGo.transform);
+            RectTransform windowRt = windowGo.GetComponent<RectTransform>();
+            windowRt.anchorMin = new Vector2(0.5f, 0.5f);
+            windowRt.anchorMax = new Vector2(0.5f, 0.5f);
+            windowRt.pivot = new Vector2(0.5f, 0.5f);
+            windowRt.anchoredPosition = Vector2.zero;
+            windowRt.sizeDelta = new Vector2(380f, 440f);
+
+            var windowBg = windowGo.AddComponent<Image>();
+            windowBg.color = new Color(0.06f, 0.07f, 0.1f, 0.95f);
+
+            // Header Title: GAME PAUSED
+            GameObject titleGo = CreateRectTransform("Pause Title", windowGo.transform);
+            RectTransform titleRt = titleGo.GetComponent<RectTransform>();
+            titleRt.anchorMin = new Vector2(0f, 1f);
+            titleRt.anchorMax = new Vector2(1f, 1f);
+            titleRt.pivot = new Vector2(0.5f, 1f);
+            titleRt.anchoredPosition = new Vector2(0f, -25f);
+            titleRt.sizeDelta = new Vector2(0f, 45f);
+
+            var titleText = titleGo.AddComponent<TextMeshProUGUI>();
+            titleText.text = "GAME PAUSED";
+            titleText.fontSize = 28f;
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = new Color(1f, 0.85f, 0.2f, 1f);
+
+            // Subtitle
+            GameObject subtitleGo = CreateRectTransform("Pause Subtitle", windowGo.transform);
+            RectTransform subtitleRt = subtitleGo.GetComponent<RectTransform>();
+            subtitleRt.anchorMin = new Vector2(0f, 1f);
+            subtitleRt.anchorMax = new Vector2(1f, 1f);
+            subtitleRt.pivot = new Vector2(0.5f, 1f);
+            subtitleRt.anchoredPosition = new Vector2(0f, -65f);
+            subtitleRt.sizeDelta = new Vector2(0f, 20f);
+
+            var subtitleText = subtitleGo.AddComponent<TextMeshProUGUI>();
+            subtitleText.text = "TACTICAL OPERATIONS";
+            subtitleText.fontSize = 12f;
+            subtitleText.alignment = TextAlignmentOptions.Center;
+            subtitleText.color = new Color(0.6f, 0.65f, 0.75f, 1f);
+
+            // 4 Vertical Action Buttons
+            Vector2 buttonSize = new Vector2(290f, 46f);
+
+            Button resumeBtn = CreateMenuButton(
+                windowGo.transform,
+                "Resume Button",
+                "RESUME",
+                new Vector2(0f, 40f),
+                buttonSize,
+                new Color(0.18f, 0.65f, 0.35f, 1f),
+                new Color(0.25f, 0.78f, 0.45f, 1f),
+                new Color(0.12f, 0.5f, 0.28f, 1f));
+
+            Button restartBtn = CreateMenuButton(
+                windowGo.transform,
+                "Restart Button",
+                "RESTART MATCH",
+                new Vector2(0f, -18f),
+                buttonSize,
+                new Color(0.22f, 0.35f, 0.55f, 1f),
+                new Color(0.28f, 0.42f, 0.65f, 1f),
+                new Color(0.16f, 0.26f, 0.42f, 1f));
+
+            Button forfeitBtn = CreateMenuButton(
+                windowGo.transform,
+                "Forfeit Button",
+                "FORFEIT MATCH",
+                new Vector2(0f, -76f),
+                buttonSize,
+                new Color(0.65f, 0.22f, 0.22f, 1f),
+                new Color(0.78f, 0.3f, 0.3f, 1f),
+                new Color(0.45f, 0.15f, 0.15f, 1f));
+
+            Button quitBtn = CreateMenuButton(
+                windowGo.transform,
+                "Quit Desktop Button",
+                "QUIT TO DESKTOP",
+                new Vector2(0f, -134f),
+                buttonSize,
+                new Color(0.25f, 0.26f, 0.32f, 1f),
+                new Color(0.35f, 0.36f, 0.44f, 1f),
+                new Color(0.18f, 0.19f, 0.24f, 1f));
+
+            // Wire Serialized Properties on MatchEscapeMenuModal
+            SerializedObject modalSo = new SerializedObject(modal);
+            modalSo.FindProperty("_resumeButton").objectReferenceValue = resumeBtn;
+            modalSo.FindProperty("_restartButton").objectReferenceValue = restartBtn;
+            modalSo.FindProperty("_forfeitButton").objectReferenceValue = forfeitBtn;
+            modalSo.FindProperty("_quitDesktopButton").objectReferenceValue = quitBtn;
+            modalSo.FindProperty("_freezeTimeOnOpen").boolValue = true;
+            modalSo.FindProperty("_blocksUnderlyingViews").boolValue = true;
+            modalSo.FindProperty("_registerAsOcclusionBlocker").boolValue = true;
+            modalSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // Modal is hidden initially
+            modalCg.alpha = 0f;
+            modalCg.interactable = false;
+            modalCg.blocksRaycasts = false;
+        }
+
+        private static Button CreateMenuButton(
+            Transform parent,
+            string name,
+            string label,
+            Vector2 anchoredPos,
+            Vector2 sizeDelta,
+            Color baseColor,
+            Color highlightColor,
+            Color pressedColor)
+        {
+            GameObject buttonGo = CreateRectTransform(name, parent);
+            RectTransform rt = buttonGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = sizeDelta;
+
+            var img = buttonGo.AddComponent<Image>();
+            img.color = baseColor;
+
+            var btn = buttonGo.AddComponent<Button>();
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = highlightColor;
+            colors.pressedColor = pressedColor;
+            btn.colors = colors;
+
+            GameObject textGo = CreateRectTransform("Button Text", buttonGo.transform);
+            StretchFull(textGo.GetComponent<RectTransform>());
+
+            var text = textGo.AddComponent<TextMeshProUGUI>();
+            text.text = label;
+            text.fontSize = 17f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = Color.white;
+
+            return btn;
         }
 
         private static GameObject CreateRectTransform(string name, Transform parent)

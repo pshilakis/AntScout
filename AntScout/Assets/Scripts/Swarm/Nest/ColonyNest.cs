@@ -62,6 +62,10 @@ namespace AntScout.Swarm.Nest
         public event Action<ISwarmAgent> OnSoldierSpawned;
         public event Action<BoundedInt> OnBiomassChanged;
 
+        private float _underAttackExpiryTimestamp = -1000f;
+        public bool IsUnderAttack => PgsTime.ElapsedTime < _underAttackExpiryTimestamp ||
+                                     (_vitals != null && _config != null && _vitals.IsInCombat(_config.NestUnderAttackLingerDuration));
+
         public Vector3 SpawnPosition
         {
             get
@@ -193,7 +197,10 @@ namespace AntScout.Swarm.Nest
 
         private void OnEnable()
         {
-            s_nestsByTeam[_colonyTeamId] = this;
+            if (!s_nestsByTeam.TryGetValue(_colonyTeamId, out ColonyNest existing) || existing == null || !existing.IsStructureAlive)
+            {
+                s_nestsByTeam[_colonyTeamId] = this;
+            }
             PgsTime.Register(this, UpdateRate.Medium, TimeChannel.World);
             FogOfWarManager.Register(this);
             FogOfWarManager.RegisterCullable(this);
@@ -246,6 +253,7 @@ namespace AntScout.Swarm.Nest
                 IFactionMember faction = (attackable as IFactionMember) ?? col.GetComponentInParent<IFactionMember>();
                 if (faction != null && GetAffiliationTowards(faction) == TargetAffiliation.Enemy)
                 {
+                    _underAttackExpiryTimestamp = PgsTime.ElapsedTime + _config.NestUnderAttackLingerDuration;
                     RallyNestDefenders(attackable);
                     break;
                 }
@@ -253,8 +261,9 @@ namespace AntScout.Swarm.Nest
         }
 
         /// <summary>
-        /// Rallies all active defenders in this colony to converge on and attack a hostile intruder (Red Alert).
-        /// Prioritizes armored soldier caste, followed by worker militia.
+        /// Rallies active defenders in this colony to converge on and attack a hostile intruder (Red Alert).
+        /// Prioritizes armored soldier caste, followed by idle worker militia physically within the home nest yard.
+        /// Workers deployed out on foraging trails remain dedicated to food logistics.
         /// </summary>
         public void RallyNestDefenders(IAttackable hostileTarget)
         {
@@ -269,12 +278,20 @@ namespace AntScout.Swarm.Nest
                 }
             }
 
+            float nestRadiusSqr = (_config.NestWanderRadius + 1.0f) * (_config.NestWanderRadius + 1.0f);
+            Vector3 nestPos = transform.position;
+
             for (int i = 0; i < _activeWorkers.Count; i++)
             {
                 ISwarmAgent agent = _activeWorkers[i];
-                if (agent is SwarmAgent swarmAgent)
+                if (agent is SwarmAgent swarmAgent && swarmAgent.AgentTransform != null)
                 {
-                    swarmAgent.EngageTarget(hostileTarget);
+                    Vector3 diff = swarmAgent.AgentTransform.position - nestPos;
+                    float distSqr = diff.x * diff.x + diff.z * diff.z;
+                    if (distSqr <= nestRadiusSqr && swarmAgent.CurrentState == SwarmAgentState.WanderingAroundNest)
+                    {
+                        swarmAgent.EngageTarget(hostileTarget);
+                    }
                 }
             }
         }

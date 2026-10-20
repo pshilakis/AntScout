@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: MapDefinition_Backyard
   m_EditorClassIdentifier: Assembly-CSharp::AntScout.Maps.MapDefinition
   _mapName: Backyard Lawn
-  _environmentPrefab: {fileID: 1546377695521776023, guid: ad62163fcc8f3844498741023321353e, type: 3}
+  _environmentPrefab: {fileID: 2001000000000000001, guid: ad62163fcc8f3844498741023321353e, type: 3}
+  _nestPrefab: {fileID: 8919748608766039444, guid: 39203c0c1e4a90640a6ff80b64fa4822, type: 3}
   _mapSize: {x: 50, y: 50}
   _boundaryWallHeight: 6
   _boundaryWallThickness: 1

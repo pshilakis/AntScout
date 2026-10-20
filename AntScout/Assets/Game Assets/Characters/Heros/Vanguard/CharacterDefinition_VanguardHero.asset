@@ -33,6 +33,15 @@ MonoBehaviour:
   _healthBarSegmentGap: 0
   _healthBarNotchWidth: 0.025
   _healthBarVisibility: 0
+  _healthBarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  _healthGhostColor: {r: 0.95, g: 0.6, b: 0.15, a: 1}
+  _enablePheromoneBar: 1
+  _pheromoneBarSpacing: 0.015
+  _pheromoneBarHeight: 0.05
+  _pheromoneBarBorderThickness: 0.01
+  _pheromoneBarColor: {r: 0, g: 0.85, b: 1, a: 0.95}
+  _pheromoneGhostColor: {r: 0.1, g: 0.45, b: 0.85, a: 0.85}
+  _pheromoneBarVisibility: 0
   _baseMoveSpeed: 5
   _visionRadius: 7
   _priorities:
@@ -62,11 +71,16 @@ MonoBehaviour:
   _secondaryAction: {fileID: 0}
   _secondaryInput: {fileID: 6645002542129529566, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _utilityAction: {fileID: 0}
-  _utilityInput: {fileID: 6692165032235015795, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _utilityInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _tertiaryAction: {fileID: 0}
+  _tertiaryInput: {fileID: 0}
+  _ultimateAction: {fileID: 0}
+  _ultimateInput: {fileID: 0}
   _recruitmentTrailAction: {fileID: 11400000, guid: 38d2e3817b174817a4349815c010886d, type: 2}
   _recruitmentTrailInput: {fileID: -3787817095328604382, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
   _alarmTrailAction: {fileID: 11400000, guid: fc2afc4c7999402183497db4f3f48016, type: 2}
-  _alarmTrailInput: {fileID: -6422137492916696482, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _alarmTrailInput: {fileID: 6692165032235015795, guid: 7f9c2d1045934ea29104b9015c7e10a1, type: 3}
+  _trailActivationMode: 0
   references:
     version: 2
     RefIds:

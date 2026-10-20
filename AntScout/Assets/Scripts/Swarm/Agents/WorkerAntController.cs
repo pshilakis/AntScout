@@ -168,21 +168,12 @@ namespace AntScout.Swarm.Agents
 
         private void EvaluateNestWandering(float deltaTime)
         {
-            // 1. Hostile intruder proximity detection (Self-Defense)
-            if (TryDetectHostileIntruder(_config.SwarmAggroRadius, out IAttackable intruder))
-            {
-                _isPausingAtNest = false;
-                EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
-                return;
-            }
-
             if (_scentCheckCooldown > 0f)
             {
                 _scentCheckCooldown -= deltaTime;
             }
 
-            // 2. Sniff for active recruitment pheromone nearby
+            // 1. Sniff for active recruitment pheromone nearby
             PheromoneTrailEmitter emitter = TrailEmitter;
             if (_scentCheckCooldown <= 0f && emitter != null && emitter.ActiveNodeCount > 0)
             {
@@ -245,15 +236,7 @@ namespace AntScout.Swarm.Agents
 
         private void EvaluateFoodSearch(float deltaTime)
         {
-            // 1. Hostile intruder proximity detection
-            if (TryDetectHostileIntruder(_config.SwarmAggroRadius, out IAttackable intruder))
-            {
-                EngageTarget(intruder);
-                BroadcastAlarmToSisters(intruder);
-                return;
-            }
-
-            // 2. Sniff for harvestable food sources
+            // 1. Sniff for harvestable food sources
             float searchRadius = _config.FoodDetectionRadius;
             FoodSource closestFood = FoodSource.FindClosest(transform.position, searchRadius);
 
@@ -481,17 +464,14 @@ namespace AntScout.Swarm.Agents
         #region Enmity Overrides
 
         /// <summary>
-        /// Enforces cargo preservation: Workers laden with harvested cargo ignore calls to arms
-        /// to prioritize safely delivering food to the depot.
+        /// Workers are dedicated economic foragers. They ignore distant combat alarms to maintain
+        /// uninterrupted foraging routes, relying on armored Soldier ants to handle combat.
+        /// Self-defense retaliation when directly attacked is fully preserved via HandleDamagedEnmityRetaliation.
         /// </summary>
         public override void OnAlarmReceived(IAttackable hostileTarget)
         {
-            if (_carriedAmount > 0)
-            {
-                return;
-            }
-
-            base.OnAlarmReceived(hostileTarget);
+            // Dedicated foragers do not abandon their food supply lines for distant skirmishes.
+            return;
         }
 
         /// <summary>

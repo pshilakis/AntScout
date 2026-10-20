@@ -67,6 +67,9 @@ namespace AntScout.Characters
         public float MaxHealth => _vitals.MaxHealth;
         public float NormalizedHealth => _vitals.NormalizedHealth;
         public float SpeedMultiplier => _speedMultiplier;
+        public float LastDamageTakenTimestamp => _vitals.LastDamageTakenTimestamp;
+        public float TimeSinceLastDamaged => _vitals.TimeSinceLastDamaged;
+        public bool IsInCombat(float combatDuration) => _vitals.IsInCombat(combatDuration);
 
         #region IMovementReceiver Implementation
 

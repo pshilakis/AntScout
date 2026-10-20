@@ -147,16 +147,7 @@ namespace AntScout.Swarm.Agents
         {
             if (_characterDefinition != null && _characterDefinition.EnableHealthBar)
             {
-                var bar = OverheadHealthBar.Attach(
-                    gameObject,
-                    _characterDefinition.HealthBarHeightOffset,
-                    _characterDefinition.HealthBarWidth,
-                    _characterDefinition.HealthBarHeight,
-                    _characterDefinition.HealthBarBorderThickness,
-                    _characterDefinition.HealthBarSegmentSize,
-                    _characterDefinition.HealthBarSegmentGap,
-                    _characterDefinition.HealthBarNotchWidth,
-                    _characterDefinition.HealthBarVisibility);
+                var bar = OverheadVitals.Attach(gameObject, _characterDefinition);
                 bar.BindHealth(this);
             }
         }
@@ -209,7 +200,7 @@ namespace AntScout.Swarm.Agents
             {
                 _vitals.Reset();
             }
-            var bar = GetComponentInChildren<OverheadHealthBar>();
+            var bar = GetComponentInChildren<OverheadVitals>();
             if (bar != null)
             {
                 bar.BindHealth(this);
