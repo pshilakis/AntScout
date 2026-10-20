@@ -38,6 +38,8 @@ namespace AntScout.Swarm.Agents
         private bool _isFollowingAlarm;
         private bool _isEscortPatrol;
         private FoodSource _guardedFoodSource;
+        private float _perimeterPaceTimer;
+        private float _emptyHarvesterTimer;
 
         public bool IsFollowingAlarm => _isFollowingAlarm;
         public bool IsEscortPatrol => _isEscortPatrol;
@@ -48,6 +50,8 @@ namespace AntScout.Swarm.Agents
 
             _scentCheckCooldown = 0f;
             _tipGuardTimer = 0f;
+            _perimeterPaceTimer = 0f;
+            _emptyHarvesterTimer = 0f;
             _isFollowingAlarm = false;
             _isEscortPatrol = false;
             _guardedFoodSource = null;
@@ -92,6 +96,38 @@ namespace AntScout.Swarm.Agents
                     break;
             }
         }
+
+        #region Alarm Mobilization API
+
+        /// <summary>
+        /// Scans for active alarm pheromone trails in sensory range and immediately mobilizes the soldier to battle.
+        /// Grounded in Single Responsibility (SRP): Prioritizes military alarm response above civilian foraging or perimeter guard.
+        /// </summary>
+        private bool TryMobilizeToNearbyAlarmTrail()
+        {
+            if (_isFollowingAlarm) return false;
+
+            PheromoneTrailEmitter emitter = TrailEmitter;
+            if (emitter == null || emitter.ActiveNodeCount == 0) return false;
+
+            float searchRadius = _config != null ? _config.TrailSamplingRadius * 1.5f : 18.0f;
+            float alarmRadiusSqr = searchRadius * searchRadius;
+
+            if (emitter.TryFindBestAlarmNode(transform.position, alarmRadiusSqr, out PheromoneTrailSegment alarmSeg, out int alarmIdx))
+            {
+                _isPausingAtNest = false;
+                _isFollowingAlarm = true;
+                _isEscortPatrol = false;
+                _guardedFoodSource = null;
+                _follower.FollowTrailOutbound(alarmSeg, alarmIdx);
+                SetState(SwarmAgentState.FollowingTrailOutbound);
+                return true;
+            }
+
+            return false;
+        }
+
+        #endregion
 
         #region Nest Yard Guard & Scent Evaluation
 
@@ -156,14 +192,8 @@ namespace AntScout.Swarm.Agents
             // 2. High-Priority Alarm Trail Scan: Immediate focus-fire mobilization
             if (_scentCheckCooldown <= 0f && emitter != null && emitter.ActiveNodeCount > 0)
             {
-                float alarmRadiusSqr = (_config.NestRecruitmentRadius * 1.5f) * (_config.NestRecruitmentRadius * 1.5f);
-                if (emitter.TryFindBestAlarmNode(transform.position, alarmRadiusSqr, out PheromoneTrailSegment alarmSeg, out int alarmIdx))
+                if (TryMobilizeToNearbyAlarmTrail())
                 {
-                    _isPausingAtNest = false;
-                    _isFollowingAlarm = true;
-                    _isEscortPatrol = false;
-                    _follower.FollowTrailOutbound(alarmSeg, alarmIdx);
-                    SetState(SwarmAgentState.FollowingTrailOutbound);
                     return;
                 }
 
@@ -245,17 +275,83 @@ namespace AntScout.Swarm.Agents
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
+                return;
             }
+
+            // High-urgency Alarm Trail response: break peaceful foraging escort if battle erupts nearby
+            if (!_isFollowingAlarm && TryMobilizeToNearbyAlarmTrail())
+            {
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Queries the home nest for the number of allied workers actively harvesting at the specified food source.
+        /// Grounded in Single Responsibility (SRP): Informs soldier escort decisions without managing harvesting logic.
+        /// </summary>
+        private int CountNearbyWorkersAtHarvest(FoodSource food, float radius = 5.0f)
+        {
+            if (food == null || _homeNest == null) return 0;
+
+            int count = 0;
+            float radiusSqr = radius * radius;
+            Vector3 foodPos = food.WorldPosition;
+
+            var workers = _homeNest.ActiveWorkers;
+            for (int i = 0; i < workers.Count; i++)
+            {
+                ISwarmAgent agent = workers[i];
+                if (agent == null || agent.AgentTransform == null || !agent.AgentTransform.gameObject.activeInHierarchy) continue;
+
+                if (agent.CurrentState == SwarmAgentState.Harvesting)
+                {
+                    Vector3 diff = agent.AgentTransform.position - foodPos;
+                    diff.y = 0f;
+                    if (diff.sqrMagnitude <= radiusSqr)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// Projects a guard station on the outer perimeter surrounding the harvest site.
+        /// Prevents clumping on top of the resource node and spaces soldiers evenly around gathering workers.
+        /// </summary>
+        private void RepositionPerimeterGuard()
+        {
+            if (_guardedFoodSource == null || _follower == null) return;
+
+            // Offset outward to defensive perimeter (2.5m - 4.0m)
+            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle.normalized * UnityEngine.Random.Range(2.5f, 4.0f);
+            Vector3 guardPos = _guardedFoodSource.WorldPosition + new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+            _follower.ApproachTarget(guardPos);
         }
 
         protected override void HandleReachedTrailTip()
         {
             _tipGuardTimer = 0f;
+            _perimeterPaceTimer = 0f;
+            _emptyHarvesterTimer = 0f;
             SetState(SwarmAgentState.AtTrailEnd);
 
             // Check if there is an active food source at this trail tip
             float searchRadius = _config.FoodDetectionRadius + 2.0f;
             _guardedFoodSource = FoodSource.FindClosest(transform.position, searchRadius);
+
+            // If escorting a foraging trail and NO allied workers are at this site yet:
+            // Do not idle in an empty clearing! Immediately turn around and patrol back down the trail to escort oncoming workers!
+            if (_isEscortPatrol && (_guardedFoodSource == null || CountNearbyWorkersAtHarvest(_guardedFoodSource) == 0))
+            {
+                OrderReturnHome();
+                return;
+            }
+
+            // Workers are present: step outward into an active perimeter guard station
+            RepositionPerimeterGuard();
         }
 
         #endregion
@@ -270,6 +366,12 @@ namespace AntScout.Swarm.Agents
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
+                return;
+            }
+
+            // 2. High-urgency Alarm Trail response: break food guard if an attack trail is laid nearby
+            if (!_isFollowingAlarm && TryMobilizeToNearbyAlarmTrail())
+            {
                 return;
             }
 
@@ -295,7 +397,35 @@ namespace AntScout.Swarm.Agents
                 return;
             }
 
-            // Face outwards defensively while standing guard
+            // Check worker presence: If all workers finished or left, don't abandon vigilance in an empty field
+            if (_isEscortPatrol)
+            {
+                int activeHarvesters = CountNearbyWorkersAtHarvest(_guardedFoodSource);
+                if (activeHarvesters == 0)
+                {
+                    _emptyHarvesterTimer += deltaTime;
+                    if (_emptyHarvesterTimer >= 2.0f)
+                    {
+                        // Harvesters have packed up and departed; escort the column home
+                        OrderReturnHome();
+                        return;
+                    }
+                }
+                else
+                {
+                    _emptyHarvesterTimer = 0f;
+                }
+            }
+
+            // Active perimeter pacing: Periodically reposition around the outer perimeter arc
+            _perimeterPaceTimer += deltaTime;
+            if (_perimeterPaceTimer >= 2.5f)
+            {
+                _perimeterPaceTimer = 0f;
+                RepositionPerimeterGuard();
+            }
+
+            // Face outwards defensively away from the food cache while watching for predators
             if (_guardedFoodSource != null)
             {
                 Vector3 awayFromFood = transform.position - _guardedFoodSource.WorldPosition;
@@ -322,6 +452,13 @@ namespace AntScout.Swarm.Agents
             if (TryDetectHostileIntruder(aggroDist, out IAttackable intruder))
             {
                 EngageTarget(intruder);
+                return;
+            }
+
+            // High-urgency Alarm Trail response: turn around if battle erupts nearby
+            if (TryMobilizeToNearbyAlarmTrail())
+            {
+                return;
             }
         }
 
@@ -334,6 +471,12 @@ namespace AntScout.Swarm.Agents
         public override void DisengageCombat()
         {
             base.DisengageCombat();
+
+            // 0. If an alarm trail is active nearby, continue military pursuit!
+            if (TryMobilizeToNearbyAlarmTrail())
+            {
+                return;
+            }
 
             // 1. If guarding an active food node at the trail tip, resume perimeter guard vigil
             if (_guardedFoodSource != null && _guardedFoodSource.CanHarvest)

@@ -477,41 +477,132 @@ namespace AntScout.Characters.Brains.StateContext
             return new Vector3(Mathf.Sin(rad), 0f, Mathf.Cos(rad)).normalized;
         }
 
-        public void DeflectFromObstacle(Vector3? surfaceNormal = null)
+        /// <summary>
+        /// Deflects heading inward when touching the outer map boundaries.
+        /// </summary>
+        public void DeflectFromBoundary()
         {
-            if (surfaceNormal.HasValue && surfaceNormal.Value.sqrMagnitude > 0.01f)
+            Vector3 toCenter = -_character.transform.position;
+            toCenter.y = 0f;
+            if (toCenter.sqrMagnitude > 1.0f)
             {
-                Vector3 curDir = new Vector3(Mathf.Sin(_currentHeadingAngle * Mathf.Deg2Rad), 0f, Mathf.Cos(_currentHeadingAngle * Mathf.Deg2Rad));
-                Vector3 reflected = Vector3.Reflect(curDir, surfaceNormal.Value);
-                reflected.y = 0f;
-                if (reflected.sqrMagnitude > 0.01f)
-                {
-                    float baseAngle = Mathf.Atan2(reflected.x, reflected.z) * Mathf.Rad2Deg;
-                    _currentHeadingAngle = (baseAngle + UnityEngine.Random.Range(-30f, 30f) + 360f) % 360f;
-                }
-                else
-                {
-                    _currentHeadingAngle = (_currentHeadingAngle + 180f + UnityEngine.Random.Range(-30f, 30f) + 360f) % 360f;
-                }
+                float centerAngle = Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg;
+                _currentHeadingAngle = (centerAngle + UnityEngine.Random.Range(-35f, 35f) + 360f) % 360f;
             }
             else
             {
-                Vector3 toCenter = -_character.transform.position;
-                toCenter.y = 0f;
-                if (toCenter.sqrMagnitude > 1.0f)
-                {
-                    float centerAngle = Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg;
-                    _currentHeadingAngle = (centerAngle + UnityEngine.Random.Range(-40f, 40f) + 360f) % 360f;
-                }
-                else
-                {
-                    _currentHeadingAngle = (_currentHeadingAngle + 135f + UnityEngine.Random.Range(-30f, 30f) + 360f) % 360f;
-                }
+                _currentHeadingAngle = (_currentHeadingAngle + 180f + UnityEngine.Random.Range(-30f, 30f) + 360f) % 360f;
             }
 
             _obstacleStuckTimer = 0f;
             _currentLegStartPosition = _character.transform.position;
             _legTimer = 0f;
+        }
+
+        public void DeflectFromObstacle(Vector3? surfaceNormal = null)
+        {
+            if (surfaceNormal.HasValue && surfaceNormal.Value.sqrMagnitude > 0.01f)
+            {
+                Vector3 curDir = new Vector3(Mathf.Sin(_currentHeadingAngle * Mathf.Deg2Rad), 0f, Mathf.Cos(_currentHeadingAngle * Mathf.Deg2Rad));
+                Vector3 norm = surfaceNormal.Value.normalized;
+                Vector3 reflected = Vector3.Reflect(curDir, norm);
+                reflected.y = 0f;
+
+                if (reflected.sqrMagnitude > 0.01f)
+                {
+                    float baseAngle = Mathf.Atan2(reflected.x, reflected.z) * Mathf.Rad2Deg;
+                    _currentHeadingAngle = (baseAngle + UnityEngine.Random.Range(-25f, 25f) + 360f) % 360f;
+                }
+                else
+                {
+                    float normAngle = Mathf.Atan2(norm.x, norm.z) * Mathf.Rad2Deg;
+                    _currentHeadingAngle = (normAngle + UnityEngine.Random.Range(-30f, 30f) + 360f) % 360f;
+                }
+            }
+            else
+            {
+                // Fallback: Turn around away from current heading into open terrain
+                _currentHeadingAngle = (_currentHeadingAngle + 180f + UnityEngine.Random.Range(-35f, 35f) + 360f) % 360f;
+            }
+
+            _obstacleStuckTimer = 0f;
+            _currentLegStartPosition = _character.transform.position;
+            _legTimer = 0f;
+        }
+
+        private static readonly float[] s_whiskerAngles = new float[] { 90f, -90f, 135f, -135f, 180f, 45f, -45f };
+
+        /// <summary>
+        /// Escapes corners or geometry wedges by casting multi-angle sensory whiskers into open terrain.
+        /// </summary>
+        public void BreakStallFromObstacle(Vector3 probeOrigin, Vector3 forwardDir)
+        {
+            float baseAngle = Mathf.Atan2(forwardDir.x, forwardDir.z) * Mathf.Rad2Deg;
+
+            for (int i = 0; i < s_whiskerAngles.Length; i++)
+            {
+                float testAngle = (baseAngle + s_whiskerAngles[i] + 360f) % 360f;
+                float rad = testAngle * Mathf.Deg2Rad;
+                Vector3 testDir = new Vector3(Mathf.Sin(rad), 0f, Mathf.Cos(rad));
+
+                if (!Physics.SphereCast(probeOrigin, 0.35f, testDir, out _, 1.5f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+                {
+                    DeflectHeading(testAngle);
+                    SetMovement(testDir, testDir);
+                    return;
+                }
+            }
+
+            // All whiskers hit: reverse 180
+            float reverseAngle = (baseAngle + 180f + 360f) % 360f;
+            float revRad = reverseAngle * Mathf.Deg2Rad;
+            Vector3 revDir = new Vector3(Mathf.Sin(revRad), 0f, Mathf.Cos(revRad));
+            DeflectHeading(reverseAngle);
+            SetMovement(revDir, revDir);
+        }
+
+        /// <summary>
+        /// Steers a directional movement vector around nearby physical obstacles.
+        /// Used by targeted states (combat, retreat, trail-paving, rally) to prevent ramming into geometry.
+        /// </summary>
+        public Vector3 ComputeSteeredMovement(Vector3 desiredDir)
+        {
+            if (desiredDir.sqrMagnitude < 0.001f) return Vector3.zero;
+
+            Vector3 selfPos = _character.transform.position;
+            Vector3 probeOrigin = selfPos + Vector3.up * 0.3f;
+            Vector3 moveDir = desiredDir.normalized;
+
+            if (Physics.SphereCast(probeOrigin, 0.35f, moveDir, out RaycastHit hit, 0.9f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 normal = hit.normal;
+                if (normal.sqrMagnitude < 0.01f && hit.collider != null)
+                {
+                    Vector3 closest = hit.collider.ClosestPoint(selfPos);
+                    Vector3 away = selfPos - closest;
+                    away.y = 0f;
+                    if (away.sqrMagnitude > 0.0001f)
+                    {
+                        normal = away.normalized;
+                    }
+                }
+
+                if (normal.sqrMagnitude > 0.01f)
+                {
+                    Vector3 steered = (moveDir + normal * 1.5f).normalized;
+                    steered.y = 0f;
+                    if (steered.sqrMagnitude > 0.01f)
+                    {
+                        return steered;
+                    }
+                }
+
+                // Perpendicular slide fallback
+                Vector3 tangent = new Vector3(-moveDir.z, 0f, moveDir.x);
+                return tangent;
+            }
+
+            return desiredDir;
         }
 
         /// <summary>
@@ -536,7 +627,7 @@ namespace AntScout.Characters.Brains.StateContext
             // 1. Boundary horizon check
             if (MapManager.Instance != null && !MapManager.Instance.IsInsideBounds(selfPos + _desiredMovement * 1.0f, margin: 0.8f))
             {
-                DeflectFromObstacle();
+                DeflectFromBoundary();
                 return;
             }
 
@@ -561,41 +652,27 @@ namespace AntScout.Characters.Brains.StateContext
                 }
             }
 
-            // 3. Proactive forward obstacle probe (detect physical walls, rocks, and obstacles ahead)
             Vector3 moveDir = _desiredMovement.sqrMagnitude > 0.01f
                 ? _desiredMovement.normalized
                 : new Vector3(Mathf.Sin(_currentHeadingAngle * Mathf.Deg2Rad), 0f, Mathf.Cos(_currentHeadingAngle * Mathf.Deg2Rad));
-
             Vector3 probeOrigin = selfPos + Vector3.up * 0.3f;
-            if (Physics.SphereCast(probeOrigin, 0.35f, moveDir, out RaycastHit forwardHit, 0.8f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
-            {
-                DeflectFromObstacle(forwardHit.normal);
-                _lastWorldPosition = selfPos;
-                return;
-            }
 
-            // 4. Physical displacement stall check (fallback if wedged against corners)
+            // 3. Physical displacement stall check (breaks corner wedges and geometry traps)
             if (_desiredMovement.sqrMagnitude > 0.05f)
             {
                 Vector3 displacement = selfPos - _lastWorldPosition;
                 displacement.y = 0f;
                 float actualSpeed = displacement.magnitude / deltaTime;
 
-                if (actualSpeed < 0.15f)
+                if (actualSpeed < 0.2f)
                 {
                     _obstacleStuckTimer += deltaTime;
                     if (_obstacleStuckTimer >= 0.25f)
                     {
-                        RaycastHit hit;
-                        Vector3 rayOrigin = selfPos + Vector3.up * 0.2f;
-                        if (Physics.SphereCast(rayOrigin, 0.35f, _desiredMovement.normalized, out hit, 1.2f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
-                        {
-                            DeflectFromObstacle(hit.normal);
-                        }
-                        else
-                        {
-                            DeflectFromObstacle();
-                        }
+                        _obstacleStuckTimer = 0f;
+                        BreakStallFromObstacle(probeOrigin, moveDir);
+                        _lastWorldPosition = selfPos;
+                        return;
                     }
                 }
                 else
@@ -606,6 +683,27 @@ namespace AntScout.Characters.Brains.StateContext
             else
             {
                 _obstacleStuckTimer = 0f;
+            }
+
+            _lastWorldPosition = selfPos;
+
+            // 4. Proactive forward obstacle probe (detect physical walls, rocks, and obstacles ahead)
+            if (Physics.SphereCast(probeOrigin, 0.35f, moveDir, out RaycastHit forwardHit, 0.8f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 normal = forwardHit.normal;
+                // If SphereCast started penetrating or touching the obstacle, PhysX normal is zero: resolve from closest point!
+                if (normal.sqrMagnitude < 0.01f && forwardHit.collider != null)
+                {
+                    Vector3 closest = forwardHit.collider.ClosestPoint(selfPos);
+                    Vector3 away = selfPos - closest;
+                    away.y = 0f;
+                    if (away.sqrMagnitude > 0.0001f)
+                    {
+                        normal = away.normalized;
+                    }
+                }
+
+                DeflectFromObstacle(normal);
             }
 
             _lastWorldPosition = selfPos;

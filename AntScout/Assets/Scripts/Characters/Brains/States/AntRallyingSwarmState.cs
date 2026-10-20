@@ -35,6 +35,9 @@ namespace AntScout.Characters.Brains.States
 
         public override void OnUpdate(AntAiContext context, float deltaTime)
         {
+            // Boundary horizon and physical obstacle deflection check
+            context.CheckObstacleDeflection(deltaTime);
+
             if (context.HomeNest == null)
             {
                 context.StopMovement();
@@ -56,7 +59,7 @@ namespace AntScout.Characters.Brains.States
                 return;
             }
 
-            Vector3 moveDir = diff.normalized;
+            Vector3 moveDir = context.ComputeSteeredMovement(diff.normalized);
             context.SetMovement(moveDir, moveDir);
         }
 

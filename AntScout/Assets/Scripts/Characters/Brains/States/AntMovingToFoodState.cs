@@ -15,6 +15,9 @@ namespace AntScout.Characters.Brains.States
 
         public override void OnUpdate(AntAiContext context, float deltaTime)
         {
+            // Boundary horizon and physical obstacle deflection check
+            context.CheckObstacleDeflection(deltaTime);
+
             var food = context.TargetFood;
             if (food == null || !food.CanHarvest)
             {
@@ -46,17 +49,7 @@ namespace AntScout.Characters.Brains.States
                 return;
             }
 
-            Vector3 moveDir = diff.normalized;
-            if (Physics.SphereCast(selfPos + Vector3.up * 0.3f, 0.35f, moveDir, out RaycastHit hit, 0.8f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
-            {
-                Vector3 avoidance = (moveDir + hit.normal * 1.2f).normalized;
-                avoidance.y = 0f;
-                if (avoidance.sqrMagnitude > 0.01f)
-                {
-                    moveDir = avoidance;
-                }
-            }
-
+            Vector3 moveDir = context.ComputeSteeredMovement(diff.normalized);
             context.SetMovement(moveDir, moveDir);
         }
     }

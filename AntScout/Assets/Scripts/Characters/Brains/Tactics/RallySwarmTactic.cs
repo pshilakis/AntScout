@@ -43,7 +43,14 @@ namespace AntScout.Characters.Brains.Tactics
                 return Mathf.Clamp01(Mathf.Max(0.85f, alarmPriority) * glandCapacity);
             }
 
-            // Scenario 2: Mobile enemy threat
+            // Scenario 2: Swarm availability check (Cannot rally a fallen army)
+            // If the colony has zero active defenders, laying an alarm trail is useless—the commander must fight or evade directly
+            if (context.HomeNest != null && context.HomeNest.ActiveSoldiers.Count == 0 && context.HomeNest.ActiveWorkers.Count == 0)
+            {
+                return 0f;
+            }
+
+            // Scenario 3: Mobile enemy threat
             float hpRatio = context.Character.NormalizedHealth;
             float retreatRatio = def.RetreatHealthRatio;
 

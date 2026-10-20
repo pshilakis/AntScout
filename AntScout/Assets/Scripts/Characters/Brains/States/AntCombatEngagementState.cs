@@ -21,6 +21,9 @@ namespace AntScout.Characters.Brains.States
 
         public override void OnUpdate(AntAiContext context, float deltaTime)
         {
+            // Boundary horizon and physical obstacle deflection check
+            context.CheckObstacleDeflection(deltaTime);
+
             var target = context.TargetEnemy;
             var def = context.Definition;
             float retreatRatio = def != null ? def.RetreatHealthRatio : 0.3f;
@@ -96,7 +99,8 @@ namespace AntScout.Characters.Brains.States
 
             if (planarDist > minStopDistance)
             {
-                context.SetMovement(aimDir, aimDir);
+                Vector3 moveDir = context.ComputeSteeredMovement(aimDir);
+                context.SetMovement(moveDir, aimDir);
             }
             else
             {

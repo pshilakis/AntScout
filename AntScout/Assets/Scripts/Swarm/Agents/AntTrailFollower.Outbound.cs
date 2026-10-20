@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AntScout.Core.Enums;
 using AntScout.Pheromone;
 using AntScout.Resources.Components;
 using PGS.Core.Time;
@@ -19,6 +20,7 @@ namespace AntScout.Swarm.Agents
             _mode = FollowerMode.OutboundTrail;
             _hasCargo = false;
             _trackedSegment = initialSegment;
+            _targetPheromoneType = initialSegment != null ? initialSegment.Type : PheromoneType.Recruitment;
             _lastChainedSegment = null;
             _trackedNodeIndex = initialNodeIndex;
             _lostTrailTimer = 0f;
@@ -53,12 +55,12 @@ namespace AntScout.Swarm.Agents
                 }
             }
 
-            // 2. Periodic freshness evaluation: if a newer or significantly more efficient segment was drawn nearby, switch to it!
+            // 2. Periodic freshness evaluation: if a newer or significantly more efficient segment of the same type was drawn nearby, switch to it!
             _freshnessCheckTimer += deltaTime;
             if (_freshnessCheckTimer >= 0.5f)
             {
                 _freshnessCheckTimer = 0f;
-                if (emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out PheromoneTrailSegment freshSeg, out int freshIdx,
+                if (emitter.TryFindBestTrailNode(myPos, samplingRadiusSqr, _targetPheromoneType, out PheromoneTrailSegment freshSeg, out int freshIdx,
                     excludeSegment: segment, priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
                     if (freshSeg != null && freshSeg.NodeCount > 0 && freshSeg != _lastChainedSegment)
@@ -98,10 +100,10 @@ namespace AntScout.Swarm.Agents
                 }
             }
 
-            // 3. Fall back to best recruitment node if local window lost scent
+            // 3. Fall back to best node of target pheromone type if local window lost scent
             if (segment == null)
             {
-                if (!emitter.TryFindBestRecruitmentNode(myPos, samplingRadiusSqr, out segment, out closestIndex,
+                if (!emitter.TryFindBestTrailNode(myPos, samplingRadiusSqr, _targetPheromoneType, out segment, out closestIndex,
                     priorityDuration: _config.NewTrailPriorityDuration, priorityMultiplier: _config.NewTrailPriorityMultiplier))
                 {
                     _trackedSegment = null;

@@ -48,6 +48,7 @@ namespace AntScout.Swarm.Agents
 
         private PheromoneTrailSegment _trackedSegment;
         private PheromoneTrailSegment _lastChainedSegment;
+        private PheromoneType _targetPheromoneType = PheromoneType.Recruitment;
         private int _trackedNodeIndex = -1;
         private float _lateralOffsetSeed;
         private float _lostTrailTimer;
@@ -70,6 +71,7 @@ namespace AntScout.Swarm.Agents
         public bool IsOutbound => _mode == FollowerMode.OutboundTrail;
         public bool HasCargo => _hasCargo;
         public PheromoneTrailSegment TrackedSegment => _trackedSegment;
+        public PheromoneType TargetPheromoneType => _targetPheromoneType;
 
         /// <summary>
         /// Effective base movement speed. Resolves from the assigned CharacterDefinition (Single Source of Truth),

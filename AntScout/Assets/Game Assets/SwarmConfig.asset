@@ -42,7 +42,7 @@ MonoBehaviour:
   _workersPerSoldierRatio: 3
   _enableWartimeSurge: 1
   _enableEmergencyBrood: 1
-  _emergencyWorkerIncubationTime: 12
+  _emergencyWorkerIncubationTime: 6
   _buildupPhaseDuration: 45
   _buildupForagingRadius: 18
   _suppressEarlyHeroAggression: 1

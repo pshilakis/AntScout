@@ -1,4 +1,5 @@
 using System;
+using AntScout.Characters;
 using AntScout.Characters.Brains.StateContext;
 using AntScout.Characters.Brains.States;
 using AntScout.Swarm.Nest;
@@ -38,6 +39,20 @@ namespace AntScout.Characters.Brains.Tactics
 
             // Aggression baseline
             float baseScore = aggression * healthScore;
+
+            // Scenario A: Threat is an enemy Hero commander (AntCharacter)
+            // When facing the enemy hero, combat urgency surges—heroes actively fight and pursue rivals!
+            if (threat is AntCharacter || (threat.Transform != null && threat.Transform.GetComponentInParent<AntCharacter>() != null))
+            {
+                baseScore = Mathf.Max(baseScore, 0.85f * healthScore);
+            }
+
+            // Scenario B: Swarm is depleted (Last Stand Defense)
+            // If self has no living swarm defenders, the hero stands and fights for self-defense
+            if (context.HomeNest != null && context.HomeNest.ActiveSoldiers.Count == 0 && context.HomeNest.ActiveWorkers.Count == 0)
+            {
+                baseScore = Mathf.Max(baseScore, 0.90f * healthScore);
+            }
 
             return Mathf.Clamp01(baseScore);
         }

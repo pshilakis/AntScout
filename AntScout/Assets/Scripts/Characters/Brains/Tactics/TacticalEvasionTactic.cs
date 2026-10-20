@@ -40,25 +40,18 @@ namespace AntScout.Characters.Brains.Tactics
                 return 0.75f;
             }
 
-            // Scenario 4: Forager vs Aggression priority balance
+            // Scenario 4: Inverse combat aggression baseline
+            // If the unit has very low aggression (e.g. pure pacifist), apply mild evasion; otherwise combat takes precedence
             float combatAggression = context.Priorities.CombatAggression;
-            float foragingPriority = context.Priorities.ForagingPriority;
-
-            if (foragingPriority > combatAggression + 0.2f)
-            {
-                return 0.7f;
-            }
-
-            // Inverse aggression baseline
-            return Mathf.Clamp01(1.0f - combatAggression);
+            return Mathf.Clamp01((1.0f - combatAggression) * 0.35f);
         }
 
         public void Execute(AntAiContext context, IAttackable threat)
         {
             if (context == null || threat == null) return;
 
-            // Register threat on temporary avoidance cooldown (prevents frame-by-frame thrashing)
-            context.MarkThreatTemporarilyAvoided(threat, 6.0f);
+            // Register threat on brief temporary avoidance cooldown (prevents frame-by-frame thrashing)
+            context.MarkThreatTemporarilyAvoided(threat, 1.5f);
 
             // Steer heading cleanly away from threat
             Vector3 selfPos = context.Character.transform.position;

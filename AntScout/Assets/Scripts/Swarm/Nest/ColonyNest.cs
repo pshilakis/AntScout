@@ -420,6 +420,7 @@ namespace AntScout.Swarm.Nest
             if (_config == null) return;
 
             // 0. Queen's Emergency Brood (Anti-Softlock Failsafe)
+            // If active workers are wiped out and biomass is insufficient to hatch a replacement, incubate a rescue worker.
             if (_activeWorkers.Count == 0 && _biomass.Current < _config.WorkerBiomassCost && _config.EnableEmergencyBrood && _workerPrefab != null)
             {
                 _emergencyIncubationTimer += deltaTime;
@@ -468,23 +469,29 @@ namespace AntScout.Swarm.Nest
             }
 
             // 2. Proportional Ratio Calculation (Golden Ratio: e.g. 1 soldier per 3 workers)
+            // Grounded in Economic Supremacy (StarCraft/Age of Empires): If 0 workers exist, target soldiers MUST be 0!
             int ratio = Mathf.Max(1, _config.WorkersPerSoldierRatio);
-            int targetSoldiers = Mathf.Min(Mathf.Max(1, _activeWorkers.Count / ratio), _config.MaxActiveSoldiers);
-            bool isSoldierDeficit = _activeSoldiers.Count < targetSoldiers;
+            int targetSoldiers = _activeWorkers.Count == 0
+                ? 0
+                : Mathf.Min(Mathf.Max(1, _activeWorkers.Count / ratio), _config.MaxActiveSoldiers);
 
+            bool isSoldierDeficit = _activeSoldiers.Count < targetSoldiers;
             bool canHatchSoldier = _soldierPrefab != null && _activeSoldiers.Count < _config.MaxActiveSoldiers;
             bool canHatchWorker = _workerPrefab != null && _activeWorkers.Count < _config.MaxActiveWorkers;
 
             // 3. Strategic Caste Prioritization:
-            // - Priority 1: Wartime Surge (Emergency military mobilization)
-            // - Priority 2: Soldier Deficit (Maintain defense ratio)
-            // - Priority 3: Worker Expansion (Grow foraging economy)
-            // - Priority 4: Max Worker Cap Overflow (Channel surplus into remaining soldiers)
+            // - Economy First: If workers are zero, NEVER prioritize soldiers over workers!
+            // - Anti-Stall Fallback: If soldiers are prioritized but biomass is insufficient for a soldier (< 75)
+            //   while sufficient for a worker (>= 50), do NOT freeze production—hatch a worker!
             bool prioritizeSoldier = false;
 
-            if (canHatchSoldier && (isWartimeSurge || isSoldierDeficit || !canHatchWorker))
+            if (_activeWorkers.Count > 0 && canHatchSoldier && (isWartimeSurge || isSoldierDeficit || !canHatchWorker))
             {
-                prioritizeSoldier = true;
+                // Only lock into soldier production if we can actually afford one, OR if we can't afford a worker either.
+                if (_biomass.Current >= _config.SoldierBiomassCost || _biomass.Current < _config.WorkerBiomassCost || !canHatchWorker)
+                {
+                    prioritizeSoldier = true;
+                }
             }
 
             if (prioritizeSoldier)
