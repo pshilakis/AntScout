@@ -335,9 +335,17 @@ namespace AntScout.Characters.Brains.StateContext
             if (swarmConfig != null && MatchDirector.Instance != null &&
                 MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration)
             {
+                float baseBuildupRadius = swarmConfig.BuildupForagingRadius;
+                // If map is larger than the default 18m sandbox, scale exploration radius to home territory (up to 60% of half-diagonal)
+                if (MapManager.Instance != null && MapManager.Instance.HasActiveMap)
+                {
+                    float mapDiagonal = MapManager.Instance.ActiveMap.PlayableHalfExtents.magnitude;
+                    baseBuildupRadius = Mathf.Max(baseBuildupRadius, mapDiagonal * 0.6f);
+                }
+
                 Vector3 toHome = _homeNest.SpawnPosition - selfPos;
                 toHome.y = 0f;
-                if (toHome.sqrMagnitude >= swarmConfig.BuildupForagingRadius * swarmConfig.BuildupForagingRadius)
+                if (toHome.sqrMagnitude >= baseBuildupRadius * baseBuildupRadius)
                 {
                     float homeAngle = Mathf.Atan2(toHome.x, toHome.z) * Mathf.Rad2Deg;
                     _currentHeadingAngle = (homeAngle + UnityEngine.Random.Range(-35f, 35f) + 360f) % 360f;
@@ -517,6 +525,8 @@ namespace AntScout.Characters.Brains.StateContext
             _obstacleStuckTimer = 0f;
         }
 
+        private static readonly int s_obstacleLayerMask = LayerMask.GetMask("Obstacle") != 0 ? LayerMask.GetMask("Obstacle") : (1 << 6);
+
         public void CheckObstacleDeflection(float deltaTime)
         {
             if (deltaTime <= 0f) return;
@@ -551,7 +561,20 @@ namespace AntScout.Characters.Brains.StateContext
                 }
             }
 
-            // 3. Physical displacement stall check
+            // 3. Proactive forward obstacle probe (detect physical walls, rocks, and obstacles ahead)
+            Vector3 moveDir = _desiredMovement.sqrMagnitude > 0.01f
+                ? _desiredMovement.normalized
+                : new Vector3(Mathf.Sin(_currentHeadingAngle * Mathf.Deg2Rad), 0f, Mathf.Cos(_currentHeadingAngle * Mathf.Deg2Rad));
+
+            Vector3 probeOrigin = selfPos + Vector3.up * 0.3f;
+            if (Physics.SphereCast(probeOrigin, 0.35f, moveDir, out RaycastHit forwardHit, 0.8f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                DeflectFromObstacle(forwardHit.normal);
+                _lastWorldPosition = selfPos;
+                return;
+            }
+
+            // 4. Physical displacement stall check (fallback if wedged against corners)
             if (_desiredMovement.sqrMagnitude > 0.05f)
             {
                 Vector3 displacement = selfPos - _lastWorldPosition;
@@ -565,7 +588,7 @@ namespace AntScout.Characters.Brains.StateContext
                     {
                         RaycastHit hit;
                         Vector3 rayOrigin = selfPos + Vector3.up * 0.2f;
-                        if (Physics.SphereCast(rayOrigin, 0.3f, _desiredMovement.normalized, out hit, 1.2f, ~0, QueryTriggerInteraction.Ignore))
+                        if (Physics.SphereCast(rayOrigin, 0.35f, _desiredMovement.normalized, out hit, 1.2f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
                         {
                             DeflectFromObstacle(hit.normal);
                         }

@@ -21,6 +21,7 @@ namespace AntScout.Characters.Brains.States
     public sealed class AntScoutingFieldState : StateBase<AntAiContext>
     {
         private static readonly Collider[] s_scanBuffer = new Collider[16];
+        private static readonly int s_obstacleLayerMask = LayerMask.GetMask("Obstacle") != 0 ? LayerMask.GetMask("Obstacle") : (1 << 6);
 
         public override void OnEnter(AntAiContext context)
         {
@@ -68,29 +69,12 @@ namespace AntScout.Characters.Brains.States
                     : 0f;
             }
 
-            // Buildup phase evaluation: restricts foraging radius to local territory
-            var swarmConfig = context.HomeNest != null ? context.HomeNest.Config : null;
-            bool isBuildup = swarmConfig != null && MatchDirector.Instance != null &&
-                             MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration;
-            float buildupRadius = swarmConfig != null ? swarmConfig.BuildupForagingRadius : 18.0f;
-
             FoodSource nearbyFood = FoodSource.FindClosest(
                 context.Character.transform.position,
                 effectiveFoodRadius,
                 source =>
                 {
                     if (context.IsFoodReportedOrActive(source)) return false;
-
-                    // Opening buildup constraint: restrict candidate foraging to local territory
-                    if (isBuildup && context.HomeNest != null)
-                    {
-                        Vector3 toNest = source.WorldPosition - context.HomeNest.SpawnPosition;
-                        toNest.y = 0f;
-                        if (toNest.sqrMagnitude > buildupRadius * buildupRadius)
-                        {
-                            return false;
-                        }
-                    }
 
                     // Economic pre-filter: If colony has an active healthy harvest (>= 20% capacity remaining),
                     // do not divert scouting attention to inferior food sources.
@@ -106,18 +90,15 @@ namespace AntScout.Characters.Brains.States
                         }
                     }
 
-                    // Line-of-sight check: ensure food is not occluded behind walls or barriers
+                    // Line-of-sight check: ensure food is not occluded behind physical obstacles/walls
                     Vector3 foodTargetPos = source.WorldPosition + Vector3.up * 0.3f;
                     Vector3 rayDir = foodTargetPos - antEyePos;
                     float dist = rayDir.magnitude;
-                    if (dist > 0.01f)
+                    if (dist > 0.1f)
                     {
-                        if (Physics.Raycast(antEyePos, rayDir / dist, out RaycastHit hit, dist, ~0, QueryTriggerInteraction.Ignore))
+                        if (Physics.Raycast(antEyePos, rayDir.normalized, dist, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
                         {
-                            if (hit.collider != null && hit.collider.GetComponentInParent<FoodSource>() != source)
-                            {
-                                return false; // Obstructed by wall or obstacle
-                            }
+                            return false; // Obstructed by physical wall or obstacle
                         }
                     }
 
