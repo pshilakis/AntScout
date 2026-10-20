@@ -18,6 +18,10 @@ namespace AntScout.Backend
         public string MapName;
         public int PlayerRemainingNestHealth;
         public int EnemyRemainingNestHealth;
+        public int PlayerRemainingWorkers;
+        public int PlayerRemainingSoldiers;
+        public int EnemyRemainingWorkers;
+        public int EnemyRemainingSoldiers;
         public int WinningTeamId;
         public int PlayerTeamId;
         public string GameVersion;

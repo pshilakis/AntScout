@@ -101,14 +101,22 @@ namespace AntScout.Backend
 
             int playerNestHp = 0;
             int enemyNestHp = 0;
+            int playerWorkers = 0;
+            int playerSoldiers = 0;
             if (ColonyNest.TryGetForTeam(playerTeamId, out ColonyNest playerNest) && playerNest != null)
             {
                 playerNestHp = Mathf.RoundToInt(playerNest.CurrentHealth);
+                playerWorkers = playerNest.ActiveWorkers.Count;
+                playerSoldiers = playerNest.ActiveSoldiers.Count;
             }
             int enemyTeamId = playerTeamId == 0 ? 1 : 0;
+            int enemyWorkers = 0;
+            int enemySoldiers = 0;
             if (ColonyNest.TryGetForTeam(enemyTeamId, out ColonyNest enemyNest) && enemyNest != null)
             {
                 enemyNestHp = Mathf.RoundToInt(enemyNest.CurrentHealth);
+                enemyWorkers = enemyNest.ActiveWorkers.Count;
+                enemySoldiers = enemyNest.ActiveSoldiers.Count;
             }
 
             string mapName = SceneManager.GetActiveScene().name;
@@ -126,6 +134,10 @@ namespace AntScout.Backend
                 MapName = mapName,
                 PlayerRemainingNestHealth = playerNestHp,
                 EnemyRemainingNestHealth = enemyNestHp,
+                PlayerRemainingWorkers = playerWorkers,
+                PlayerRemainingSoldiers = playerSoldiers,
+                EnemyRemainingWorkers = enemyWorkers,
+                EnemyRemainingSoldiers = enemySoldiers,
                 WinningTeamId = resultContext.WinningTeamId,
                 PlayerTeamId = playerTeamId,
                 GameVersion = Application.version,
@@ -160,6 +172,10 @@ namespace AntScout.Backend
                         { "map_name", context.MapName },
                         { "player_nest_hp", context.PlayerRemainingNestHealth },
                         { "enemy_nest_hp", context.EnemyRemainingNestHealth },
+                        { "player_workers", context.PlayerRemainingWorkers },
+                        { "player_soldiers", context.PlayerRemainingSoldiers },
+                        { "enemy_workers", context.EnemyRemainingWorkers },
+                        { "enemy_soldiers", context.EnemyRemainingSoldiers },
                         { "winning_team", context.WinningTeamId },
                         { "player_team", context.PlayerTeamId },
                         { "game_version", context.GameVersion },
