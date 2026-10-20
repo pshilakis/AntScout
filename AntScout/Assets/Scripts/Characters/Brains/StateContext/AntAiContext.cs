@@ -56,6 +56,17 @@ namespace AntScout.Characters.Brains.StateContext
         private Vector3 _lastWorldPosition;
         private readonly float _jitterSeed;
 
+        // Obstacle avoidance & corner-clearing memory (prevents oscillation and geometry traps)
+        private float _stallBreakTimer;
+        private Vector3 _stallBreakVector;
+        private float _detourTimer;
+        private Vector3 _activeDetourHeading;
+
+        private const float STALL_SPEED_THRESHOLD = 0.2f;
+        private const float STALL_TRIGGER_DURATION = 0.25f;
+        private const float STALL_ESCAPE_DURATION = 0.5f;
+        private const float DETOUR_HYSTERESIS_DURATION = 0.45f;
+
         // Organic antenna sampling (micro-pauses)
         private bool _isSamplingAir;
         private float _pauseTimer;
@@ -95,6 +106,7 @@ namespace AntScout.Characters.Brains.StateContext
         public float LegTimer => _legTimer;
         public float ObstacleStuckTimer => _obstacleStuckTimer;
         public float JitterSeed => _jitterSeed;
+        public bool IsStallBreaking => _stallBreakTimer > 0f;
 
         public AntAiContext(AntAiBrain brain, AntCharacter character, ColonyNest homeNest)
         {
@@ -347,8 +359,11 @@ namespace AntScout.Characters.Brains.StateContext
                 toHome.y = 0f;
                 if (toHome.sqrMagnitude >= baseBuildupRadius * baseBuildupRadius)
                 {
+                    // Instead of a sharp 180 flip that creates a sentry loop with MidfieldBias,
+                    // steer tangentially along the perimeter arc with an inward bias
                     float homeAngle = Mathf.Atan2(toHome.x, toHome.z) * Mathf.Rad2Deg;
-                    _currentHeadingAngle = (homeAngle + UnityEngine.Random.Range(-35f, 35f) + 360f) % 360f;
+                    float flankOffset = (UnityEngine.Random.value < 0.5f ? 55f : -55f);
+                    _currentHeadingAngle = (homeAngle + flankOffset + UnityEngine.Random.Range(-15f, 15f) + 360f) % 360f;
                     return;
                 }
             }
@@ -547,23 +562,36 @@ namespace AntScout.Characters.Brains.StateContext
 
                 if (!Physics.SphereCast(probeOrigin, 0.35f, testDir, out _, 1.5f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
                 {
+                    _stallBreakVector = testDir;
+                    _stallBreakTimer = STALL_ESCAPE_DURATION;
+                    _obstacleStuckTimer = 0f;
+                    _detourTimer = 0f;
+                    _activeDetourHeading = Vector3.zero;
+
                     DeflectHeading(testAngle);
                     SetMovement(testDir, testDir);
                     return;
                 }
             }
 
-            // All whiskers hit: reverse 180
+            // All whiskers hit: reverse 180 into open space
             float reverseAngle = (baseAngle + 180f + 360f) % 360f;
             float revRad = reverseAngle * Mathf.Deg2Rad;
             Vector3 revDir = new Vector3(Mathf.Sin(revRad), 0f, Mathf.Cos(revRad));
+
+            _stallBreakVector = revDir;
+            _stallBreakTimer = STALL_ESCAPE_DURATION;
+            _obstacleStuckTimer = 0f;
+            _detourTimer = 0f;
+            _activeDetourHeading = Vector3.zero;
+
             DeflectHeading(reverseAngle);
             SetMovement(revDir, revDir);
         }
 
         /// <summary>
-        /// Steers a directional movement vector around nearby physical obstacles.
-        /// Used by targeted states (combat, retreat, trail-paving, rally) to prevent ramming into geometry.
+        /// Steers a directional movement vector around nearby physical obstacles using surface tangent projection
+        /// and detour hysteresis memory. Prevents high-frequency oscillation between orthogonal obstacle faces.
         /// </summary>
         public Vector3 ComputeSteeredMovement(Vector3 desiredDir)
         {
@@ -573,6 +601,23 @@ namespace AntScout.Characters.Brains.StateContext
             Vector3 probeOrigin = selfPos + Vector3.up * 0.3f;
             Vector3 moveDir = desiredDir.normalized;
 
+            // 1. If an active detour heading is running, check if direct path to target has cleared
+            if (_detourTimer > 0f && _activeDetourHeading.sqrMagnitude > 0.01f)
+            {
+                // Check if direct line-of-sight to target is now unobstructed
+                if (!Physics.SphereCast(probeOrigin, 0.35f, moveDir, out _, 1.0f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+                {
+                    // Path cleared! Drop detour and resume direct chase
+                    _detourTimer = 0f;
+                    _activeDetourHeading = Vector3.zero;
+                    return desiredDir;
+                }
+
+                // Still blocked by obstacle: maintain detour heading to clear corner
+                return _activeDetourHeading;
+            }
+
+            // 2. Direct forward probe along desired direction
             if (Physics.SphereCast(probeOrigin, 0.35f, moveDir, out RaycastHit hit, 0.9f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
             {
                 Vector3 normal = hit.normal;
@@ -589,17 +634,41 @@ namespace AntScout.Characters.Brains.StateContext
 
                 if (normal.sqrMagnitude > 0.01f)
                 {
-                    Vector3 steered = (moveDir + normal * 1.5f).normalized;
-                    steered.y = 0f;
-                    if (steered.sqrMagnitude > 0.01f)
+                    // Compute surface tangents along the obstacle boundary
+                    Vector3 tangent1 = new Vector3(-normal.z, 0f, normal.x);
+                    Vector3 tangent2 = -tangent1;
+
+                    Vector3 slide1 = (tangent1 + normal * 0.3f).normalized;
+                    slide1.y = 0f;
+                    Vector3 slide2 = (tangent2 + normal * 0.3f).normalized;
+                    slide2.y = 0f;
+
+                    // Rank tangents by forward progress toward goal
+                    Vector3 primary = Vector3.Dot(tangent1, moveDir) >= Vector3.Dot(tangent2, moveDir) ? slide1 : slide2;
+                    Vector3 secondary = (primary == slide1) ? slide2 : slide1;
+
+                    // Test primary tangent clearance
+                    if (!Physics.SphereCast(probeOrigin, 0.3f, primary, out _, 0.7f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
                     {
-                        return steered;
+                        _activeDetourHeading = primary;
+                        _detourTimer = DETOUR_HYSTERESIS_DURATION;
+                        return primary;
+                    }
+
+                    // Primary tangent blocked; test secondary tangent
+                    if (!Physics.SphereCast(probeOrigin, 0.3f, secondary, out _, 0.7f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+                    {
+                        _activeDetourHeading = secondary;
+                        _detourTimer = DETOUR_HYSTERESIS_DURATION;
+                        return secondary;
                     }
                 }
 
-                // Perpendicular slide fallback
-                Vector3 tangent = new Vector3(-moveDir.z, 0f, moveDir.x);
-                return tangent;
+                // Fallback: perpendicular slide
+                Vector3 fallback = new Vector3(-moveDir.z, 0f, moveDir.x);
+                _activeDetourHeading = fallback;
+                _detourTimer = DETOUR_HYSTERESIS_DURATION;
+                return fallback;
             }
 
             return desiredDir;
@@ -623,6 +692,24 @@ namespace AntScout.Characters.Brains.StateContext
             if (deltaTime <= 0f) return;
 
             Vector3 selfPos = _character.transform.position;
+
+            // 0. Active stall escape maneuver has priority over all other sensory evaluations
+            if (_stallBreakTimer > 0f)
+            {
+                _stallBreakTimer -= deltaTime;
+                SetMovement(_stallBreakVector, _stallBreakVector);
+                _lastWorldPosition = selfPos;
+                return;
+            }
+
+            if (_detourTimer > 0f)
+            {
+                _detourTimer -= deltaTime;
+                if (_detourTimer <= 0f)
+                {
+                    _activeDetourHeading = Vector3.zero;
+                }
+            }
 
             // 1. Boundary horizon check
             if (MapManager.Instance != null && !MapManager.Instance.IsInsideBounds(selfPos + _desiredMovement * 1.0f, margin: 0.8f))
@@ -664,10 +751,10 @@ namespace AntScout.Characters.Brains.StateContext
                 displacement.y = 0f;
                 float actualSpeed = displacement.magnitude / deltaTime;
 
-                if (actualSpeed < 0.2f)
+                if (actualSpeed < STALL_SPEED_THRESHOLD)
                 {
                     _obstacleStuckTimer += deltaTime;
-                    if (_obstacleStuckTimer >= 0.25f)
+                    if (_obstacleStuckTimer >= STALL_TRIGGER_DURATION)
                     {
                         _obstacleStuckTimer = 0f;
                         BreakStallFromObstacle(probeOrigin, moveDir);

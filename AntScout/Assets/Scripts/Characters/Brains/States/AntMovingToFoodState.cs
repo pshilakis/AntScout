@@ -49,6 +49,12 @@ namespace AntScout.Characters.Brains.States
                 return;
             }
 
+            if (context.IsStallBreaking)
+            {
+                // Active stall escape maneuver has absolute priority; do not overwrite escape locomotion!
+                return;
+            }
+
             Vector3 moveDir = context.ComputeSteeredMovement(diff.normalized);
             context.SetMovement(moveDir, moveDir);
         }

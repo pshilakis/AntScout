@@ -14,7 +14,6 @@ namespace AntScout.Characters.Brains.States
     /// </summary>
     public sealed class AntPavingTrailHomeState : StateBase<AntAiContext>
     {
-        private static readonly int s_obstacleLayerMask = LayerMask.GetMask("Obstacle") != 0 ? LayerMask.GetMask("Obstacle") : (1 << 6);
         public override void OnEnter(AntAiContext context)
         {
             var def = context.Definition;
@@ -116,17 +115,13 @@ namespace AntScout.Characters.Brains.States
                 }
             }
 
-            Vector3 moveDir = diff.normalized;
-            if (Physics.SphereCast(context.Character.transform.position + Vector3.up * 0.3f, 0.35f, moveDir, out RaycastHit hit, 0.8f, s_obstacleLayerMask, QueryTriggerInteraction.Ignore))
+            if (context.IsStallBreaking)
             {
-                Vector3 avoidance = (moveDir + hit.normal * 1.2f).normalized;
-                avoidance.y = 0f;
-                if (avoidance.sqrMagnitude > 0.01f)
-                {
-                    moveDir = avoidance;
-                }
+                // Active stall escape maneuver has absolute priority; do not overwrite escape locomotion!
+                return;
             }
 
+            Vector3 moveDir = context.ComputeSteeredMovement(diff.normalized);
             context.SetMovement(moveDir, moveDir);
         }
 

@@ -93,6 +93,12 @@ namespace AntScout.Characters.Brains.States
                 context.Character.TryExecuteAction(def.PrimaryAction, aimDir);
             }
 
+            if (context.IsStallBreaking)
+            {
+                // Active stall escape maneuver has absolute priority; do not overwrite escape locomotion!
+                return;
+            }
+
             float minStopDistance = (def != null && def.PrimaryAction != null)
                 ? def.PrimaryAction.Range * 0.75f
                 : (def != null ? def.ArrivalDistance : 1.2f);
@@ -100,7 +106,8 @@ namespace AntScout.Characters.Brains.States
             if (planarDist > minStopDistance)
             {
                 Vector3 moveDir = context.ComputeSteeredMovement(aimDir);
-                context.SetMovement(moveDir, aimDir);
+                Vector3 facingDir = (moveDir != aimDir && moveDir.sqrMagnitude > 0.01f) ? moveDir : aimDir;
+                context.SetMovement(moveDir, facingDir);
             }
             else
             {

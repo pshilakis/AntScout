@@ -128,6 +128,12 @@ namespace AntScout.Characters.Brains.States
                 return;
             }
 
+            if (context.IsStallBreaking)
+            {
+                // Active stall escape maneuver has absolute priority; do not overwrite escape locomotion!
+                return;
+            }
+
             // 5. Antenna sampling micro-pause evaluation
             if (context.IsSamplingAir)
             {
@@ -162,21 +168,6 @@ namespace AntScout.Characters.Brains.States
 
         private IAttackable ScanForThreats(AntAiContext context, float perceptionMult)
         {
-            var swarmConfig = context.HomeNest != null ? context.HomeNest.Config : null;
-            bool isBuildup = swarmConfig != null && MatchDirector.Instance != null &&
-                             MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration;
-
-            if (isBuildup && swarmConfig.SuppressEarlyHeroAggression && context.HomeNest != null)
-            {
-                // In opening buildup, suppress early aggressive hunts unless the threat is intruding on allied home nest defense perimeter
-                Vector3 toNest = context.Character.transform.position - context.HomeNest.SpawnPosition;
-                toNest.y = 0f;
-                if (toNest.sqrMagnitude > swarmConfig.NestDefenseRadius * swarmConfig.NestDefenseRadius)
-                {
-                    return null;
-                }
-            }
-
             float radius = context.Brain.DetectionRadius * perceptionMult;
             int count = Physics.OverlapSphereNonAlloc(
                 context.Character.transform.position,
@@ -184,6 +175,17 @@ namespace AntScout.Characters.Brains.States
                 s_scanBuffer,
                 context.Brain.TargetLayerMask,
                 QueryTriggerInteraction.Ignore);
+
+            var swarmConfig = context.HomeNest != null ? context.HomeNest.Config : null;
+            bool isBuildup = swarmConfig != null && MatchDirector.Instance != null &&
+                             MatchDirector.Instance.ElapsedSimulationTime < swarmConfig.BuildupPhaseDuration;
+            bool suppressHunts = isBuildup && swarmConfig != null && swarmConfig.SuppressEarlyHeroAggression && context.HomeNest != null;
+
+            Vector3 toNest = context.HomeNest != null ? (context.Character.transform.position - context.HomeNest.SpawnPosition) : Vector3.zero;
+            toNest.y = 0f;
+            bool isDefendingHomeBase = swarmConfig != null && toNest.sqrMagnitude <= swarmConfig.NestDefenseRadius * swarmConfig.NestDefenseRadius;
+
+            Vector3 selfPos = context.Character.transform.position;
 
             for (int i = 0; i < count; i++)
             {
@@ -201,6 +203,24 @@ namespace AntScout.Characters.Brains.States
 
                 if (ColonyAffiliation.Evaluate(context.Character, faction) == TargetAffiliation.Enemy)
                 {
+                    if (suppressHunts && !isDefendingHomeBase)
+                    {
+                        // In early buildup outside base, suppress proactive long-range hunting of workers/depots,
+                        // but always react if an enemy hero directly confronts us within personal vision (<= 6.0m)
+                        bool isEnemyHero = col.GetComponentInParent<AntCharacter>() != null;
+                        Vector3 toThreat = (attackable.Transform != null ? attackable.Transform.position : selfPos) - selfPos;
+                        toThreat.y = 0f;
+                        float distToThreat = toThreat.magnitude;
+
+                        if (isEnemyHero && distToThreat <= 6.0f)
+                        {
+                            return attackable; // Close-range hero duel engagement!
+                        }
+
+                        // Suppress proactive hunting of non-heroes or distant units during buildup
+                        continue;
+                    }
+
                     return attackable;
                 }
             }
