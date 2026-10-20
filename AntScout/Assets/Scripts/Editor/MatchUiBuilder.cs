@@ -1,4 +1,5 @@
 using System;
+using AntScout.Backend;
 using AntScout.UI;
 using PGS.Core.Scenes;
 using PGS.UI.Gauges;
@@ -83,7 +84,10 @@ namespace AntScout.Editor
             // 5. Create Match Escape Menu Modal
             BuildMatchEscapeMenuModal(canvasGo.transform);
 
-            // 6. Save/update Prefab Asset
+            // 6. Attach and Configure PlayFab Telemetry Service
+            AttachTelemetryService(canvasGo);
+
+            // 7. Save/update Prefab Asset
             PrefabUtility.SaveAsPrefabAsset(canvasGo, PrefabPath);
 
             EditorSceneManager.MarkSceneDirty(activeScene);
@@ -120,6 +124,7 @@ namespace AntScout.Editor
                 BuildMatchHudView(canvasGo.transform, fillBarShader);
                 BuildMatchConcludedModal(canvasGo.transform);
                 BuildMatchEscapeMenuModal(canvasGo.transform);
+                AttachTelemetryService(canvasGo);
 
                 PrefabUtility.SaveAsPrefabAsset(canvasGo, PrefabPath);
                 AssetDatabase.SaveAssets();
@@ -129,6 +134,19 @@ namespace AntScout.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(canvasGo);
+            }
+        }
+
+        private static void AttachTelemetryService(GameObject canvasGo)
+        {
+            var telemetryService = canvasGo.AddComponent<PlayFabMatchTelemetryService>();
+            var config = PlayFabEditorUtility.GetOrCreatePlayFabConfiguration();
+            if (config != null)
+            {
+                SerializedObject telSo = new SerializedObject(telemetryService);
+                telSo.FindProperty("_configuration").objectReferenceValue = config;
+                telSo.FindProperty("_autoHookMatchDirector").boolValue = true;
+                telSo.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 
